@@ -1,0 +1,744 @@
+!******************************************************************************!
+!*  This is the main program to simulate seismic wave propagation             *!
+!*                                                                            *!
+!*  Author: Wei ZHANG     Email: zhangw.pku@gmail.com                         *!
+!*  Copyright (C) Wei ZHANG, 2006. All Rights Reserved.                       *!
+!******************************************************************************!
+
+! $Date$
+! $Revision$
+! $LastChangedBy$
+#define PMLNT 700
+!-----------------------------------------------------------------------------
+program seis3d_wave
+!-----------------------------------------------------------------------------
+
+!{ -- declare module used --
+use mpi
+use para_mod
+use io_mod
+use mpi_mod
+use grid_mod
+use media_mod
+use src_mod
+use abs_mod
+use macdrp_mod
+#ifdef WithOMP
+use omp_lib
+#endif
+!} -- end declare module used ---
+
+implicit none
+integer ntime,ierr
+
+call MPI_INIT(ierr)
+
+call get_conf_name(fnm_conf)
+
+call swmpi_init(fnm_conf)
+call swmpi_cart_creat
+
+call para_init(fnm_conf)
+call swmpi_reinit_para
+
+call grid_fnm_init(fnm_conf)
+call grid_alloc
+call grid_import
+
+call media_fnm_init(fnm_conf)
+call media_alloc
+call media_import
+
+call src_fnm_init(fnm_conf)
+call src_import
+!call src_choose
+
+call io_init(fnm_conf)
+call io_snap_read(fnm_conf)
+call io_snap_locate
+call io_pt_import
+call io_seismo_init
+
+!call grid_dealloc(iscoord=.true.)
+
+call macdrp_init
+
+call abs_init(fnm_conf)
+
+call swmpi_datatype
+call macdrp_mesg_init
+
+ntime=0
+
+call io_rest_import(Txx,Tyy,Tzz,Txy,Txz,Tyz,Vx,Vy,Vz,ntime)
+
+call swmpi_time_init(fnm_log)
+
+#ifdef WithOMP
+call OMP_SET_NUM_THREADS(2)
+#endif
+
+
+! 1-1A FFF
+! 8-4B FFB
+! 5-1B BBB
+! 4-4A BBF
+
+! 6-2B FBB
+! 7-3B BFB
+! 2-2A BFF
+! 3-3A FBF
+
+loop_time: do
+!-----------------------------------------------------------------------------
+
+if ( ntime>nt ) exit
+
+#ifdef PML
+if ( ntime<= PMLNT .or. ntime >2*PMLNT) then
+#endif
+! 1-1A FFF
+! {==========================================================================
+! prepare
+call swmpi_time_write(ntime,fnm_log)
+call macdrp_syn
+call abs_syn
+! the 1th stage
+call set_cur_time(ntime,0.0_SP)
+#ifdef SrcTensorMomentum
+call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,0.0_SP,stept)
+#endif
+call macdrp_LxF_LyF_LzF
+call abs_LxF_LyF_LzF
+#ifdef SrcTensorHook
+  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,0.0_SP,stept)
+#endif
+#ifdef SrcForce
+  call src_force(hVx,hVy,hVz,ntime,0.0_SP,stept)
+#endif
+call macdrp_RK_beg(firRKa(1),firRKb(1))
+call abs_RK_beg(firRKa(1),firRKb(1))
+! the 2th stage
+call set_cur_time(ntime,firRKa(1))
+#ifdef SrcTensorMomentum
+call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(1),stept)
+#endif
+call macdrp_LxB_LyB_LzB
+call abs_LxB_LyB_LzB
+#ifdef SrcTensorHook
+  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(1),stept)
+#endif
+#ifdef SrcForce
+  call src_force(hVx,hVy,hVz,ntime,firRKa(1),stept)
+#endif
+call macdrp_RK_inn(firRKa(2),firRKb(2))
+call abs_RK_inn(firRKa(2),firRKb(2))
+! the 3th stage
+call set_cur_time(ntime,firRKa(2))
+#ifdef SrcTensorMomentum
+call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(2),stept)
+#endif
+call macdrp_LxF_LyF_LzF
+call abs_LxF_LyF_LzF
+#ifdef SrcTensorHook
+  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(2),stept)
+#endif
+#ifdef SrcForce
+  call src_force(hVx,hVy,hVz,ntime,firRKa(2),stept)
+#endif
+call macdrp_RK_inn(firRKa(3),firRKb(3))
+call abs_RK_inn(firRKa(3),firRKb(3))
+! the 4th stage
+call set_cur_time(ntime,firRKa(3))
+#ifdef SrcTensorMomentum
+call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(3),stept)
+#endif
+call macdrp_LxB_LyB_LzB
+call abs_LxB_LyB_LzB
+#ifdef SrcTensorHook
+  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(3),stept)
+#endif
+#ifdef SrcForce
+  call src_force(hVx,hVy,hVz,ntime,firRKa(3),stept)
+#endif
+call macdrp_RK_fin(firRKb(4))
+call abs_RK_fin(firRKb(4))
+#ifdef WITHQS
+ call atten_graves
+#endif
+
+! save result
+     ntime=ntime+1
+call macdrp_check(ntime)
+call io_seismo_put(Vx,Vy,Vz,ntime)
+call io_wave_export(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,stept)
+! ========================================================================== }
+
+! 8-4B FFB
+! {==========================================================================
+! prepare
+call swmpi_time_write(ntime,fnm_log)
+call macdrp_syn
+call abs_syn
+! the 1th stage
+call set_cur_time(ntime,0.0_SP)
+#ifdef SrcTensorMomentum
+call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,0.0_SP,stept)
+#endif
+call macdrp_LxF_LyF_LzB
+call abs_LxF_LyF_LzB
+#ifdef SrcTensorHook
+  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,0.0_SP,stept)
+#endif
+#ifdef SrcForce
+  call src_force(hVx,hVy,hVz,ntime,0.0_SP,stept)
+#endif
+call macdrp_RK_beg(firRKa(1),firRKb(1))
+call abs_RK_beg(firRKa(1),firRKb(1))
+! the 2th stage
+call set_cur_time(ntime,firRKa(1))
+#ifdef SrcTensorMomentum
+call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(1),stept)
+#endif
+call macdrp_LxB_LyB_LzF
+call abs_LxB_LyB_LzF
+#ifdef SrcTensorHook
+  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(1),stept)
+#endif
+#ifdef SrcForce
+  call src_force(hVx,hVy,hVz,ntime,firRKa(1),stept)
+#endif
+call macdrp_RK_inn(firRKa(2),firRKb(2))
+call abs_RK_inn(firRKa(2),firRKb(2))
+! the 3th stage
+call set_cur_time(ntime,firRKa(2))
+#ifdef SrcTensorMomentum
+call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(2),stept)
+#endif
+call macdrp_LxF_LyF_LzB
+call abs_LxF_LyF_LzB
+#ifdef SrcTensorHook
+  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(2),stept)
+#endif
+#ifdef SrcForce
+  call src_force(hVx,hVy,hVz,ntime,firRKa(2),stept)
+#endif
+call macdrp_RK_inn(firRKa(3),firRKb(3))
+call abs_RK_inn(firRKa(3),firRKb(3))
+! the 4th stage
+call set_cur_time(ntime,firRKa(3))
+#ifdef SrcTensorMomentum
+call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(3),stept)
+#endif
+call macdrp_LxB_LyB_LzF
+call abs_LxB_LyB_LzF
+#ifdef SrcTensorHook
+  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(3),stept)
+#endif
+#ifdef SrcForce
+  call src_force(hVx,hVy,hVz,ntime,firRKa(3),stept)
+#endif
+call macdrp_RK_fin(firRKb(4))
+call abs_RK_fin(firRKb(4))
+#ifdef WITHQS
+ call atten_graves
+#endif
+
+! save result
+     ntime=ntime+1
+call macdrp_check(ntime)
+call io_seismo_put(Vx,Vy,Vz,ntime)
+call io_wave_export(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,stept)
+call io_rest_export(Txx,Tyy,Tzz,Txy,Txz,Tyz,Vx,Vy,Vz,ntime)
+! ========================================================================== }
+
+! 5-1B BBB
+! { ============================= third : lddrk4 =============================
+! prepare
+call swmpi_time_write(ntime,fnm_log)
+call macdrp_syn
+call abs_syn
+! the 1th stage
+call set_cur_time(ntime,0.0_SP)
+#ifdef SrcTensorMomentum
+call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,0.0_SP,stept)
+#endif
+call macdrp_LxB_LyB_LzB
+call abs_LxB_LyB_LzB
+#ifdef SrcTensorHook
+  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,0.0_SP,stept)
+#endif
+#ifdef SrcForce
+  call src_force(hVx,hVy,hVz,ntime,0.0_SP,stept)
+#endif
+call macdrp_RK_beg(firRKa(1),firRKb(1))
+call abs_RK_beg(firRKa(1),firRKb(1))
+! the 2th stage
+call set_cur_time(ntime,firRKa(1))
+#ifdef SrcTensorMomentum
+call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(1),stept)
+#endif
+call macdrp_LxF_LyF_LzF
+call abs_LxF_LyF_LzF
+#ifdef SrcTensorHook
+  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(1),stept)
+#endif
+#ifdef SrcForce
+  call src_force(hVx,hVy,hVz,ntime,firRKa(1),stept)
+#endif
+call macdrp_RK_inn(firRKa(2),firRKb(2))
+call abs_RK_inn(firRKa(2),firRKb(2))
+! the 3th stage
+call set_cur_time(ntime,firRKa(2))
+#ifdef SrcTensorMomentum
+call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(2),stept)
+#endif
+call macdrp_LxB_LyB_LzB
+call abs_LxB_LyB_LzB
+#ifdef SrcTensorHook
+  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(2),stept)
+#endif
+#ifdef SrcForce
+  call src_force(hVx,hVy,hVz,ntime,firRKa(2),stept)
+#endif
+call macdrp_RK_inn(firRKa(3),firRKb(3))
+call abs_RK_inn(firRKa(3),firRKb(3))
+! the 4th stage
+call set_cur_time(ntime,firRKa(3))
+#ifdef SrcTensorMomentum
+call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(3),stept)
+#endif
+call macdrp_LxF_LyF_LzF
+call abs_LxF_LyF_LzF
+#ifdef SrcTensorHook
+  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(3),stept)
+#endif
+#ifdef SrcForce
+  call src_force(hVx,hVy,hVz,ntime,firRKa(3),stept)
+#endif
+call macdrp_RK_fin(firRKb(4))
+call abs_RK_fin(firRKb(4))
+#ifdef WITHQS
+ call atten_graves
+#endif
+
+! save result
+     ntime=ntime+1
+call macdrp_check(ntime)
+call io_seismo_put(Vx,Vy,Vz,ntime)
+call io_wave_export(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,stept)
+! ========================================================================== }
+
+! 4-4A BBF
+! { ============================= forth : lddrk4 =============================
+! prepare
+call swmpi_time_write(ntime,fnm_log)
+call macdrp_syn
+call abs_syn
+! the 1th stage
+call set_cur_time(ntime,0.0_SP)
+#ifdef SrcTensorMomentum
+call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,0.0_SP,stept)
+#endif
+call macdrp_LxB_LyB_LzF
+call abs_LxB_LyB_LzF
+#ifdef SrcTensorHook
+  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,0.0_SP,stept)
+#endif
+#ifdef SrcForce
+  call src_force(hVx,hVy,hVz,ntime,0.0_SP,stept)
+#endif
+call macdrp_RK_beg(firRKa(1),firRKb(1))
+call abs_RK_beg(firRKa(1),firRKb(1))
+! the 2th stage
+call set_cur_time(ntime,firRKa(1))
+#ifdef SrcTensorMomentum
+call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(1),stept)
+#endif
+call macdrp_LxF_LyF_LzB
+call abs_LxF_LyF_LzB
+#ifdef SrcTensorHook
+  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(1),stept)
+#endif
+#ifdef SrcForce
+  call src_force(hVx,hVy,hVz,ntime,firRKa(1),stept)
+#endif
+call macdrp_RK_inn(firRKa(2),firRKb(2))
+call abs_RK_inn(firRKa(2),firRKb(2))
+! the 3th stage
+call set_cur_time(ntime,firRKa(2))
+#ifdef SrcTensorMomentum
+call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(2),stept)
+#endif
+call macdrp_LxB_LyB_LzF
+call abs_LxB_LyB_LzF
+#ifdef SrcTensorHook
+  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(2),stept)
+#endif
+#ifdef SrcForce
+  call src_force(hVx,hVy,hVz,ntime,firRKa(2),stept)
+#endif
+call macdrp_RK_inn(firRKa(3),firRKb(3))
+call abs_RK_inn(firRKa(3),firRKb(3))
+! the 4th stage
+call set_cur_time(ntime,firRKa(3))
+#ifdef SrcTensorMomentum
+call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(3),stept)
+#endif
+call macdrp_LxF_LyF_LzB
+call abs_LxF_LyF_LzB
+#ifdef SrcTensorHook
+  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(3),stept)
+#endif
+#ifdef SrcForce
+  call src_force(hVx,hVy,hVz,ntime,firRKa(3),stept)
+#endif
+call macdrp_RK_fin(firRKb(4))
+call abs_RK_fin(firRKb(4))
+#ifdef WITHQS
+ call atten_graves
+#endif
+
+! save result
+     ntime=ntime+1
+call macdrp_check(ntime)
+call io_seismo_put(Vx,Vy,Vz,ntime)
+call io_wave_export(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,stept)
+call io_rest_export(Txx,Tyy,Tzz,Txy,Txz,Tyz,Vx,Vy,Vz,ntime)
+! ========================================================================== }
+
+#ifdef PML
+end if
+if (ntime>PMLNT) then
+
+! 6-2B FBB
+! {==========================================================================
+! prepare
+call swmpi_time_write(ntime,fnm_log)
+call macdrp_syn
+call abs_syn
+! the 1th stage
+call set_cur_time(ntime,0.0_SP)
+#ifdef SrcTensorMomentum
+call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,0.0_SP,stept)
+#endif
+call macdrp_LxF_LyB_LzB
+call abs_LxF_LyB_LzB
+#ifdef SrcTensorHook
+  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,0.0_SP,stept)
+#endif
+#ifdef SrcForce
+  call src_force(hVx,hVy,hVz,ntime,0.0_SP,stept)
+#endif
+call macdrp_RK_beg(firRKa(1),firRKb(1))
+call abs_RK_beg(firRKa(1),firRKb(1))
+! the 2th stage
+call set_cur_time(ntime,firRKa(1))
+#ifdef SrcTensorMomentum
+call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(1),stept)
+#endif
+call macdrp_LxB_LyF_LzF
+call abs_LxB_LyF_LzF
+#ifdef SrcTensorHook
+  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(1),stept)
+#endif
+#ifdef SrcForce
+  call src_force(hVx,hVy,hVz,ntime,firRKa(1),stept)
+#endif
+call macdrp_RK_inn(firRKa(2),firRKb(2))
+call abs_RK_inn(firRKa(2),firRKb(2))
+! the 3th stage
+call set_cur_time(ntime,firRKa(2))
+#ifdef SrcTensorMomentum
+call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(2),stept)
+#endif
+call macdrp_LxF_LyB_LzB
+call abs_LxF_LyB_LzB
+#ifdef SrcTensorHook
+  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(2),stept)
+#endif
+#ifdef SrcForce
+  call src_force(hVx,hVy,hVz,ntime,firRKa(2),stept)
+#endif
+call macdrp_RK_inn(firRKa(3),firRKb(3))
+call abs_RK_inn(firRKa(3),firRKb(3))
+! the 4th stage
+call set_cur_time(ntime,firRKa(3))
+#ifdef SrcTensorMomentum
+call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(3),stept)
+#endif
+call macdrp_LxB_LyF_LzF
+call abs_LxB_LyF_LzF
+#ifdef SrcTensorHook
+  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(3),stept)
+#endif
+#ifdef SrcForce
+  call src_force(hVx,hVy,hVz,ntime,firRKa(3),stept)
+#endif
+call macdrp_RK_fin(firRKb(4))
+call abs_RK_fin(firRKb(4))
+#ifdef WITHQS
+ call atten_graves
+#endif
+
+! save result
+     ntime=ntime+1
+call macdrp_check(ntime)
+call io_seismo_put(Vx,Vy,Vz,ntime)
+call io_wave_export(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,stept)
+! ========================================================================== }
+
+! 7-3B BFB
+! {==========================================================================
+! prepare
+call swmpi_time_write(ntime,fnm_log)
+call macdrp_syn
+call abs_syn
+! the 1th stage
+call set_cur_time(ntime,0.0_SP)
+#ifdef SrcTensorMomentum
+call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,0.0_SP,stept)
+#endif
+call macdrp_LxB_LyF_LzB
+call abs_LxB_LyF_LzB
+#ifdef SrcTensorHook
+  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,0.0_SP,stept)
+#endif
+#ifdef SrcForce
+  call src_force(hVx,hVy,hVz,ntime,0.0_SP,stept)
+#endif
+call macdrp_RK_beg(firRKa(1),firRKb(1))
+call abs_RK_beg(firRKa(1),firRKb(1))
+! the 2th stage
+call set_cur_time(ntime,firRKa(1))
+#ifdef SrcTensorMomentum
+call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(1),stept)
+#endif
+call macdrp_LxF_LyB_LzF
+call abs_LxF_LyB_LzF
+#ifdef SrcTensorHook
+  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(1),stept)
+#endif
+#ifdef SrcForce
+  call src_force(hVx,hVy,hVz,ntime,firRKa(1),stept)
+#endif
+call macdrp_RK_inn(firRKa(2),firRKb(2))
+call abs_RK_inn(firRKa(2),firRKb(2))
+! the 3th stage
+call set_cur_time(ntime,firRKa(2))
+#ifdef SrcTensorMomentum
+call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(2),stept)
+#endif
+call macdrp_LxB_LyF_LzB
+call abs_LxB_LyF_LzB
+#ifdef SrcTensorHook
+  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(2),stept)
+#endif
+#ifdef SrcForce
+  call src_force(hVx,hVy,hVz,ntime,firRKa(2),stept)
+#endif
+call macdrp_RK_inn(firRKa(3),firRKb(3))
+call abs_RK_inn(firRKa(3),firRKb(3))
+! the 4th stage
+call set_cur_time(ntime,firRKa(3))
+#ifdef SrcTensorMomentum
+call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(3),stept)
+#endif
+call macdrp_LxF_LyB_LzF
+call abs_LxF_LyB_LzF
+#ifdef SrcTensorHook
+  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(3),stept)
+#endif
+#ifdef SrcForce
+  call src_force(hVx,hVy,hVz,ntime,firRKa(3),stept)
+#endif
+call macdrp_RK_fin(firRKb(4))
+call abs_RK_fin(firRKb(4))
+#ifdef WITHQS
+ call atten_graves
+#endif
+
+! save result
+     ntime=ntime+1
+call macdrp_check(ntime)
+call io_seismo_put(Vx,Vy,Vz,ntime)
+call io_wave_export(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,stept)
+! ========================================================================== }
+
+! 2-2A BFF
+! {==========================================================================
+! prepare
+call swmpi_time_write(ntime,fnm_log)
+call macdrp_syn
+call abs_syn
+! the 1th stage
+call set_cur_time(ntime,0.0_SP)
+#ifdef SrcTensorMomentum
+call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,0.0_SP,stept)
+#endif
+call macdrp_LxB_LyF_LzF
+call abs_LxB_LyF_LzF
+#ifdef SrcTensorHook
+  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,0.0_SP,stept)
+#endif
+#ifdef SrcForce
+  call src_force(hVx,hVy,hVz,ntime,0.0_SP,stept)
+#endif
+call macdrp_RK_beg(firRKa(1),firRKb(1))
+call abs_RK_beg(firRKa(1),firRKb(1))
+! the 2th stage
+call set_cur_time(ntime,firRKa(1))
+#ifdef SrcTensorMomentum
+call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(1),stept)
+#endif
+call macdrp_LxF_LyB_LzB
+call abs_LxF_LyB_LzB
+#ifdef SrcTensorHook
+  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(1),stept)
+#endif
+#ifdef SrcForce
+  call src_force(hVx,hVy,hVz,ntime,firRKa(1),stept)
+#endif
+call macdrp_RK_inn(firRKa(2),firRKb(2))
+call abs_RK_inn(firRKa(2),firRKb(2))
+! the 3th stage
+call set_cur_time(ntime,firRKa(2))
+#ifdef SrcTensorMomentum
+call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(2),stept)
+#endif
+call macdrp_LxB_LyF_LzF
+call abs_LxB_LyF_LzF
+#ifdef SrcTensorHook
+  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(2),stept)
+#endif
+#ifdef SrcForce
+  call src_force(hVx,hVy,hVz,ntime,firRKa(2),stept)
+#endif
+call macdrp_RK_inn(firRKa(3),firRKb(3))
+call abs_RK_inn(firRKa(3),firRKb(3))
+! the 4th stage
+call set_cur_time(ntime,firRKa(3))
+#ifdef SrcTensorMomentum
+call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(3),stept)
+#endif
+call macdrp_LxF_LyB_LzB
+call abs_LxF_LyB_LzB
+#ifdef SrcTensorHook
+  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(3),stept)
+#endif
+#ifdef SrcForce
+  call src_force(hVx,hVy,hVz,ntime,firRKa(3),stept)
+#endif
+call macdrp_RK_fin(firRKb(4))
+call abs_RK_fin(firRKb(4))
+#ifdef WITHQS
+ call atten_graves
+#endif
+
+! save result
+     ntime=ntime+1
+call macdrp_check(ntime)
+call io_seismo_put(Vx,Vy,Vz,ntime)
+call io_wave_export(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,stept)
+! ========================================================================== }
+
+! 3-3A FBF
+! {==========================================================================
+! prepare
+call swmpi_time_write(ntime,fnm_log)
+call macdrp_syn
+call abs_syn
+! the 1th stage
+call set_cur_time(ntime,0.0_SP)
+#ifdef SrcTensorMomentum
+call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,0.0_SP,stept)
+#endif
+call macdrp_LxF_LyB_LzF
+call abs_LxF_LyB_LzF
+#ifdef SrcTensorHook
+  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,0.0_SP,stept)
+#endif
+#ifdef SrcForce
+  call src_force(hVx,hVy,hVz,ntime,0.0_SP,stept)
+#endif
+call macdrp_RK_beg(firRKa(1),firRKb(1))
+call abs_RK_beg(firRKa(1),firRKb(1))
+! the 2th stage
+call set_cur_time(ntime,firRKa(1))
+#ifdef SrcTensorMomentum
+call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(1),stept)
+#endif
+call macdrp_LxB_LyF_LzB
+call abs_LxB_LyF_LzB
+#ifdef SrcTensorHook
+  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(1),stept)
+#endif
+#ifdef SrcForce
+  call src_force(hVx,hVy,hVz,ntime,firRKa(1),stept)
+#endif
+call macdrp_RK_inn(firRKa(2),firRKb(2))
+call abs_RK_inn(firRKa(2),firRKb(2))
+! the 3th stage
+call set_cur_time(ntime,firRKa(2))
+#ifdef SrcTensorMomentum
+call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(2),stept)
+#endif
+call macdrp_LxF_LyB_LzF
+call abs_LxF_LyB_LzF
+#ifdef SrcTensorHook
+  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(2),stept)
+#endif
+#ifdef SrcForce
+  call src_force(hVx,hVy,hVz,ntime,firRKa(2),stept)
+#endif
+call macdrp_RK_inn(firRKa(3),firRKb(3))
+call abs_RK_inn(firRKa(3),firRKb(3))
+! the 4th stage
+call set_cur_time(ntime,firRKa(3))
+#ifdef SrcTensorMomentum
+call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(3),stept)
+#endif
+call macdrp_LxB_LyF_LzB
+call abs_LxB_LyF_LzB
+#ifdef SrcTensorHook
+  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(3),stept)
+#endif
+#ifdef SrcForce
+  call src_force(hVx,hVy,hVz,ntime,firRKa(3),stept)
+#endif
+call macdrp_RK_fin(firRKb(4))
+call abs_RK_fin(firRKb(4))
+#ifdef WITHQS
+ call atten_graves
+#endif
+
+! save result
+     ntime=ntime+1
+call macdrp_check(ntime)
+call io_seismo_put(Vx,Vy,Vz,ntime)
+call io_wave_export(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,stept)
+! ========================================================================== }
+
+end if
+#endif
+
+!-----------------------------------------------------------------------------
+end do loop_time
+
+call io_seismo_close
+call io_wave_close
+call swmpi_time_end(fnm_log)
+
+call macdrp_destroy
+call grid_dealloc
+call media_destroy
+!call abs_destroy
+call src_destroy
+
+call MPI_FINALIZE(ierr)
+!-----------------------------------------------------------------------!
+!contains
+!-----------------------------------------------------------------------!
+
+end program seis3d_wave
+
