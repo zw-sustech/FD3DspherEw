@@ -7,27 +7,18 @@
 clear all
 
 % ----------------------- parameter -----------------------
-id=0; n=4;
-flag_acc = 0;
-flag_vel = 1;
-flag_dis = 0;
+flag_acc = 0; flag_vel = 1; flag_dis = 0;
 flag_normalize = 0; % 0:unnorm; 1:norm together; 2:norm seperate
-flag_overlap = 1; spec_line='r';
 flag_1canvas = 1;
 
-flag_twin=0;
-twin=[34 40];
-%twin=[34.6 36.7];
-%twin=[38.5 41.5];
-%twin=[34.6 36.7];
-
-%fnm_conf='../SeisFD3D.conf'; pnm_info='../input/'; pnm_out='../output/';
-
-%fnm_conf='../fy/SeisFD3D.conf'; pnm_info='../fy/input/'; pnm_out='../fy/output/';
-fnm_conf='../fx/SeisFD3D.conf'; pnm_info='../fx/input/'; pnm_out='../fx/output/';
-%fnm_conf='../../d30-drinc/fy/SeisFD3D.conf'; pnm_info='../../d30-drinc/fy/input/'; pnm_out='../../d30-drinc/fy/output/';
-%fnm_conf='../../d30-drinc/fx/SeisFD3D.conf'; pnm_info='../../d30-drinc/fx/input/'; pnm_out='../../d30-drinc/fx/output/';
-
+if 1
+OUTPUT_ROOT='../';
+fnm_conf=[OUTPUT_ROOT 'SeisFD3D.conf'];
+pnm_info=[OUTPUT_ROOT 'input/'];pnm_out=[OUTPUT_ROOT 'output/'];
+id=0; n=2;
+flag_overlap=0; spec_line='r'; enlarger=24;
+flag_twin=0; twin=[34 40];
+end
 
 % -------------------- load data --------------------------
 [Vx,Vy,Vz,t,x,y,z] = ...
@@ -130,3 +121,21 @@ if flag_dis==1
    if flag_twin; hold on; plot(t(indx),Uz(indx)/Uz0,'r'); end
 end
 
+% -------------------- plot figures ------------------------
+if 0
+%figure
+Ux=cumtrapz(Vx)*stept; Uy=cumtrapz(Vy)*stept; Uz=cumtrapz(Vz)*stept;
+%U0=max(max(abs([Ux,Uy,Uz]))); Ux0=U0;Uy0=U0;Uz0=U0;
+%Ux0=max(max(abs(Ux]))); Uy0=max(max(abs(Uy]))); Uz0=max(max(abs(Uz])));
+%Ux0=1;Uy0=1;Uz0=1;
+Ux0=1/20;Uy0=1/20;Uz0=1/20;
+subplot(3,1,1)
+hold on
+plot(t,Ux/Ux0,spec_line)
+subplot(3,1,2)
+hold on
+plot(t,Uy/Uy0,spec_line);
+subplot(3,1,3)
+hold on
+plot(t,Uz/Uz0,spec_line);
+end

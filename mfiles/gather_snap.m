@@ -1,4 +1,4 @@
-function [V,t,ntime,varnm]=gather_snap(snapinfo,id,nlayer,varargin)
+function [V,t,varnm]=gather_snap(snapinfo,id,nlayer,varargin)
 % gather snap data
 %
 % $Date$
@@ -18,19 +18,16 @@ if numel(varargin{n})==1 | ~isnumeric(varargin{n})
    switch varargin{n}
    case {'Vx','Vy','Vz'}
        varnm=varargin{n};
-       fnm_prefix='snap_';
+       fnm_prefix='vel_';
    case {'Ax','Ay','Az'}
        varnm=varargin{n};
        fnm_prefix='acce_';
    case {'Dx','Dy','Dz'}
        varnm=varargin{n};
        fnm_prefix='disp_';
-   case {'Txx','Tyy','Tzz'}
+   case {'Txx','Tyy','Tzz','Txy','Txz','Tyz'}
        varnm=varargin{n};
-       fnm_prefix='norm_';
-   case {'Txy','Txz','Tyz'}
-       varnm=varargin{n};
-       fnm_prefix='shear_';
+       fnm_prefix='sgt_';
    case 'outdir'
        pnm_out=varargin{n+1}; n=n+1;
    end
@@ -71,7 +68,6 @@ for n=1:nthd
     V(k1:k2,j1:j2,i1:i2)=nc_varget(fnm_snap,varnm, ...
           [ninnc,fliplr(subs)-1],[1,fliplr(subc)],[1,fliplr(subt)]);
     t=nc_varget(fnm_snap,'time',[ninnc],[1]);
-    ntime=nc_varget(fnm_snap,'ntime',[ninnc],[1]);
 end
 
 V=permute(V,[3,2,1]);

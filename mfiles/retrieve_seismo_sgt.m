@@ -1,4 +1,4 @@
-function [U,t]=retrieve_seismo_represent(snapinfo,id,M,varargin)
+function [U,t]=retrieve_seismo_sgt(snapinfo,id,M,varargin)
 %
 % $Date$
 % $Revision$
@@ -29,17 +29,17 @@ disp(['outdir is ' pnm_out])
 [lambda,varnm]=gather_media(snapinfo,'lambda','mediadir',pnm_media);
 [mu,varnm]=gather_media(snapinfo,'mu','mediadir',pnm_media);
 
-[Txx,t,tindx,varnm]=retrieve_seismo_snap(snapinfo,id,'Txx','outdir',pnm_out);
+[Txx,t,varnm]=retrieve_seismo_snap(snapinfo,id,'Txx','outdir',pnm_out);
 disp('  read Txx');
-[Tyy,t,tindx,varnm]=retrieve_seismo_snap(snapinfo,id,'Tyy','outdir',pnm_out);
+[Tyy,t,varnm]=retrieve_seismo_snap(snapinfo,id,'Tyy','outdir',pnm_out);
 disp('  read Tyy');
-[Tzz,t,tindx,varnm]=retrieve_seismo_snap(snapinfo,id,'Tzz','outdir',pnm_out);
+[Tzz,t,varnm]=retrieve_seismo_snap(snapinfo,id,'Tzz','outdir',pnm_out);
 disp('  read Tzz');
-[Txy,t,tindx,varnm]=retrieve_seismo_snap(snapinfo,id,'Txy','outdir',pnm_out);
+[Txy,t,varnm]=retrieve_seismo_snap(snapinfo,id,'Txy','outdir',pnm_out);
 disp('  read Txy');
-[Txz,t,tindx,varnm]=retrieve_seismo_snap(snapinfo,id,'Txz','outdir',pnm_out);
+[Txz,t,varnm]=retrieve_seismo_snap(snapinfo,id,'Txz','outdir',pnm_out);
 disp('  read Txz');
-[Tyz,t,tindx,varnm]=retrieve_seismo_snap(snapinfo,id,'Tyz','outdir',pnm_out);
+[Tyz,t,varnm]=retrieve_seismo_snap(snapinfo,id,'Tyz','outdir',pnm_out);
 disp('  read Tyz');
 Exx=zeros(size(Txx));Eyy=zeros(size(Tyy));Ezz=zeros(size(Tzz));
 Exy=zeros(size(Txy));Exz=zeros(size(Txz));Eyz=zeros(size(Tyz));

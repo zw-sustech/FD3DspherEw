@@ -105,6 +105,7 @@ end
 [x,y,z]=gather_coord(snapinfo,varargin{:});
 nx=size(x,1);ny=size(x,2);nz=size(x,3);
 x=permute(x,[2,1,3]); y=permute(y,[2,1,3]); z=permute(z,[2,1,3]);
+[x,y,z]=sph2cart(x,y,z);
 
 % -- time loop
 for nlayer=nbound(1):dn:nbound(2)
@@ -119,7 +120,7 @@ for nlayer=nbound(1):dn:nbound(2)
        set(hid,'PaperPosition',canv_size)
     end
 
-    [v,t,ntime,varnm]=gather_snap(snapinfo,id,nlayer,varargin{:});
+    [v,t,varnm]=gather_snap(snapinfo,id,nlayer,varargin{:});
     v=permute(v,[2,1,3]);
 
 % -- plot --

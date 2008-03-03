@@ -88,14 +88,7 @@ end
 [x,y,z]=gather_coord(snapinfo,varargin{:});
 nx=size(x,1);ny=size(x,2);nz=size(x,3);
 x=permute(x,[2,1,3]); y=permute(y,[2,1,3]); z=permute(z,[2,1,3]);
-
-if nx==1
-   indx_pcolor=2;
-elseif ny==1
-   indx_pcolor=1;
-else
-   indx_pcolor=3;
-end
+[x,y,z]=sph2cart(x,y,z);
 
 [v,varnm]=gather_dist(snapinfo,id,varargin{:});
 v=permute(v,[2,1,3]);

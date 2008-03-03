@@ -79,13 +79,13 @@ case 'nk'
     nk=sscanf(s,'%f',1);
 case 'nt'
     nt=sscanf(s,'%f',1);
-case 'pnm_grid'
+case 'GRID_ROOT'
     pnm_grid=sscanf(s,'%s',1);
-case 'pnm_media'
+case 'MEDIA_ROOT'
     pnm_media=sscanf(s,'%s',1);
-case 'pnm_src'
+case 'SOURCE_ROOT'
     pnm_src=sscanf(s,'%s',1);
-case 'pnm_output'
+case 'OUTPUT_ROOT'
     pnm_output=sscanf(s,'%s',1);
 case 'number_of_recv'
     num_recv=sscanf(s,'%f',1);

@@ -1,4 +1,4 @@
-function [V,t,nindx,varnm]=retrieve_seismo_snap(snapinfo,id,varargin)
+function [V,t,varnm]=retrieve_seismo_snap(snapinfo,id,varargin)
 % retreive seismogram from snap nc files
 %
 % $Date$
@@ -26,12 +26,9 @@ if numel(varargin{n})==1 | ~isnumeric(varargin{n})
    case {'Dx','Dy','Dz'}
        varnm=varargin{n};
        fnm_prefix='disp_';
-   case {'Txx','Tyy','Tzz'}
+   case {'Txx','Tyy','Tzz','Txy','Txz','Tyz'}
        varnm=varargin{n};
-       fnm_prefix='norm_';
-   case {'Txy','Txz','Tyz'}
-       varnm=varargin{n};
-       fnm_prefix='shear_';
+       fnm_prefix='sgt_';
    end
 end
 n=n+1;
@@ -76,7 +73,6 @@ while 1
     end
     %-- get data
         t(nt+1:nt+ntinc)=nc_varget(fnm_snap,'time' ,[ninnc-1],[ntinc],[nstride]);
-    nindx(nt+1:nt+ntinc)=nc_varget(fnm_snap,'ntime',[ninnc-1],[ntinc],[nstride]);
     V(nt+1:nt+ntinc,k1:k2,j1:j2,i1:i2)=nc_varget(fnm_snap,varnm, ...
           [ninnc-1,fliplr(subs)-1],[ntinc,fliplr(subc)],[nstride,fliplr(subt)]);
 
