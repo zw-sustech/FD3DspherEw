@@ -9,10 +9,11 @@
 ! $Revision$
 ! $LastChangedBy$
 
-#include "mod_macdrp.h"
 !-----------------------------------------------------------------------------
 program seis3d_station
 !-----------------------------------------------------------------------------
+
+#include "mod_macdrp.h"
 
 use constants_mod
 use string_mod, only : string_conf
@@ -92,7 +93,7 @@ contains
 !-----------------------------------------------------------------------------
 
 subroutine receiver_locate(n_i,n_j,n_k)
-integer n_i,n_j,n_k
+integer,intent(in) :: n_i,n_j,n_k
 integer,dimension(SEIS_GEO) :: p1
 character (len=SEIS_STRLEN) :: filenm
 integer npt,n,i,j,k,gi,gj,gk
@@ -138,3 +139,4 @@ end subroutine receiver_locate
 
 end program seis3d_station
 
+! vim:ft=fortran:ts=4:sw=4:nu:et:ai:

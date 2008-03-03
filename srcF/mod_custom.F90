@@ -12,6 +12,7 @@
 !-----------------------------------------------------------------------------
 module custom_mod
 !-----------------------------------------------------------------------------
+
 use constants_mod
 implicit none
 !private
@@ -180,3 +181,5 @@ end if
 end subroutine custom_media_perturb
 
 end module custom_mod
+
+! vim:ft=fortran:ts=4:sw=4:nu:et:ai:

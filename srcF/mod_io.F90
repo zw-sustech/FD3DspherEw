@@ -28,9 +28,7 @@ public :: io_wave_export,io_wave_close
 public :: io_enum,io_out_pattern
 public :: io_delete
 public :: get_fnm_seismo,get_fnm_seismoinfo,       &
-          get_fnm_snapnode,get_fnm_snapnode_n,     &
-          get_fnm_snapcoord,get_fnm_snap,          &
-          get_fnm_recv,get_fnm_line
+          get_fnm_snapnode,get_fnm_snapnode_n
 public :: seismo_on_this,retrieve_recvline
 public :: retrieve_snap_seis,retrieve_snap_time
 public :: corr_subse,corr_indx
@@ -52,7 +50,6 @@ real(SP),allocatable,public ::    &
 real(SP),public :: topo_hyper_height
 
 integer,allocatable,public :: &
-     snap_id(:),              &
      snap_tinv(:),            &
      snap_tcnt(:),            &
      snap_gsubs(:,:),         &
@@ -63,85 +60,56 @@ integer,allocatable,public :: &
      snap_subt(:,:),          &
      snap_sube(:,:),          &
      snap_subc(:,:),          &
-     snap_ncid(:),            &
-     snap_vxid(:),            &
-     snap_vyid(:),            &
-     snap_vzid(:),            &
-     snap_tid(:),             &
-     snap_nid(:),             &
-     norm_ncid(:),            &
-     norm_vxid(:),            &
-     norm_vyid(:),            &
-     norm_vzid(:),            &
-     norm_tid(:),             &
-     norm_nid(:),             &
-     Tsh_ncid(:),             &
-     Tsh_vxid(:),             &
-     Tsh_vyid(:),             &
-     Tsh_vzid(:),             &
-     Tsh_tid(:),              &
-     Tsh_nid(:)
+     sgt_ncid(:),             &
+     sgt_vid(:,:),            &
+     sgt_tid(:),              &
+     vel_ncid(:),             &
+     vel_vid(:,:),            &
+     vel_tid(:)
 logical,allocatable,public :: &
+     snap_ishere(:),          &
      snap_oflag(:),           &
-     stress_out(:)
+     sgt_out(:),              &
+     vel_out(:)
 
-character (len=SEIS_STRLEN),public ::           &
-    pnm_out,pnm_seismo,pnm_seismoinfo,pnm_snap, &
-    fnm_recv, prefix_line, prefix_snap,         &
+character (len=SEIS_STRLEN),public :: &
+    pnm_out,pnm_seismoinfo,           &
     pnm_rest, fnm_rest, fnm_rest_point
 
 !---------------------------------------------
 integer pt_ncid,pt_tid,pt_vxid,pt_vyid,pt_vzid
 integer rest_tinv,run_from_rest
-integer :: nt_dyn_rest
+integer :: nt_dyn_rest, nt_dyn_sync, nt_dyn_new
 
 !---------------------------------------------------------------------------
 contains
 !---------------------------------------------------------------------------
 subroutine io_init(fnm_input)
-character (len=*) :: fnm_input
+character (len=*),intent(in) :: fnm_input
 integer fid
 
 fid=1001
 open(fid,file=trim(fnm_input),status="old")
+
+call string_conf(fid,1,'OUTPUT_ROOT',2,pnm_out)
+call string_conf(fid,1,'SEISMOINFO_ROOT',2,pnm_seismoinfo)
 !-- log file --
 call string_conf(fid,1,'fnm_log',2,fnm_log)
 
 !-- restart --
-call string_conf(fid,1,'pnm_rest',2,pnm_rest)
-call string_conf(fid,1,'rest_tinv',2,rest_tinv)
-call string_conf(fid,1,'run_from_rest',2,run_from_rest)
-call string_conf(fid,1,'fnm_rest_point',2,fnm_rest_point)
-nt_dyn_rest=0
-
-call string_conf(fid,1,'pnm_output',2,pnm_out)
-call string_conf(fid,1,'pnm_seismo',2,pnm_seismo)
-call string_conf(fid,1,'pnm_seismoinfo',2,pnm_seismoinfo)
-call string_conf(fid,1,'pnm_snap',2,pnm_snap)
-call string_conf(fid,1,'fnm_recv',2,fnm_recv)
-call string_conf(fid,1,'prefix_line',2,prefix_line)
-call string_conf(fid,1,'prefix_snap',2,prefix_snap)
-
-!fnm_seismo='seis.nc'
-!fnm_seismoinfo='seisinfo.nc'
-!pref_snap='snap_'
-!fnm_snapinfo='snapinfo.nc'
-!fnm_recv='recv.nc'
-!pref_line='line_'
+call string_conf(fid,1,'CHECKPOINT_ROOT',2,pnm_rest)
+call string_conf(fid,1,'checkpoint_tinv',2,rest_tinv)
+call string_conf(fid,1,'run_from_checkpoint',2,run_from_rest)
+call string_conf(fid,1,'sudden_checkpoint',2,fnm_rest_point)
+nt_dyn_rest=0; nt_dyn_sync=0;
 
 close(fid)
-
-!if (masternode) then
-!   open(fid,file=trim(fnm_log),status="unknown")
-!     write(fid,*) "# seis3d_wave run time log"
-!   close(fid)
-!end if
 end subroutine io_init
 
 !---------------------------------------------------------------------------
 
 subroutine io_pt_read(fnm_input)
-character (len=*) :: fnm_input
+character (len=*),intent(in) :: fnm_input
 real(SP),dimension(SEIS_GEO) :: xyz0,dxyz
 integer fid,n,m,npt
 
@@ -182,7 +150,7 @@ end do
 pt_xyz(1:2,:)=pt_xyz(1:2,:)*PI/180.0_SP
 end subroutine io_pt_read
 subroutine alloc_pt(npt,nline)
- integer npt,nline
+ integer,intent(in) :: npt,nline
  allocate(pt_xyz(SEIS_GEO,npt))
  allocate(pt_id (       2,npt))
  allocate(num_line_pt(nline))
@@ -209,7 +177,8 @@ end subroutine io_pt_import
 !---------------------------------------------------------------------------
 
 subroutine io_snap_read(fnm_input)
-character (len=*) :: fnm_input
+character (len=*),intent(in) :: fnm_input
+character (len=2) :: varnm
 integer fid,n,m
 
 fid=1001
@@ -225,9 +194,10 @@ do m=1,SEIS_GEO
 end do
  call string_conf(fid,1,trim(io_enum('snap_',n)),1+1+3*SEIS_GEO,snap_tinv(n))
  call string_conf(fid,1,trim(io_enum('snap_',n)),2+1+3*SEIS_GEO,snap_tcnt(n))
- call string_conf(fid,1,trim(io_enum('snap_',n)),3+1+3*SEIS_GEO,stress_out(n))
+ call string_conf(fid,1,trim(io_enum('snap_',n)),3+1+3*SEIS_GEO,varnm)
+ sgt_out(n)=.false.; if (index(varnm,"T")/=0) sgt_out(n)=.true.
+ vel_out(n)=.false.; if (index(varnm,"V")/=0) vel_out(n)=.true.
  call corr_indx(snap_subs(:,n),snap_subc(:,n),snap_subt(:,n),snap_sube(:,n))
- snap_id(n)=n
 end do
 !snap_sube=snap_subs+snap_subt*(snap_subc-1)
 close(fid)
@@ -245,73 +215,51 @@ subroutine alloc_snap(nsnap)
   allocate(snap_subc(SEIS_GEO,nsnap))
   allocate(snap_tinv(nsnap))
   allocate(snap_tcnt(nsnap))
-  allocate(snap_id(nsnap))
-  allocate(snap_ncid(nsnap))
-  allocate(snap_vxid(nsnap))
-  allocate(snap_vyid(nsnap))
-  allocate(snap_vzid(nsnap))
-  allocate(snap_tid(nsnap))
-  allocate(snap_nid(nsnap))
+  allocate(snap_ishere(nsnap)); snap_ishere=.false.
   allocate(snap_oflag(nsnap)); snap_oflag=.false.
-  allocate(norm_ncid(nsnap))
-  allocate(norm_vxid(nsnap))
-  allocate(norm_vyid(nsnap))
-  allocate(norm_vzid(nsnap))
-  allocate(norm_tid(nsnap))
-  allocate(norm_nid(nsnap))
-  allocate(Tsh_ncid(nsnap))
-  allocate(Tsh_vxid(nsnap))
-  allocate(Tsh_vyid(nsnap))
-  allocate(Tsh_vzid(nsnap))
-  allocate(Tsh_tid(nsnap))
-  allocate(Tsh_nid(nsnap))
-  allocate(stress_out(nsnap)); stress_out=.false.
+  allocate(vel_ncid(nsnap))
+  allocate(vel_vid(SEIS_GEO,nsnap))
+  allocate(vel_tid(nsnap))
+  allocate(vel_out(nsnap)); vel_out=.false.
+  allocate(sgt_ncid(nsnap))
+  allocate(sgt_vid(6,nsnap))
+  allocate(sgt_tid(nsnap))
+  allocate(sgt_out(nsnap)); sgt_out=.false.
 end subroutine alloc_snap
 
 subroutine io_snap_locate
 integer,dimension(SEIS_GEO) :: subs,subc,subt,sube
 integer,dimension(SEIS_GEO) :: gsubs,gsube
-integer n,nsnap,tinv,tcnt
+integer n
 
-nsnap=0
 do n=1,num_snap
    subs=snap_subs(:,n);subc=snap_subc(:,n);subt=snap_subt(:,n)
    sube=snap_sube(:,n)
-   tinv=snap_tinv(n)
-   tinv=snap_tinv(n)
-   tcnt=snap_tcnt(n)
    ! convert into this thread
 if (      subs(1)<=ngi2 .and. sube(1)>=ngi1 &
     .and. subs(2)<=ngj2 .and. sube(2)>=ngj1 &
     .and. subs(3)<=ngk2 .and. sube(3)>=ngk1 ) then
-   nsnap=nsnap+1
+   snap_ishere(n)=.true.
    call corr_subse(subs,subc,subt,sube)
    gsubs(1)=out_i(subs(1)); gsubs(2)=out_j(subs(2)); gsubs(3)=out_k(subs(3))
    gsube(1)=out_i(sube(1)); gsube(2)=out_j(sube(2)); gsube(3)=out_k(sube(3))
-   snap_gsubs(:,nsnap)=gsubs
-   snap_gsube(:,nsnap)=gsube
-   snap_gsubc(:,nsnap)=subc
-   snap_gsubt(:,nsnap)=subt
-   snap_subs(1,nsnap)=swmpi_locli(subs(1),thisid(1))
-   snap_subs(2,nsnap)=swmpi_loclj(subs(2),thisid(2))
-   snap_subs(3,nsnap)=swmpi_loclk(subs(3),thisid(3))
-   snap_sube(1,nsnap)=swmpi_locli(sube(1),thisid(1))
-   snap_sube(2,nsnap)=swmpi_loclj(sube(2),thisid(2))
-   snap_sube(3,nsnap)=swmpi_loclk(sube(3),thisid(3))
-   snap_subc(:,nsnap)=subc
-   snap_subt(:,nsnap)=subt
-   snap_id(nsnap)=n
-   snap_tinv(nsnap)=tinv
-   snap_tcnt(nsnap)=tcnt
-   stress_out(nsnap)=stress_out(n)
+   snap_gsubs(:,n)=gsubs
+   snap_gsube(:,n)=gsube
+   snap_gsubc(:,n)=subc
+   snap_subs(1,n)=swmpi_locli(subs(1),thisid(1))
+   snap_subs(2,n)=swmpi_loclj(subs(2),thisid(2))
+   snap_subs(3,n)=swmpi_loclk(subs(3),thisid(3))
+   snap_sube(1,n)=swmpi_locli(sube(1),thisid(1))
+   snap_sube(2,n)=swmpi_loclj(sube(2),thisid(2))
+   snap_sube(3,n)=swmpi_loclk(sube(3),thisid(3))
+   snap_subc(:,n)=subc
 end if
 end do
-num_snap=nsnap
 end subroutine io_snap_locate
 !---------------------------------------------------------------------------
 
 subroutine corr_indx(subs,subc,subt,sube)
-integer,dimension(SEIS_GEO) :: subs,subc,subt,sube
+integer,dimension(SEIS_GEO),intent(inout) :: subs,subc,subt,sube
    ! -1 global first index
    ! 0 index of source center
    ! -2 global index of free surface
@@ -351,7 +299,7 @@ integer,dimension(SEIS_GEO) :: subs,subc,subt,sube
 end subroutine corr_indx
 subroutine corr_subse(subs,subc,subt,sube)
 ! in global mode
-integer,dimension(SEIS_GEO) :: subs,subc,subt,sube
+integer,dimension(SEIS_GEO),intent(inout) :: subs,subc,subt,sube
 integer n
  if (ngi1>subs(1)) then
     n=ngi1-subs(1)
@@ -391,19 +339,35 @@ end subroutine corr_subse
 !---------------------------------------------------------------------------
 subroutine io_rest_export(Txx,Tyy,Tzz,Txy,Txz,Tyz,Vx,Vy,Vz,ntime)
 use mpi
-integer ntime
-real(SP),dimension(nx1:nx2,ny1:ny2,nz1:nz2) :: Txx,Tyy,Tzz,Txy,Txz,Tyz,Vx,Vy,Vz
+integer,intent(in) :: ntime
+real(SP),dimension(:,:,:),intent(in) :: Txx,Tyy,Tzz,Txy,Txz,Tyz,Vx,Vy,Vz
 integer,dimension(SEIS_GEO) :: subs,subc,subt
 character (len=SEIS_STRLEN) :: filenm
 integer ierr,fid,n
   fid=5001
 if (mod(ntime,10)==0) then
 if (masternode) then
-  open(fid,file=trim(fnm_rest_point),status='old')
-  read(fid,*) nt_dyn_rest
+  open(fid,file=trim(fnm_rest_point),status='old',iostat=ierr)
+  if (ierr/=0)  &
+    call swmpi_except("io_rest_export: error when open "//trim(fnm_rest_point))
+  read(fid,*) nt_dyn_rest, nt_dyn_sync,nt_dyn_new
+  close(fid)
   close(fid)
 end if
   call MPI_BCAST(nt_dyn_rest,1,MPI_INTEGER,0,SWMPI_COMM,ierr)
+  call MPI_BCAST(nt_dyn_sync,1,MPI_INTEGER,0,SWMPI_COMM,ierr)
+  call MPI_BCAST(nt_dyn_new ,1,MPI_INTEGER,0,SWMPI_COMM,ierr)
+  if (nt_dyn_new>nt) call reset_nt(nt_dyn_new)
+end if
+
+if (ntime==nt_dyn_rest .or. ntime==nt_dyn_sync) then
+  if (num_pt>0) ierr=nf90_sync(pt_ncid)
+  do n=1,num_snap
+     if (snap_oflag(n)) then
+        if (vel_out(n)) ierr=nf90_sync(vel_ncid(n))
+        if (sgt_out(n)) ierr=nf90_sync(sgt_ncid(n))
+     end if
+  end do
 end if
 
 if (ntime/=nt_dyn_rest .and. mod(ntime,rest_tinv)/=0) return
@@ -431,16 +395,6 @@ if (ntime/=nt_dyn_rest .and. mod(ntime,rest_tinv)/=0) return
   call nfseis_varput( filenm,'Txy',Txy,subs,subc,subt)
   call nfseis_varput( filenm,'Txz',Txz,subs,subc,subt)
   call nfseis_varput( filenm,'Tyz',Tyz,subs,subc,subt)
-  if (num_pt>0) ierr=nf90_sync(pt_ncid)
-  do n=1,num_snap
-     if (snap_oflag(n)) then
-        ierr=nf90_sync(snap_ncid(n))
-        if (stress_out(n)) then
-           ierr=nf90_sync(norm_ncid(n))
-           ierr=nf90_sync(Tsh_ncid(n))
-        end if
-     end if
-  end do
 
   if (ntime-rest_tinv>0) then
      fnm_rest='rest_t'//trim(io_out_pattern(ntime-rest_tinv,5))//'.nc'
@@ -449,8 +403,8 @@ if (ntime/=nt_dyn_rest .and. mod(ntime,rest_tinv)/=0) return
   end if
 end subroutine io_rest_export
 subroutine io_rest_import(Txx,Tyy,Tzz,Txy,Txz,Tyz,Vx,Vy,Vz,ntime)
-integer ntime
-real(SP),dimension(nx1:nx2,ny1:ny2,nz1:nz2) :: Txx,Tyy,Tzz,Txy,Txz,Tyz,Vx,Vy,Vz
+integer,intent(out) :: ntime
+real(SP),dimension(:,:,:),intent(out) :: Txx,Tyy,Tzz,Txy,Txz,Tyz,Vx,Vy,Vz
 integer,dimension(SEIS_GEO) :: subs,subc,subt
 character (len=SEIS_STRLEN) :: filenm
 if (run_from_rest==0) then
@@ -488,8 +442,8 @@ end if
 end subroutine io_seismo_init
 
 subroutine io_seismo_put(Vx,Vy,Vz,ntime)
-real(SP),dimension(nx1:nx2,ny1:ny2,nz1:nz2) :: Vx,Vy,Vz
-integer ntime
+real(SP),dimension(:,:,:),intent(in) :: Vx,Vy,Vz
+integer,intent(in) :: ntime
 real(SP) :: t
 integer i,j,k,n,m,ierr
 
@@ -520,19 +474,22 @@ end subroutine io_seismo_close
 
 !---------------------------------------------------------------------------
 subroutine io_wave_export(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,stept)
-real(SP),dimension(nx1:nx2,ny1:ny2,nz1:nz2) :: Vx,Vy,Vz
-real(SP),dimension(nx1:nx2,ny1:ny2,nz1:nz2) :: Txx,Tyy,Tzz,Txy,Txz,Tyz
+real(SP),dimension(:,:,:),intent(in) :: Vx,Vy,Vz
+real(SP),dimension(:,:,:),intent(in) :: Txx,Tyy,Tzz,Txy,Txz,Tyz
+integer,intent(in) :: ntime
+real(SP),intent(in) :: stept
+
 integer,dimension(SEIS_GEO) :: subs,subc,subt,sube
 integer,dimension(SEIS_GEO) :: isubs,isube
-!integer,dimension(SEIS_GEO) :: gsubs,gsubc,gsubt,gsube
-integer ntime
-real(SP) :: stept
+integer,dimension(SEIS_GEO+1) :: startput,countput,strideput
 character (len=SEIS_STRLEN) :: filenm
 real(SP) :: t
 integer n,n1
 t=ntime*stept
 do n=1,num_snap
-if ( mod(ntime,snap_tinv(n))==0) then
+   if (.not. snap_ishere(n)) cycle
+   if (mod(ntime,snap_tinv(n))/=0) cycle
+
    n1=mod(ntime/snap_tinv(n)-1,snap_tcnt(n))
    subs=snap_subs(:,n); subt=snap_subt(:,n); sube=snap_sube(:,n)
    subc=snap_subc(:,n)
@@ -540,162 +497,136 @@ if ( mod(ntime,snap_tinv(n))==0) then
    isube(1) =out_i(sube(1));isube(2)=out_j(sube(2));isube(3)=out_k(sube(3))
 
 if ( n1==0 ) then
-   filenm=get_fnm_snapnode(pnm_out,'snap_',n,ntime,thisid(1),thisid(2),thisid(3))
-   call nfseis_wave_init(filenm,'Vx','Vy','Vz',                &
-          snap_ncid(n),snap_vxid(n),snap_vyid(n),snap_vzid(n), &
-          snap_tid(n),snap_nid(n),stept*snap_tinv(n),          &
-          snap_gsubs(:,n),                                     &
-          snap_gsubc(:,n),                                     &
-          snap_gsubt(:,n),                                     &
-          snap_gsube(:,n),                                     &
-                    isubs,                                     &
-                     subc,                                     &
-                     subt,                                     &
-                    isube,                                     &
-          "snap of wave feilds")
+   if (vel_out(n)) then
+   filenm=get_fnm_snapnode(pnm_out,'vel_',n,ntime,thisid(1),thisid(2),thisid(3))
+   call nfseis_snap_header(filenm,vel_ncid(n),vel_tid(n),stept*snap_tinv(n),  &
+          snap_gsubs(:,n), snap_gsubc(:,n), snap_gsubt(:,n), snap_gsube(:,n), &
+          isubs, subc, subt, isube,                                           &
+          "snap of velocity feilds")
+   call nfseis_snap_addvar(vel_ncid(n),'Vx',vel_vid(1,n))
+   call nfseis_snap_addvar(vel_ncid(n),'Vy',vel_vid(2,n))
+   call nfseis_snap_addvar(vel_ncid(n),'Vz',vel_vid(3,n))
+   call nfseis_snap_enddef(vel_ncid(n))
    snap_oflag(n)=.true.
-
-   if (stress_out(n)) then
-   filenm=get_fnm_snapnode(pnm_out,'norm_',n,                  &
-          ntime,thisid(1),thisid(2),thisid(3))
-   call nfseis_wave_init(filenm,'Txx','Tyy','Tzz',             &
-          norm_ncid(n),norm_vxid(n),norm_vyid(n),norm_vzid(n), &
-          norm_tid(n),norm_nid(n),stept*snap_tinv(n),          &
-          snap_gsubs(:,n),                                     &
-          snap_gsubc(:,n),                                     &
-          snap_gsubt(:,n),                                     &
-          snap_gsube(:,n),                                     &
-                    isubs,                                     &
-                     subc,                                     &
-                     subt,                                     &
-                    isube,                                     &
-          "snap of normal stress")
-   filenm=get_fnm_snapnode(pnm_out,'shear_',n,             &
-          ntime,thisid(1),thisid(2),thisid(3))
-   call nfseis_wave_init(filenm,'Txy','Txz','Tyz',         &
-          Tsh_ncid(n),Tsh_vxid(n),Tsh_vyid(n),Tsh_vzid(n), &
-          Tsh_tid(n),Tsh_nid(n),stept*snap_tinv(n),        &
-          snap_gsubs(:,n),                                 &
-          snap_gsubc(:,n),                                 &
-          snap_gsubt(:,n),                                 &
-          snap_gsube(:,n),                                 &
-                    isubs,                                 &
-                     subc,                                 &
-                     subt,                                 &
-                    isube,                                 &
-          "snap of shear stress")
+   end if
+   if (sgt_out(n)) then
+   filenm=get_fnm_snapnode(pnm_out,'sgt_',n,ntime,thisid(1),thisid(2),thisid(3))
+   call nfseis_snap_header(filenm,sgt_ncid(n),sgt_tid(n),stept*snap_tinv(n),  &
+          snap_gsubs(:,n), snap_gsubc(:,n), snap_gsubt(:,n), snap_gsube(:,n), &
+          isubs, subc, subt, isube,                                           &
+          "snap of stress feilds")
+   call nfseis_snap_addvar(sgt_ncid(n),'Txx',sgt_vid(1,n))
+   call nfseis_snap_addvar(sgt_ncid(n),'Tyy',sgt_vid(2,n))
+   call nfseis_snap_addvar(sgt_ncid(n),'Tzz',sgt_vid(3,n))
+   call nfseis_snap_addvar(sgt_ncid(n),'Txy',sgt_vid(4,n))
+   call nfseis_snap_addvar(sgt_ncid(n),'Txz',sgt_vid(5,n))
+   call nfseis_snap_addvar(sgt_ncid(n),'Tyz',sgt_vid(6,n))
+   call nfseis_snap_enddef(sgt_ncid(n))
+   snap_oflag(n)=.true.
    end if
 elseif ( run_from_rest>0 .and. ntime-run_from_rest<=snap_tinv(n) ) then
-   filenm=get_fnm_snapnode(pnm_out,'snap_',n,                  &
-          ntime,                                               &
-          thisid(1),thisid(2),thisid(3))
-   call nfseis_wave_reinit(filenm,'Vx','Vy','Vz',              &
-          snap_ncid(n),snap_vxid(n),snap_vyid(n),snap_vzid(n), &
-          snap_tid(n),snap_nid(n))
+   if (vel_out(n)) then
+   filenm=get_fnm_snapnode(pnm_out,'vel_',n,ntime,thisid(1),thisid(2),thisid(3))
+   call nfseis_open(filenm,vel_ncid(n))
+   call nfseis_inq_varid(vel_ncid(n),'Vx',vel_vid(1,n))
+   call nfseis_inq_varid(vel_ncid(n),'Vy',vel_vid(2,n))
+   call nfseis_inq_varid(vel_ncid(n),'Vz',vel_vid(3,n))
+   call nfseis_inq_varid(vel_ncid(n),'time',vel_tid(n))
    snap_oflag(n)=.true.
-   if (stress_out(n)) then
-   filenm=get_fnm_snapnode(pnm_out,'norm_',n,                  &
-          ntime,thisid(1),thisid(2),thisid(3))
-   call nfseis_wave_reinit(filenm,'Txx','Tyy','Tzz',           &
-          norm_ncid(n),norm_vxid(n),norm_vyid(n),norm_vzid(n), &
-          norm_tid(n),norm_nid(n))
-   filenm=get_fnm_snapnode(pnm_out,'shear_',n,                 &
-          ntime,thisid(1),thisid(2),thisid(3))
-   call nfseis_wave_reinit(filenm,'Txy','Txz','Tyz',           &
-          Tsh_ncid(n),Tsh_vxid(n),Tsh_vyid(n),Tsh_vzid(n),     &
-          Tsh_tid(n),Tsh_nid(n))
+   end if
+   if (sgt_out(n)) then
+   filenm=get_fnm_snapnode(pnm_out,'sgt_',n,ntime,thisid(1),thisid(2),thisid(3))
+   call nfseis_open(filenm,sgt_ncid(n))
+   call nfseis_inq_varid(sgt_ncid(n),'Txx',sgt_vid(1,n))
+   call nfseis_inq_varid(sgt_ncid(n),'Tyy',sgt_vid(2,n))
+   call nfseis_inq_varid(sgt_ncid(n),'Tzz',sgt_vid(3,n))
+   call nfseis_inq_varid(sgt_ncid(n),'Txy',sgt_vid(4,n))
+   call nfseis_inq_varid(sgt_ncid(n),'Txz',sgt_vid(5,n))
+   call nfseis_inq_varid(sgt_ncid(n),'Tyz',sgt_vid(6,n))
+   call nfseis_inq_varid(sgt_ncid(n),'time',sgt_tid(n))
+   snap_oflag(n)=.true.
    end if
 end if
 
-   call nfseis_put(snap_ncid(n),snap_tid(n),t,     &
+   startput=(/1,1,1,n1+1/);countput=(/subc,1/);strideput=(/1,1,1,1/)
+
+   if (vel_out(n)) then
+   call nfseis_put(vel_ncid(n),vel_tid(n),t, &
         (/n1+1/),(/1/),(/1/) )
-   call nfseis_put(snap_ncid(n),snap_nid(n),ntime, &
+   call nfseis_put(vel_ncid(n),vel_vid(1,n), &
+        Vx(subs(1):sube(1):subt(1),          &
+           subs(2):sube(2):subt(2),          &
+           subs(3):sube(3):subt(3)),         &
+        startput,countput,strideput )
+   call nfseis_put(vel_ncid(n),vel_vid(2,n), &
+        Vy(subs(1):sube(1):subt(1),          &
+           subs(2):sube(2):subt(2),          &
+           subs(3):sube(3):subt(3)),         &
+        startput,countput,strideput )
+   call nfseis_put(vel_ncid(n),vel_vid(3,n), &
+        Vz(subs(1):sube(1):subt(1),          &
+           subs(2):sube(2):subt(2),          &
+           subs(3):sube(3):subt(3)),         &
+        startput,countput,strideput )
+   end if
+   if (sgt_out(n)) then
+   call nfseis_put(sgt_ncid(n),sgt_tid(n),t, &
         (/n1+1/),(/1/),(/1/) )
-   call nfseis_put(snap_ncid(n),snap_vxid(n),      &
-        Vx(subs(1):sube(1):subt(1),                &
-           subs(2):sube(2):subt(2),                &
-           subs(3):sube(3):subt(3)),               &
-        (/1,1,1,n1+1/),(/subc,1/),(/1,1,1,1/) )
-   call nfseis_put(snap_ncid(n),snap_vyid(n),      &
-        Vy(subs(1):sube(1):subt(1),                &
-           subs(2):sube(2):subt(2),                &
-           subs(3):sube(3):subt(3)),               &
-        (/1,1,1,n1+1/),(/subc,1/),(/1,1,1,1/) )
-   call nfseis_put(snap_ncid(n),snap_vzid(n),      &
-        Vz(subs(1):sube(1):subt(1),                &
-           subs(2):sube(2):subt(2),                &
-           subs(3):sube(3):subt(3)),               &
-        (/1,1,1,n1+1/),(/subc,1/),(/1,1,1,1/) )
-   if (stress_out(n)) then
-   call nfseis_put(norm_ncid(n),norm_tid(n),t,     &
-        (/n1+1/),(/1/),(/1/) )
-   call nfseis_put(norm_ncid(n),norm_nid(n),ntime, &
-        (/n1+1/),(/1/),(/1/) )
-   call nfseis_put(norm_ncid(n),norm_vxid(n),      &
-        Txx(subs(1):sube(1):subt(1),               &
-            subs(2):sube(2):subt(2),               &
-            subs(3):sube(3):subt(3)),              &
-        (/1,1,1,n1+1/),(/subc,1/),(/1,1,1,1/) )
-   call nfseis_put(norm_ncid(n),norm_vyid(n),      &
-        Tyy(subs(1):sube(1):subt(1),               &
-            subs(2):sube(2):subt(2),               &
-            subs(3):sube(3):subt(3)),              &
-        (/1,1,1,n1+1/),(/subc,1/),(/1,1,1,1/) )
-   call nfseis_put(norm_ncid(n),norm_vzid(n),      &
-        Tzz(subs(1):sube(1):subt(1),               &
-            subs(2):sube(2):subt(2),               &
-            subs(3):sube(3):subt(3)),              &
-        (/1,1,1,n1+1/),(/subc,1/),(/1,1,1,1/) )
-   call nfseis_put(Tsh_ncid(n),Tsh_tid(n),t,     &
-        (/n1+1/),(/1/),(/1/) )
-   call nfseis_put(Tsh_ncid(n),Tsh_nid(n),ntime, &
-        (/n1+1/),(/1/),(/1/) )
-   call nfseis_put(Tsh_ncid(n),Tsh_vxid(n),      &
-        Txy(subs(1):sube(1):subt(1),             &
-            subs(2):sube(2):subt(2),             &
-            subs(3):sube(3):subt(3)),            &
-        (/1,1,1,n1+1/),(/subc,1/),(/1,1,1,1/) )
-   call nfseis_put(Tsh_ncid(n),Tsh_vyid(n),      &
-        Txz(subs(1):sube(1):subt(1),             &
-            subs(2):sube(2):subt(2),             &
-            subs(3):sube(3):subt(3)),            &
-        (/1,1,1,n1+1/),(/subc,1/),(/1,1,1,1/) )
-   call nfseis_put(Tsh_ncid(n),Tsh_vzid(n),      &
-        Tyz(subs(1):sube(1):subt(1),             &
-            subs(2):sube(2):subt(2),             &
-            subs(3):sube(3):subt(3)),            &
-        (/1,1,1,n1+1/),(/subc,1/),(/1,1,1,1/) )
+   call nfseis_put(sgt_ncid(n),sgt_vid(1,n), &
+        Txx(subs(1):sube(1):subt(1),         &
+            subs(2):sube(2):subt(2),         &
+            subs(3):sube(3):subt(3)),        &
+        startput,countput,strideput )
+   call nfseis_put(sgt_ncid(n),sgt_vid(2,n), &
+        Tyy(subs(1):sube(1):subt(1),         &
+            subs(2):sube(2):subt(2),         &
+            subs(3):sube(3):subt(3)),        &
+        startput,countput,strideput )
+   call nfseis_put(sgt_ncid(n),sgt_vid(3,n), &
+        Tzz(subs(1):sube(1):subt(1),         &
+            subs(2):sube(2):subt(2),         &
+            subs(3):sube(3):subt(3)),        &
+        startput,countput,strideput )
+   call nfseis_put(sgt_ncid(n),sgt_vid(4,n), &
+        Txy(subs(1):sube(1):subt(1),         &
+            subs(2):sube(2):subt(2),         &
+            subs(3):sube(3):subt(3)),        &
+        startput,countput,strideput )
+   call nfseis_put(sgt_ncid(n),sgt_vid(5,n), &
+        Txz(subs(1):sube(1):subt(1),         &
+            subs(2):sube(2):subt(2),         &
+            subs(3):sube(3):subt(3)),        &
+        startput,countput,strideput )
+   call nfseis_put(sgt_ncid(n),sgt_vid(6,n), &
+        Tyz(subs(1):sube(1):subt(1),         &
+            subs(2):sube(2):subt(2),         &
+            subs(3):sube(3):subt(3)),        &
+        startput,countput,strideput )
    end if
 
 if ( n1==snap_tcnt(n)-1 ) then
-   call nfseis_close(snap_ncid(n))
-   if (stress_out(n)) then
-       call nfseis_close(norm_ncid(n))
-       call nfseis_close(Tsh_ncid(n))
-   end if
+   if (vel_out(n)) call nfseis_close(vel_ncid(n))
+   if (sgt_out(n)) call nfseis_close(sgt_ncid(n))
    snap_oflag(n)=.false.
 end if
 
-end if ! output
 end do
 end subroutine io_wave_export
 
 subroutine io_wave_close
 integer n
 do n=1,num_snap
-if (snap_oflag(n)) &
-   call nfseis_close(snap_ncid(n))
-   if (stress_out(n)) then
-       call nfseis_close(norm_ncid(n))
-       call nfseis_close(Tsh_ncid(n))
-   end if
+if (snap_oflag(n)) then
+   if (vel_out(n)) call nfseis_close(vel_ncid(n))
+   if (sgt_out(n)) call nfseis_close(sgt_ncid(n))
+end if
 end do
 end subroutine io_wave_close
 
 subroutine read_nc_list(pnm_list,fnm_list,varnm,var,subs1,subc1)
-character (len=*) :: pnm_list,fnm_list,varnm
-real(SP),dimension(:,:) :: var
-integer,dimension(SEIS_GEO) :: subs1,subc1
+character (len=*),intent(in) :: pnm_list,fnm_list,varnm
+real(SP),dimension(:,:),intent(out) :: var
+integer,dimension(SEIS_GEO),intent(in) :: subs1,subc1
 
 character (len=SEIS_STRLEN) :: fnm_nc
 integer,dimension(SEIS_GEO) :: subs,subc,subt
@@ -772,11 +703,11 @@ end do
    deallocate(ids)
 end if
 end function seismo_on_this
-subroutine retrieve_recvline(fnm_nc,id,Vx,Vy,Vz,nts,ntc,ntt,T)
-character (len=*) :: fnm_nc
-integer id,nts,ntc,ntt
-real,dimension(:) :: Vx,Vy,Vz
-real,dimension(:),optional :: T
+subroutine retrieve_recvline(fnm_nc,id,vnm,V,nts,ntc,ntt,T)
+character (len=*),intent(in) :: fnm_nc,vnm
+integer,intent(in) :: id,nts,ntc,ntt
+real,dimension(:),intent(out) :: V
+real,dimension(:),optional,intent(out) :: T
 
 integer numt
 
@@ -791,18 +722,16 @@ if (numt-nts+1<ntc/ntt) then
    stop 1
 end if
 
-call nfseis_varget(fnm_nc,'Vx',Vx(1:ntc),(/id,nts/),(/1,ntc/),(/1,ntt/))
-call nfseis_varget(fnm_nc,'Vy',Vy(1:ntc),(/id,nts/),(/1,ntc/),(/1,ntt/))
-call nfseis_varget(fnm_nc,'Vz',Vz(1:ntc),(/id,nts/),(/1,ntc/),(/1,ntt/))
+call nfseis_varget(fnm_nc,trim(vnm),V,(/id,nts/),(/1,ntc/),(/1,ntt/))
 if (present(T)) then
-call nfseis_varget(fnm_nc,'time',T(1:ntc),(/nts/),(/ntc/),(/ntt/))
+call nfseis_varget(fnm_nc,'time',T,(/nts/),(/ntc/),(/ntt/))
 end if
 end subroutine retrieve_recvline
 
 subroutine retrieve_snap_seis(fnm_prefix,i,j,k,varnm,var,num_nt)
-character (len=*) :: fnm_prefix,varnm
-integer i,j,k,num_nt
-real,dimension(:) :: var
+character (len=*),intent(in) :: fnm_prefix,varnm
+integer,intent(in) :: i,j,k,num_nt
+real,dimension(:),intent(out) :: var
 character (len=SEIS_STRLEN) :: filenm
 
 integer m,n,mt
@@ -816,14 +745,15 @@ do
    call nfseis_diminfo(filenm,'time',mt)
    if (m+mt>num_nt) mt=num_nt-m
    call nfseis_varget(filenm,varnm,var(m+1:m+mt), &
-        (/i,j,k,1/),(/1,1,1,mt/),(/1,1,1,1/))
+        (/i,j,k,1/),(/1,1,1,mt/),(/1,1,1,1/)  &
+        )
    m=m+mt
 end do
 end subroutine retrieve_snap_seis
 subroutine retrieve_snap_time(fnm_prefix,T,num_nt)
-character (len=*) :: fnm_prefix
-real,dimension(:) :: T
-integer num_nt
+character (len=*),intent(in) :: fnm_prefix
+real,dimension(:),intent(out) :: T
+integer,intent(in) :: num_nt
 character (len=SEIS_STRLEN) :: filenm
 
 integer m,n,mt
@@ -843,10 +773,9 @@ end do
 end subroutine retrieve_snap_time
 
 !---------------------------------------------------------------------------
-
 function get_fnm_seismoinfo(pnm_info,n_i,n_j,n_k) result(filenm)
-  character (len=*) :: pnm_info
-  integer n_i,n_j,n_k
+  character (len=*),intent(in) :: pnm_info
+  integer,intent(in) :: n_i,n_j,n_k
   character (len=SEIS_STRLEN) :: filenm
   filenm=trim(pnm_info)                         &
        //'/'//'seismoinfo'                      &
@@ -854,8 +783,8 @@ function get_fnm_seismoinfo(pnm_info,n_i,n_j,n_k) result(filenm)
        //'.nc'
 end function get_fnm_seismoinfo
 function get_fnm_seismo(pnm,n_i,n_j,n_k) result(filenm)
-  character (len=*) :: pnm
-  integer n_i,n_j,n_k
+  character (len=*),intent(in) :: pnm
+  integer,intent(in) :: n_i,n_j,n_k
   character (len=SEIS_STRLEN) :: filenm
   filenm=trim(pnm    )                          &
        //'/'//'seismo'                          &
@@ -863,20 +792,20 @@ function get_fnm_seismo(pnm,n_i,n_j,n_k) result(filenm)
        //'.nc'
 end function get_fnm_seismo
 function get_fnm_snapnode(pnm,prefix,n,ntime,n_i,n_j,n_k) result(filenm)
-  integer n,ntime,n_i,n_j,n_k
-  character (len=*) :: pnm,prefix
+  integer,intent(in) :: n,ntime,n_i,n_j,n_k
+  character (len=*),intent(in) :: pnm,prefix
   character (len=SEIS_STRLEN) :: filenm
   integer n0
   n0=(ntime+snap_tinv(n)*snap_tcnt(n)-1)/(snap_tinv(n)*snap_tcnt(n))
   filenm=trim(pnm)                              &
-       //'/'//trim(io_enum(prefix,snap_id(n)))  &
+       //'/'//trim(io_enum(prefix,n))           &
        //'_'//trim(set_mpi_subfix(n_i,n_j,n_k)) &
        //'_n'//trim(io_out_pattern(n0,5))       &
        //'.nc'
 end function get_fnm_snapnode
 function get_fnm_snapnode_n(pnm,prefix,id,n0,n_i,n_j,n_k) result(filenm)
-  character (len=*) :: pnm,prefix
-  integer id,n0,n_i,n_j,n_k
+  character (len=*),intent(in) :: pnm,prefix
+  integer,intent(in) :: id,n0,n_i,n_j,n_k
   character (len=SEIS_STRLEN) :: filenm
   filenm=trim(pnm)                              &
        //'/'//trim(io_enum(prefix,id))          &
@@ -884,45 +813,6 @@ function get_fnm_snapnode_n(pnm,prefix,id,n0,n_i,n_j,n_k) result(filenm)
        //'_n'//trim(io_out_pattern(n0,5))       &
        //'.nc'
 end function get_fnm_snapnode_n
-
-function get_fnm_recv() result(filenm)
-  character (len=SEIS_STRLEN) :: filenm
-  filenm=trim(pnm_seismo) &
-       //'/'//trim(fnm_recv)
-end function get_fnm_recv
-function get_fnm_line(id) result(filenm)
-  integer id
-  character (len=SEIS_STRLEN) :: filenm
-  filenm=trim(pnm_seismo)                   &
-       //'/'//trim(io_enum(prefix_line,id)) &
-       //'.nc'
-end function get_fnm_line
-function get_fnm_snap(n,ntime) result(filenm)
-  integer n,ntime
-  character (len=SEIS_STRLEN) :: filenm
-  integer n0
-  n0=(ntime+snap_tinv(n)*snap_tcnt(n)-1)/(snap_tinv(n)*snap_tcnt(n))
-  filenm=trim(pnm_snap)                             &
-       //'/'//trim(io_enum(prefix_snap,snap_id(n))) &
-       //'_n'//trim(io_out_pattern(n0,5))           &
-       //'.nc'
-end function get_fnm_snap
-function get_fnm_snap_n(n,n0) result(filenm)
-  integer n,n0
-  character (len=SEIS_STRLEN) :: filenm
-  filenm=trim(pnm_snap)                             &
-       //'/'//trim(io_enum(prefix_snap,snap_id(n))) &
-       //'_n'//trim(io_out_pattern(n0,5))           &
-       //'.nc'
-end function get_fnm_snap_n
-function get_fnm_snapcoord(n) result(filenm)
-  integer n
-  character (len=SEIS_STRLEN) :: filenm
-  filenm=trim(pnm_snap)                             &
-       //'/'//trim(io_enum(prefix_snap,snap_id(n))) &
-       //'_coord'                                   &
-       //'.nc'
-end function get_fnm_snapcoord
 
 !function set_mpi_subfix(i,j,k) result(filenm)
 !    integer i,j,k
@@ -937,8 +827,8 @@ end function get_fnm_snapcoord
 !end function set_mpi_subfix
 
 function io_enum(prefix,num) result(ioname)
-character (len=*) :: prefix
-integer num
+character (len=*),intent(in) :: prefix
+integer,intent(in) :: num
 character (len=SEIS_STRLEN) :: ioname
 character (len=SEIS_STRLEN) :: str
 write(str,"(i3.3)") num
@@ -946,8 +836,8 @@ ioname=trim(prefix)//trim(str)
 end function io_enum
 
 function io_out_pattern(num,width) result(ioname)
-integer num
-integer,optional :: width
+integer,intent(in) :: num
+integer,optional,intent(in) :: width
 character (len=SEIS_STRLEN) :: ioname,str,fmt_str
 if (present(width)) then
    write(str,"(i)") width
@@ -959,7 +849,7 @@ write(ioname,fmt_str) num
 end function io_out_pattern
 
 subroutine io_delete(filenm)
-character (len=*) :: filenm
+character (len=*),intent(in) :: filenm
 integer fid
 fid=5001
 open(fid,file=trim(filenm),status='unknown')
@@ -967,3 +857,5 @@ close(fid,status='delete')
 end subroutine io_delete
 
 end module io_mod
+
+! vim:ft=fortran:ts=4:sw=4:nu:et:ai:

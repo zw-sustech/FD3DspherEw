@@ -8,10 +8,12 @@
 ! $Date$
 ! $Revision$
 ! $LastChangedBy$
-#define PMLNT 700
+
 !-----------------------------------------------------------------------------
 program seis3d_wave
 !-----------------------------------------------------------------------------
+
+#define PMLNT 700
 
 !{ -- declare module used --
 use mpi
@@ -72,7 +74,7 @@ ntime=0
 
 call io_rest_import(Txx,Tyy,Tzz,Txy,Txz,Tyz,Vx,Vy,Vz,ntime)
 
-call swmpi_time_init(fnm_log)
+call swmpi_time_init(fnm_log,ntime)
 
 #ifdef WithOMP
 call OMP_SET_NUM_THREADS(2)
@@ -105,62 +107,34 @@ call macdrp_syn
 call abs_syn
 ! the 1th stage
 call set_cur_time(ntime,0.0_SP)
-#ifdef SrcTensorMomentum
-call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,0.0_SP,stept)
-#endif
 call macdrp_LxF_LyF_LzF
 call abs_LxF_LyF_LzF
-#ifdef SrcTensorHook
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,0.0_SP,stept)
-#endif
-#ifdef SrcForce
   call src_force(hVx,hVy,hVz,ntime,0.0_SP,stept)
-#endif
 call macdrp_RK_beg(firRKa(1),firRKb(1))
 call abs_RK_beg(firRKa(1),firRKb(1))
 ! the 2th stage
 call set_cur_time(ntime,firRKa(1))
-#ifdef SrcTensorMomentum
-call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(1),stept)
-#endif
 call macdrp_LxB_LyB_LzB
 call abs_LxB_LyB_LzB
-#ifdef SrcTensorHook
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(1),stept)
-#endif
-#ifdef SrcForce
   call src_force(hVx,hVy,hVz,ntime,firRKa(1),stept)
-#endif
 call macdrp_RK_inn(firRKa(2),firRKb(2))
 call abs_RK_inn(firRKa(2),firRKb(2))
 ! the 3th stage
 call set_cur_time(ntime,firRKa(2))
-#ifdef SrcTensorMomentum
-call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(2),stept)
-#endif
 call macdrp_LxF_LyF_LzF
 call abs_LxF_LyF_LzF
-#ifdef SrcTensorHook
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(2),stept)
-#endif
-#ifdef SrcForce
   call src_force(hVx,hVy,hVz,ntime,firRKa(2),stept)
-#endif
 call macdrp_RK_inn(firRKa(3),firRKb(3))
 call abs_RK_inn(firRKa(3),firRKb(3))
 ! the 4th stage
 call set_cur_time(ntime,firRKa(3))
-#ifdef SrcTensorMomentum
-call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(3),stept)
-#endif
 call macdrp_LxB_LyB_LzB
 call abs_LxB_LyB_LzB
-#ifdef SrcTensorHook
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(3),stept)
-#endif
-#ifdef SrcForce
   call src_force(hVx,hVy,hVz,ntime,firRKa(3),stept)
-#endif
 call macdrp_RK_fin(firRKb(4))
 call abs_RK_fin(firRKb(4))
 #ifdef WITHQS
@@ -182,62 +156,34 @@ call macdrp_syn
 call abs_syn
 ! the 1th stage
 call set_cur_time(ntime,0.0_SP)
-#ifdef SrcTensorMomentum
-call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,0.0_SP,stept)
-#endif
 call macdrp_LxF_LyF_LzB
 call abs_LxF_LyF_LzB
-#ifdef SrcTensorHook
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,0.0_SP,stept)
-#endif
-#ifdef SrcForce
   call src_force(hVx,hVy,hVz,ntime,0.0_SP,stept)
-#endif
 call macdrp_RK_beg(firRKa(1),firRKb(1))
 call abs_RK_beg(firRKa(1),firRKb(1))
 ! the 2th stage
 call set_cur_time(ntime,firRKa(1))
-#ifdef SrcTensorMomentum
-call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(1),stept)
-#endif
 call macdrp_LxB_LyB_LzF
 call abs_LxB_LyB_LzF
-#ifdef SrcTensorHook
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(1),stept)
-#endif
-#ifdef SrcForce
   call src_force(hVx,hVy,hVz,ntime,firRKa(1),stept)
-#endif
 call macdrp_RK_inn(firRKa(2),firRKb(2))
 call abs_RK_inn(firRKa(2),firRKb(2))
 ! the 3th stage
 call set_cur_time(ntime,firRKa(2))
-#ifdef SrcTensorMomentum
-call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(2),stept)
-#endif
 call macdrp_LxF_LyF_LzB
 call abs_LxF_LyF_LzB
-#ifdef SrcTensorHook
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(2),stept)
-#endif
-#ifdef SrcForce
   call src_force(hVx,hVy,hVz,ntime,firRKa(2),stept)
-#endif
 call macdrp_RK_inn(firRKa(3),firRKb(3))
 call abs_RK_inn(firRKa(3),firRKb(3))
 ! the 4th stage
 call set_cur_time(ntime,firRKa(3))
-#ifdef SrcTensorMomentum
-call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(3),stept)
-#endif
 call macdrp_LxB_LyB_LzF
 call abs_LxB_LyB_LzF
-#ifdef SrcTensorHook
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(3),stept)
-#endif
-#ifdef SrcForce
   call src_force(hVx,hVy,hVz,ntime,firRKa(3),stept)
-#endif
 call macdrp_RK_fin(firRKb(4))
 call abs_RK_fin(firRKb(4))
 #ifdef WITHQS
@@ -260,62 +206,34 @@ call macdrp_syn
 call abs_syn
 ! the 1th stage
 call set_cur_time(ntime,0.0_SP)
-#ifdef SrcTensorMomentum
-call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,0.0_SP,stept)
-#endif
 call macdrp_LxB_LyB_LzB
 call abs_LxB_LyB_LzB
-#ifdef SrcTensorHook
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,0.0_SP,stept)
-#endif
-#ifdef SrcForce
   call src_force(hVx,hVy,hVz,ntime,0.0_SP,stept)
-#endif
 call macdrp_RK_beg(firRKa(1),firRKb(1))
 call abs_RK_beg(firRKa(1),firRKb(1))
 ! the 2th stage
 call set_cur_time(ntime,firRKa(1))
-#ifdef SrcTensorMomentum
-call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(1),stept)
-#endif
 call macdrp_LxF_LyF_LzF
 call abs_LxF_LyF_LzF
-#ifdef SrcTensorHook
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(1),stept)
-#endif
-#ifdef SrcForce
   call src_force(hVx,hVy,hVz,ntime,firRKa(1),stept)
-#endif
 call macdrp_RK_inn(firRKa(2),firRKb(2))
 call abs_RK_inn(firRKa(2),firRKb(2))
 ! the 3th stage
 call set_cur_time(ntime,firRKa(2))
-#ifdef SrcTensorMomentum
-call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(2),stept)
-#endif
 call macdrp_LxB_LyB_LzB
 call abs_LxB_LyB_LzB
-#ifdef SrcTensorHook
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(2),stept)
-#endif
-#ifdef SrcForce
   call src_force(hVx,hVy,hVz,ntime,firRKa(2),stept)
-#endif
 call macdrp_RK_inn(firRKa(3),firRKb(3))
 call abs_RK_inn(firRKa(3),firRKb(3))
 ! the 4th stage
 call set_cur_time(ntime,firRKa(3))
-#ifdef SrcTensorMomentum
-call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(3),stept)
-#endif
 call macdrp_LxF_LyF_LzF
 call abs_LxF_LyF_LzF
-#ifdef SrcTensorHook
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(3),stept)
-#endif
-#ifdef SrcForce
   call src_force(hVx,hVy,hVz,ntime,firRKa(3),stept)
-#endif
 call macdrp_RK_fin(firRKb(4))
 call abs_RK_fin(firRKb(4))
 #ifdef WITHQS
@@ -337,62 +255,34 @@ call macdrp_syn
 call abs_syn
 ! the 1th stage
 call set_cur_time(ntime,0.0_SP)
-#ifdef SrcTensorMomentum
-call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,0.0_SP,stept)
-#endif
 call macdrp_LxB_LyB_LzF
 call abs_LxB_LyB_LzF
-#ifdef SrcTensorHook
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,0.0_SP,stept)
-#endif
-#ifdef SrcForce
   call src_force(hVx,hVy,hVz,ntime,0.0_SP,stept)
-#endif
 call macdrp_RK_beg(firRKa(1),firRKb(1))
 call abs_RK_beg(firRKa(1),firRKb(1))
 ! the 2th stage
 call set_cur_time(ntime,firRKa(1))
-#ifdef SrcTensorMomentum
-call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(1),stept)
-#endif
 call macdrp_LxF_LyF_LzB
 call abs_LxF_LyF_LzB
-#ifdef SrcTensorHook
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(1),stept)
-#endif
-#ifdef SrcForce
   call src_force(hVx,hVy,hVz,ntime,firRKa(1),stept)
-#endif
 call macdrp_RK_inn(firRKa(2),firRKb(2))
 call abs_RK_inn(firRKa(2),firRKb(2))
 ! the 3th stage
 call set_cur_time(ntime,firRKa(2))
-#ifdef SrcTensorMomentum
-call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(2),stept)
-#endif
 call macdrp_LxB_LyB_LzF
 call abs_LxB_LyB_LzF
-#ifdef SrcTensorHook
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(2),stept)
-#endif
-#ifdef SrcForce
   call src_force(hVx,hVy,hVz,ntime,firRKa(2),stept)
-#endif
 call macdrp_RK_inn(firRKa(3),firRKb(3))
 call abs_RK_inn(firRKa(3),firRKb(3))
 ! the 4th stage
 call set_cur_time(ntime,firRKa(3))
-#ifdef SrcTensorMomentum
-call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(3),stept)
-#endif
 call macdrp_LxF_LyF_LzB
 call abs_LxF_LyF_LzB
-#ifdef SrcTensorHook
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(3),stept)
-#endif
-#ifdef SrcForce
   call src_force(hVx,hVy,hVz,ntime,firRKa(3),stept)
-#endif
 call macdrp_RK_fin(firRKb(4))
 call abs_RK_fin(firRKb(4))
 #ifdef WITHQS
@@ -419,62 +309,34 @@ call macdrp_syn
 call abs_syn
 ! the 1th stage
 call set_cur_time(ntime,0.0_SP)
-#ifdef SrcTensorMomentum
-call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,0.0_SP,stept)
-#endif
 call macdrp_LxF_LyB_LzB
 call abs_LxF_LyB_LzB
-#ifdef SrcTensorHook
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,0.0_SP,stept)
-#endif
-#ifdef SrcForce
   call src_force(hVx,hVy,hVz,ntime,0.0_SP,stept)
-#endif
 call macdrp_RK_beg(firRKa(1),firRKb(1))
 call abs_RK_beg(firRKa(1),firRKb(1))
 ! the 2th stage
 call set_cur_time(ntime,firRKa(1))
-#ifdef SrcTensorMomentum
-call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(1),stept)
-#endif
 call macdrp_LxB_LyF_LzF
 call abs_LxB_LyF_LzF
-#ifdef SrcTensorHook
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(1),stept)
-#endif
-#ifdef SrcForce
   call src_force(hVx,hVy,hVz,ntime,firRKa(1),stept)
-#endif
 call macdrp_RK_inn(firRKa(2),firRKb(2))
 call abs_RK_inn(firRKa(2),firRKb(2))
 ! the 3th stage
 call set_cur_time(ntime,firRKa(2))
-#ifdef SrcTensorMomentum
-call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(2),stept)
-#endif
 call macdrp_LxF_LyB_LzB
 call abs_LxF_LyB_LzB
-#ifdef SrcTensorHook
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(2),stept)
-#endif
-#ifdef SrcForce
   call src_force(hVx,hVy,hVz,ntime,firRKa(2),stept)
-#endif
 call macdrp_RK_inn(firRKa(3),firRKb(3))
 call abs_RK_inn(firRKa(3),firRKb(3))
 ! the 4th stage
 call set_cur_time(ntime,firRKa(3))
-#ifdef SrcTensorMomentum
-call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(3),stept)
-#endif
 call macdrp_LxB_LyF_LzF
 call abs_LxB_LyF_LzF
-#ifdef SrcTensorHook
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(3),stept)
-#endif
-#ifdef SrcForce
   call src_force(hVx,hVy,hVz,ntime,firRKa(3),stept)
-#endif
 call macdrp_RK_fin(firRKb(4))
 call abs_RK_fin(firRKb(4))
 #ifdef WITHQS
@@ -496,62 +358,34 @@ call macdrp_syn
 call abs_syn
 ! the 1th stage
 call set_cur_time(ntime,0.0_SP)
-#ifdef SrcTensorMomentum
-call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,0.0_SP,stept)
-#endif
 call macdrp_LxB_LyF_LzB
 call abs_LxB_LyF_LzB
-#ifdef SrcTensorHook
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,0.0_SP,stept)
-#endif
-#ifdef SrcForce
   call src_force(hVx,hVy,hVz,ntime,0.0_SP,stept)
-#endif
 call macdrp_RK_beg(firRKa(1),firRKb(1))
 call abs_RK_beg(firRKa(1),firRKb(1))
 ! the 2th stage
 call set_cur_time(ntime,firRKa(1))
-#ifdef SrcTensorMomentum
-call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(1),stept)
-#endif
 call macdrp_LxF_LyB_LzF
 call abs_LxF_LyB_LzF
-#ifdef SrcTensorHook
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(1),stept)
-#endif
-#ifdef SrcForce
   call src_force(hVx,hVy,hVz,ntime,firRKa(1),stept)
-#endif
 call macdrp_RK_inn(firRKa(2),firRKb(2))
 call abs_RK_inn(firRKa(2),firRKb(2))
 ! the 3th stage
 call set_cur_time(ntime,firRKa(2))
-#ifdef SrcTensorMomentum
-call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(2),stept)
-#endif
 call macdrp_LxB_LyF_LzB
 call abs_LxB_LyF_LzB
-#ifdef SrcTensorHook
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(2),stept)
-#endif
-#ifdef SrcForce
   call src_force(hVx,hVy,hVz,ntime,firRKa(2),stept)
-#endif
 call macdrp_RK_inn(firRKa(3),firRKb(3))
 call abs_RK_inn(firRKa(3),firRKb(3))
 ! the 4th stage
 call set_cur_time(ntime,firRKa(3))
-#ifdef SrcTensorMomentum
-call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(3),stept)
-#endif
 call macdrp_LxF_LyB_LzF
 call abs_LxF_LyB_LzF
-#ifdef SrcTensorHook
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(3),stept)
-#endif
-#ifdef SrcForce
   call src_force(hVx,hVy,hVz,ntime,firRKa(3),stept)
-#endif
 call macdrp_RK_fin(firRKb(4))
 call abs_RK_fin(firRKb(4))
 #ifdef WITHQS
@@ -573,62 +407,34 @@ call macdrp_syn
 call abs_syn
 ! the 1th stage
 call set_cur_time(ntime,0.0_SP)
-#ifdef SrcTensorMomentum
-call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,0.0_SP,stept)
-#endif
 call macdrp_LxB_LyF_LzF
 call abs_LxB_LyF_LzF
-#ifdef SrcTensorHook
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,0.0_SP,stept)
-#endif
-#ifdef SrcForce
   call src_force(hVx,hVy,hVz,ntime,0.0_SP,stept)
-#endif
 call macdrp_RK_beg(firRKa(1),firRKb(1))
 call abs_RK_beg(firRKa(1),firRKb(1))
 ! the 2th stage
 call set_cur_time(ntime,firRKa(1))
-#ifdef SrcTensorMomentum
-call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(1),stept)
-#endif
 call macdrp_LxF_LyB_LzB
 call abs_LxF_LyB_LzB
-#ifdef SrcTensorHook
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(1),stept)
-#endif
-#ifdef SrcForce
   call src_force(hVx,hVy,hVz,ntime,firRKa(1),stept)
-#endif
 call macdrp_RK_inn(firRKa(2),firRKb(2))
 call abs_RK_inn(firRKa(2),firRKb(2))
 ! the 3th stage
 call set_cur_time(ntime,firRKa(2))
-#ifdef SrcTensorMomentum
-call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(2),stept)
-#endif
 call macdrp_LxB_LyF_LzF
 call abs_LxB_LyF_LzF
-#ifdef SrcTensorHook
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(2),stept)
-#endif
-#ifdef SrcForce
   call src_force(hVx,hVy,hVz,ntime,firRKa(2),stept)
-#endif
 call macdrp_RK_inn(firRKa(3),firRKb(3))
 call abs_RK_inn(firRKa(3),firRKb(3))
 ! the 4th stage
 call set_cur_time(ntime,firRKa(3))
-#ifdef SrcTensorMomentum
-call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(3),stept)
-#endif
 call macdrp_LxF_LyB_LzB
 call abs_LxF_LyB_LzB
-#ifdef SrcTensorHook
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(3),stept)
-#endif
-#ifdef SrcForce
   call src_force(hVx,hVy,hVz,ntime,firRKa(3),stept)
-#endif
 call macdrp_RK_fin(firRKb(4))
 call abs_RK_fin(firRKb(4))
 #ifdef WITHQS
@@ -650,62 +456,34 @@ call macdrp_syn
 call abs_syn
 ! the 1th stage
 call set_cur_time(ntime,0.0_SP)
-#ifdef SrcTensorMomentum
-call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,0.0_SP,stept)
-#endif
 call macdrp_LxF_LyB_LzF
 call abs_LxF_LyB_LzF
-#ifdef SrcTensorHook
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,0.0_SP,stept)
-#endif
-#ifdef SrcForce
   call src_force(hVx,hVy,hVz,ntime,0.0_SP,stept)
-#endif
 call macdrp_RK_beg(firRKa(1),firRKb(1))
 call abs_RK_beg(firRKa(1),firRKb(1))
 ! the 2th stage
 call set_cur_time(ntime,firRKa(1))
-#ifdef SrcTensorMomentum
-call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(1),stept)
-#endif
 call macdrp_LxB_LyF_LzB
 call abs_LxB_LyF_LzB
-#ifdef SrcTensorHook
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(1),stept)
-#endif
-#ifdef SrcForce
   call src_force(hVx,hVy,hVz,ntime,firRKa(1),stept)
-#endif
 call macdrp_RK_inn(firRKa(2),firRKb(2))
 call abs_RK_inn(firRKa(2),firRKb(2))
 ! the 3th stage
 call set_cur_time(ntime,firRKa(2))
-#ifdef SrcTensorMomentum
-call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(2),stept)
-#endif
 call macdrp_LxF_LyB_LzF
 call abs_LxF_LyB_LzF
-#ifdef SrcTensorHook
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(2),stept)
-#endif
-#ifdef SrcForce
   call src_force(hVx,hVy,hVz,ntime,firRKa(2),stept)
-#endif
 call macdrp_RK_inn(firRKa(3),firRKb(3))
 call abs_RK_inn(firRKa(3),firRKb(3))
 ! the 4th stage
 call set_cur_time(ntime,firRKa(3))
-#ifdef SrcTensorMomentum
-call src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,firRKa(3),stept)
-#endif
 call macdrp_LxB_LyF_LzB
 call abs_LxB_LyF_LzB
-#ifdef SrcTensorHook
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(3),stept)
-#endif
-#ifdef SrcForce
   call src_force(hVx,hVy,hVz,ntime,firRKa(3),stept)
-#endif
 call macdrp_RK_fin(firRKb(4))
 call abs_RK_fin(firRKb(4))
 #ifdef WITHQS
@@ -742,3 +520,4 @@ call MPI_FINALIZE(ierr)
 
 end program seis3d_wave
 
+! vim:ft=fortran:ts=4:sw=4:nu:et:ai:

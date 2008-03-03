@@ -36,3 +36,5 @@ integer,parameter ::    &
      SEIS_STRLEN=132
 
 end module constants_mod
+
+! vim:ft=fortran:ts=4:sw=4:nu:et:ai:

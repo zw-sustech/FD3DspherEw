@@ -73,7 +73,7 @@ do n=1,nthd
    i2=info_list(n)%indxe(1);j2=info_list(n)%indxe(2);k2=info_list(n)%indxe(3);
    subs=info_list(n)%subs;subc=info_list(n)%subc;subt=info_list(n)%subt;
    sube=info_list(n)%sube
-   filenm=swmpi_rename_fnm(pnm_grid,fnm_metric)
+   filenm=swmpi_rename_fnm(pnm_grid,fnm_grid)
 
    call nfseis_varget(filenm,'x',Vx(i1:i2,j1:j2,k1:k2),subs,subc,subt) 
    call nfseis_varget(filenm,'y',Vy(i1:i2,j1:j2,k1:k2),subs,subc,subt) 
@@ -94,7 +94,7 @@ do n=1,nthd
    i1=info_list(n)%indxs(1);j1=info_list(n)%indxs(2);k1=info_list(n)%indxs(3);
    i2=info_list(n)%indxe(1);j2=info_list(n)%indxe(2);k2=info_list(n)%indxe(3);
    subc=info_list(n)%indxc
-   filenm=get_fnm_snapnode_n(pnm_out,'snap_',id,nofnc,n_i,n_j,n_k)
+   filenm=get_fnm_snapnode_n(pnm_out,'vel_',id,nofnc,n_i,n_j,n_k)
    call nfseis_varget(filenm,'Vx',Vx(i1:i2,j1:j2,k1:k2), &
         (/1,1,1,ninnc/),(/subc,1/),(/1,1,1,1/) )
    call nfseis_varget(filenm,'Vy',Vy(i1:i2,j1:j2,k1:k2), &
@@ -102,7 +102,7 @@ do n=1,nthd
    call nfseis_varget(filenm,'Vz',Vz(i1:i2,j1:j2,k1:k2), &
         (/1,1,1,ninnc/),(/subc,1/),(/1,1,1,1/) )
 end do
-filenm=trim(pnm_expt)//'/'//trim(io_enum('snap_',id)) &
+filenm=trim(pnm_expt)//'/'//trim(io_enum('vel_',id)) &
        //'_ndim'//io_out_pattern(nlayer,5)//'.grd'
 call export_grd(filenm,Vx,Vy,Vz)
 
@@ -177,3 +177,4 @@ end subroutine export_grd
 
 end program tool_expt_snap
 
+! vim:ft=fortran:ts=4:sw=4:nu:et:ai:

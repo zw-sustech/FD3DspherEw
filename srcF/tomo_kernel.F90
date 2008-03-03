@@ -1,5 +1,5 @@
 !******************************************************************************!
-!*  This program calculate GSDF kernels for tau_p and tau_q.                  *!
+!*  This program calculate GSDF kernels of tau_p and tau_q.                   *!
 !*  Following the code of Li Z, Po C, Zhang ZG and Shang Y                    *!
 !*                                                                            *!
 !*  Author: Wei ZHANG     Email: zhangw.pku@gmail.com                         *!
@@ -10,76 +10,78 @@
 ! $Revision$
 ! $LastChangedBy$
 
-#define TomoObsConvSrc
-!#define TomoFx
-!#define TomoFy
-#define TomoFz
-
 !-----------------------------------------------------------------------------
 program tomo_kernel
 !-----------------------------------------------------------------------------
 
+#define TomoObsConvSrc
+#define VERBOSE
+#define USEMPI
+
 use constants_mod
 use string_mod
-use math_mod
-use nfseis_mod
 use para_mod
-use grid_mod
+use io_mod
 use media_mod
+use nfseis_mod
 use src_mod
 use mpi_mod
-use io_mod
+#ifdef USEMPI
+use mpi
+#endif
 
 implicit none
 
-INTEGER, PARAMETER :: TP = KIND(1.0D0)
+character (len=SEIS_STRLEN) :: &
+    fnm_main_conf,             &
+    fnm_tomo_conf,             &
+    pnm_obsinfo,pnm_obs,       &
+    pnm_result_source,         &
+    pnm_result_fz,             &
+    pnm_ker,fnm_ker
+character (len=SEIS_STRLEN) :: &
+    filenm
 
-character (len=SEIS_STRLEN) ::                 &
-    fnm_main_conf,                             &
-    fnm_tomo_conf,                             &
-    pnm_obsinfo,pnm_obs,                       &
-    pnm_result_source,                         &
-    pnm_result_fx,pnm_result_fy,pnm_result_fz, &
-    pnm_ker,fnm_prefix,                        &
-    fnm_ker_log
-integer ker_nt,ker_num,id_in_obs,nt1,nt2
-integer id_of_obs, indx_in_obs, obs_nts,obs_ntt
+integer,dimension(SEIS_GEO) :: ker_blk_len,ker_blk_n
+integer ker_nt,ker_id,knt,nt1,nt2
 real(SP) :: ker_dt,ker_win(2)
-integer,allocatable :: ker_id(:)
 
-real(SP),dimension(:),allocatable :: &
-    Vx,Vy,Vz,Ux,Uy,Uz,T,S,           &
-    Txx,Tyy,Tzz,Txy,Txz,Tyz,         &
-    ExxS,EyyS,EzzS,ExyS,ExzS,EyzS,   &
-    ExxR,EyyR,EzzR,ExyR,ExzR,EyzR,   &
-    Er,Es,Econ
-real(kind=TP),dimension(:),allocatable :: Ka,Kb
-real(SP) :: Kap,Kaq,Kbp,Kbq
-real(SP) :: Vx0,Vy0,Vz0,Ux0,Uy0,Uz0
-real(SP) :: src_m0
-integer :: ker_nsift
+real(SP),dimension(:),allocatable :: Vz,Uz,T,S
+character(len=SEIS_STRLEN) :: varnm_obs
+integer id_of_obs, indx_in_obs
+real(SP) :: Vz0,Uz0,src_m0
+real(SP) :: t0_sgt
+integer :: n0_sgt
 
-character (len=SEIS_STRLEN) :: filenm
+real(SP),dimension(:,:,:,:),allocatable :: &
+    ExxS,EyyS,EzzS,ExyS,ExzS,EyzS ,        &
+    ExxR,EyyR,EzzR,ExyR,ExzR,EyzR
+
+real(kind=SP),dimension(:),allocatable :: Ka,Kb
+real(SP),dimension(:),allocatable :: E11R,E22R,E33R,E12R,E13R,E23R
+real(SP),dimension(:),allocatable :: E11S,E22S,E33S,E12S,E13S,E23S
+real(SP),dimension(:,:,:),allocatable :: Kap,Kaq,Kbp,Kbq
+
 integer n_i,n_j,n_k
-integer si,sj,sk,i,j,k,m,nid
-logical iflag
+integer i,j,k,m,n,mt,ierr
 integer,dimension(SEIS_GEO) :: &
-   subs,subc,subt,sube,        &
-   gsubs,gsubc,gsubt,gsube
+   bsubs,bsubc,bsubt,          &
+    subs, subc, subt
 integer p(1)
+#ifdef USEMPI
+integer,dimension(MPI_STATUS_SIZE) :: istatus
+#endif
 
-integer ncid
-#ifdef TomoFx
-integer kapxid,kaqxid,kbpxid,kbqxid
-#endif
-#ifdef TomoFy
-integer kapyid,kaqyid,kbpyid,kbqyid
-#endif
-#ifdef TomoFz
+integer ncid,ncidS,ncidF
 integer kapzid,kaqzid,kbpzid,kbqzid
-#endif
+integer TxxSid,TyySid,TzzSid,TxySid,TxzSid,TyzSid
+integer TxxFzid,TyyFzid,TzzFzid,TxyFzid,TxzFzid,TyzFzid
 
-!----------------------------------------------------------------------!
+!----------------------------------------------------------------------
+
+#ifdef USEMPI
+call MPI_INIT(ierr)
+#endif
 
 call get_conf_name(fnm_conf)
 
@@ -88,352 +90,433 @@ fnm_tomo_conf='TomoKernel.conf'
 call read_tomo_conf(fnm_tomo_conf)
 fnm_conf=fnm_main_conf
 
-call alloc_local(ker_nt)
+call swmpi_init(fnm_conf)
+#ifdef USEMPI
+call swmpi_cart_creat
+#endif
 
 call para_init(fnm_conf)
-call swmpi_init(fnm_conf)
-call grid_fnm_init(fnm_conf)
+call swmpi_reinit_para
+
 call media_fnm_init(fnm_conf)
-!call src_fnm_init(fnm_conf)
+!call media_import
 
-! alloc module
-call grid_alloc
-call media_alloc
-
-! io
 call io_init(fnm_conf)
 call io_snap_read(fnm_conf)
 call io_pt_read(fnm_conf)
 
-nid=ker_id(1); ker_dt=snap_tinv(nid)*stept
-T=(/0:ker_nt/)*ker_dt
+call alloc_seismo(ker_nt)
 
-obs_nts=snap_tinv(nid)/pt_tinv
-obs_ntt=obs_nts
-
-p=minloc(T,T>=ker_win(1)); nt1=p(1)-1
-p=maxloc(T,T<=ker_win(2)); nt2=p(1)-1
-
+!----------------------------------------------------------------------
 ! seismo on receiver
+#ifdef USEMPI
+if (seismo_on_this(pnm_obsinfo,id_of_obs,indx_in_obs, &
+                   thisid(1),thisid(2),thisid(3),n)) then
+   filenm=get_fnm_seismo(pnm_obs,thisid(1),thisid(2),thisid(3))
+   i=snap_tinv(ker_id)/pt_tinv; ! recv type ouput may be denser than snap
+   call retrieve_recvline(filenm,n,varnm_obs,Vz,i,ker_nt,i)
+   do n=0,dims(1)*dims(2)*dims(3)-1
+   if (n/=myid) then
+      call MPI_SEND(Vz,ker_nt,MPI_REAL,n,3,MPI_COMM_WORLD,ierr)
+   end if
+   end do
+else
+   call MPI_RECV(Vz,ker_nt,MPI_REAL,MPI_ANY_SOURCE,3,MPI_COMM_WORLD,istatus,ierr)
+end if
+#else
 do n_i=0,dims(1)-1
 do n_j=0,dims(2)-1
 do n_k=0,dims(3)-1
    call swmpi_change_fnm(n_i,n_j,n_k)
    call swmpi_set_gindx(n_i,n_j,n_k)
 if (seismo_on_this(pnm_obsinfo,id_of_obs,indx_in_obs, &
-                   n_i,n_j,n_k,m)) then
+                   n_i,n_j,n_k,n)) then
    filenm=get_fnm_seismo(pnm_obs,n_i,n_j,n_k)
-   call retrieve_recvline(filenm,m,Vx(1:ker_nt),Vy(1:ker_nt),Vz(1:ker_nt), &
-        obs_nts,ker_nt,obs_ntt)
-   Vx(0)=0.0; Vy(0)=0.0; Vz(0)=0.0
+   i=snap_tinv(ker_id)/pt_tinv; ! recv type ouput may be denser than snap
+   call retrieve_recvline(filenm,n,varnm_obs,Vz,i,ker_nt,i)
    exit
 end if
 end do
 end do
 end do
+#endif
+
+ker_dt=snap_tinv(ker_id)*stept
+T=(/1:ker_nt/)*ker_dt
+
+p=minloc(T,T>=ker_win(1)); nt1=p(1)
+p=maxloc(T,T<=ker_win(2)); nt2=p(1)
+
+do n=1,ker_nt
+   S(n)=src_stf(n*ker_dt,frcstf_time(1),frcstf_freq(1),frcstf_id)
+end do
+print *, "integration of stf is about ", sum(S)*ker_dt
+call green_stf_halfwin(ker_dt,n0_sgt,t0_sgt)
+knt=nt2+n0_sgt ! for shift green function back
 
 #ifdef TomoObsConvSrc
-call gen_stf(S,ker_nt,ker_dt,ker_nsift)
-call cal_convolv(ker_nt,S,Vx,Ux,ker_dt,0,ker_nt); Vx=Ux
-call cal_convolv(ker_nt,S,Vy,Uy,ker_dt,0,ker_nt); Vy=Uy
-call cal_convolv(ker_nt,S,Vz,Uz,ker_dt,0,ker_nt); Vz=Uz
-nt1=nt1+ker_nsift
-nt2=nt2+ker_nsift
+call cal_convolv(S,Vz,Uz,ker_dt,1,ker_nt); Vz=Uz
+nt1=nt1+n0_sgt
+nt2=nt2+n0_sgt
 if (nt2>nt*stept/ker_dt) then
    print *, 'nt2 too large after src conv'
    print *, 'ndim, nt2=',nt*stept/ker_dt,nt2
-   print *, 'src shift=',ker_nsift
-   stop 1
+   print *, 'src shift=',n0_sgt
+   call MPI_ABORT(SWMPI_COMM,1,ierr)
 end if
 #endif
 
-call vel2disp(Vx,Ux,ker_nt,ker_dt)
-call vel2disp(Vy,Uy,ker_nt,ker_dt)
 call vel2disp(Vz,Uz,ker_nt,ker_dt)
 
 ! normalization
-Vx0=(0.5*Vx(nt1)**2+0.5*Vx(nt2)**2)*ker_dt
-Vy0=(0.5*Vy(nt1)**2+0.5*Vy(nt2)**2)*ker_dt
 Vz0=(0.5*Vz(nt1)**2+0.5*Vz(nt2)**2)*ker_dt
-Ux0=(0.5*Ux(nt1)**2+0.5*Ux(nt2)**2)*ker_dt
-Uy0=(0.5*Uy(nt1)**2+0.5*Uy(nt2)**2)*ker_dt
 Uz0=(0.5*Uz(nt1)**2+0.5*Uz(nt2)**2)*ker_dt
 do m=nt1+1,nt2-1
-   Vx0=Vx0+Vx(m)**2.0*ker_dt
-   Vy0=Vy0+Vy(m)**2.0*ker_dt
    Vz0=Vz0+Vz(m)**2.0*ker_dt
-   Ux0=Ux0+Ux(m)**2.0*ker_dt
-   Uy0=Uy0+Uy(m)**2.0*ker_dt
    Uz0=Uz0+Uz(m)**2.0*ker_dt
 end do
-Vx=Vx/Vx0/src_m0;Vy=Vy/Vy0/src_m0;Vz=Vz/Vz0/src_m0
-Ux=Ux/Ux0/src_m0;Uy=Uy/Uy0/src_m0;Uz=Uz/Uz0/src_m0
+Vz=Vz/Vz0/src_m0
+Uz=Uz/Uz0/src_m0
+
+!-----------------------------------------------------------------------------
+#ifndef USEMPI
+print *, 'input mpi id:'
+read *, n_i,n_j,n_k
+call swmpi_change_fnm(n_i,n_j,n_k)
+call swmpi_set_gindx(n_i,n_j,n_k)
+thisid=(/ n_i,n_j,n_k /)
+#else
+n_i=thisid(1); n_j=thisid(2); n_k=thisid(3)
+#endif
+
+call io_snap_locate
+
+kernode_if : if (snap_ishere(ker_id) .and. sgt_out(ker_id)) then
+
+call ker_para_reinit
+call alloc_local(ker_blk_len(1),ker_blk_len(2),ker_blk_len(3),knt,nt2)
+call alloc_media_local(ker_blk_len(1),ker_blk_len(2),ker_blk_len(3))
+
+! create kernel nc file
+fnm_ker=get_fnm_snapnode_n(pnm_ker,'kernel_'//trim(varnm_obs)//'_', &
+           ker_id,0,thisid(1),thisid(2),thisid(3))
+call create_kernc(fnm_ker)
+call nfseis_open(fnm_ker,ncid)
+call nfseis_inq_varid(ncid,'Kap',kapzid)
+call nfseis_inq_varid(ncid,'Kaq',kaqzid)
+call nfseis_inq_varid(ncid,'Kbp',kbpzid)
+call nfseis_inq_varid(ncid,'Kbq',kbqzid)
+
+! open modeling ouput
+if (snap_tcnt(ker_id)>=knt) then
+   filenm=trim(pnm_result_source)               &
+       //'/'//trim(io_enum('sgt_',ker_id))     &
+       //'_'//trim(set_mpi_subfix(n_i,n_j,n_k)) &
+       //'_n'//trim(io_out_pattern(1,5))        &
+       //'.nc'
+   call nfseis_open(filenm,ncidS)
+   call nfseis_inq_varid(ncidS, 'Txx', TxxSid)
+   call nfseis_inq_varid(ncidS, 'Tyy', TyySid)
+   call nfseis_inq_varid(ncidS, 'Tzz', TzzSid)
+   call nfseis_inq_varid(ncidS, 'Txy', TxySid)
+   call nfseis_inq_varid(ncidS, 'Txz', TxzSid)
+   call nfseis_inq_varid(ncidS, 'Tyz', TyzSid)
+
+   filenm=trim(pnm_result_fz)                   &
+       //'/'//trim(io_enum('sgt_',ker_id))     &
+       //'_'//trim(set_mpi_subfix(n_i,n_j,n_k)) &
+       //'_n'//trim(io_out_pattern(1,5))        &
+       //'.nc'
+   call nfseis_open(filenm,ncidF)
+   call nfseis_inq_varid(ncidF, 'Txx', TxxFzid)
+   call nfseis_inq_varid(ncidF, 'Tyy', TyyFzid)
+   call nfseis_inq_varid(ncidF, 'Tzz', TzzFzid)
+   call nfseis_inq_varid(ncidF, 'Txy', TxyFzid)
+   call nfseis_inq_varid(ncidF, 'Txz', TxzFzid)
+   call nfseis_inq_varid(ncidF, 'Tyz', TyzFzid)
+end if
+
+! loop each block
+do k=1,ker_blk_n(3)
+do j=1,ker_blk_n(2)
+do i=1,ker_blk_n(1)
+
+#ifdef VERBOSE
+   write(*,"(a7,3(i4,a1,i4.4),a9,3(i2.2))")  &
+       ' block:',              &
+       i,'/',ker_blk_n(1),     &
+       j,'/',ker_blk_n(2),     &
+       k,'/',ker_blk_n(3),     &
+       ', thisid=',n_i,n_j,n_k
+#endif
+
+   bsubs=(/ (i-1)*ker_blk_len(1)+1,(j-1)*ker_blk_len(2)+1,(k-1)*ker_blk_len(3)+1 /)
+   bsubc=(/ min(ker_blk_len(1),snap_subc(1,ker_id)-bsubs(1)+1),  &
+            min(ker_blk_len(2),snap_subc(2,ker_id)-bsubs(2)+1),  &
+            min(ker_blk_len(3),snap_subc(3,ker_id)-bsubs(3)+1) /)
+   bsubt=(/ 1,1,1 /)
+   subc=bsubc; subt=snap_subt(:,ker_id)*bsubt
+   subs=snap_subs(:,ker_id)+(bsubs-1)*subt
+
+if (product(bsubc)*knt/=size(ExxS)) then
+   call realloc_local(bsubc(1),bsubc(2),bsubc(3),knt)
+end if
+
+! load modeling field
+if (snap_tcnt(ker_id)<knt) then
+   m=0; n=0; mt=knt
+   do 
+      if (m>=knt) exit
+      n=n+1
+      filenm=trim(pnm_result_source)               &
+          //'/'//trim(io_enum('sgt_',ker_id))      &
+          //'_'//trim(set_mpi_subfix(n_i,n_j,n_k)) &
+          //'_n'//trim(io_out_pattern(n,5))        &
+          //'.nc'
+      call nfseis_open(filenm,ncidS)
+      call nfseis_inq_varid(ncidS, 'Txx', TxxSid)
+      call nfseis_inq_varid(ncidS, 'Tyy', TyySid)
+      call nfseis_inq_varid(ncidS, 'Tzz', TzzSid)
+      call nfseis_inq_varid(ncidS, 'Txy', TxySid)
+      call nfseis_inq_varid(ncidS, 'Txz', TxzSid)
+      call nfseis_inq_varid(ncidS, 'Tyz', TyzSid)
+
+      filenm=trim(pnm_result_fz)                   &
+          //'/'//trim(io_enum('sgt_',ker_id))      &
+          //'_'//trim(set_mpi_subfix(n_i,n_j,n_k)) &
+          //'_n'//trim(io_out_pattern(n,5))        &
+          //'.nc'
+      call nfseis_open(filenm,ncidF)
+      call nfseis_inq_varid(ncidF, 'Txx', TxxFzid)
+      call nfseis_inq_varid(ncidF, 'Tyy', TyyFzid)
+      call nfseis_inq_varid(ncidF, 'Tzz', TzzFzid)
+      call nfseis_inq_varid(ncidF, 'Txy', TxyFzid)
+      call nfseis_inq_varid(ncidF, 'Txz', TxzFzid)
+      call nfseis_inq_varid(ncidF, 'Tyz', TyzFzid)
+      if (m+mt>knt) mt=knt-m
+
+      ierr=nf90_get_var(ncidS,TxxSid,ExxS(:,:,:,m+1:m+mt), &
+           (/bsubs,1/),(/bsubc,mt/),(/bsubt,1/))
+      ierr=nf90_get_var(ncidS,TyySid,EyyS(:,:,:,m+1:m+mt), &
+           (/bsubs,1/),(/bsubc,mt/),(/bsubt,1/))
+      ierr=nf90_get_var(ncidS,TzzSid,EzzS(:,:,:,m+1:m+mt), &
+           (/bsubs,1/),(/bsubc,mt/),(/bsubt,1/))
+      ierr=nf90_get_var(ncidS,TxySid,ExyS(:,:,:,m+1:m+mt), &
+           (/bsubs,1/),(/bsubc,mt/),(/bsubt,1/))
+      ierr=nf90_get_var(ncidS,TxzSid,ExzS(:,:,:,m+1:m+mt), &
+           (/bsubs,1/),(/bsubc,mt/),(/bsubt,1/))
+      ierr=nf90_get_var(ncidS,TyzSid,EyzS(:,:,:,m+1:m+mt), &
+           (/bsubs,1/),(/bsubc,mt/),(/bsubt,1/))
+
+      ierr=nf90_get_var(ncidF,TxxFzid,ExxR(:,:,:,m+1:m+mt), &
+           (/bsubs,1/),(/bsubc,mt/),(/bsubt,1/))
+      ierr=nf90_get_var(ncidF,TyyFzid,EyyR(:,:,:,m+1:m+mt), &
+           (/bsubs,1/),(/bsubc,mt/),(/bsubt,1/))
+      ierr=nf90_get_var(ncidF,TzzFzid,EzzR(:,:,:,m+1:m+mt), &
+           (/bsubs,1/),(/bsubc,mt/),(/bsubt,1/))
+      ierr=nf90_get_var(ncidF,TxyFzid,ExyR(:,:,:,m+1:m+mt), &
+           (/bsubs,1/),(/bsubc,mt/),(/bsubt,1/))
+      ierr=nf90_get_var(ncidF,TxzFzid,ExzR(:,:,:,m+1:m+mt), &
+           (/bsubs,1/),(/bsubc,mt/),(/bsubt,1/))
+      ierr=nf90_get_var(ncidF,TyzFzid,EyzR(:,:,:,m+1:m+mt), &
+           (/bsubs,1/),(/bsubc,mt/),(/bsubt,1/))
+      if (ierr /= nf90_noerr) &
+      call nfseis_except(ierr,'tomo_kernel_mpi: get equavilent stress fail')
+      m=m+mt
+   end do
+   call nfseis_close(ncidS)
+   call nfseis_close(ncidF)
+else
+   ierr=nf90_get_var(ncidS,TxxSid,ExxS,        &
+        (/bsubs,1/),(/bsubc,knt/),(/bsubt,1/))
+   ierr=nf90_get_var(ncidS,TyySid,EyyS,        &
+        (/bsubs,1/),(/bsubc,knt/),(/bsubt,1/))
+   ierr=nf90_get_var(ncidS,TzzSid,EzzS,        &
+        (/bsubs,1/),(/bsubc,knt/),(/bsubt,1/))
+   ierr=nf90_get_var(ncidS,TxySid,ExyS,        &
+        (/bsubs,1/),(/bsubc,knt/),(/bsubt,1/))
+   ierr=nf90_get_var(ncidS,TxzSid,ExzS,        &
+        (/bsubs,1/),(/bsubc,knt/),(/bsubt,1/))
+   ierr=nf90_get_var(ncidS,TyzSid,EyzS,        &
+        (/bsubs,1/),(/bsubc,knt/),(/bsubt,1/))
+   ierr=nf90_get_var(ncidF,TxxFzid,ExxR,       &
+        (/bsubs,1/),(/bsubc,knt/),(/bsubt,1/))
+   ierr=nf90_get_var(ncidF,TyyFzid,EyyR,       &
+        (/bsubs,1/),(/bsubc,knt/),(/bsubt,1/))
+   ierr=nf90_get_var(ncidF,TzzFzid,EzzR,       &
+        (/bsubs,1/),(/bsubc,knt/),(/bsubt,1/))
+   ierr=nf90_get_var(ncidF,TxyFzid,ExyR,       &
+        (/bsubs,1/),(/bsubc,knt/),(/bsubt,1/))
+   ierr=nf90_get_var(ncidF,TxzFzid,ExzR,       &
+        (/bsubs,1/),(/bsubc,knt/),(/bsubt,1/))
+   ierr=nf90_get_var(ncidF,TyzFzid,EyzR,       &
+        (/bsubs,1/),(/bsubc,knt/),(/bsubt,1/))
+end if
+
+! load media
+  filenm=swmpi_rename_fnm(pnm_media,fnm_media)
+  call nfseis_varget( filenm, 'lambda', lambda, subs,subc,subt)
+  call nfseis_varget( filenm, 'mu', mu, subs,subc,subt)
+
+! convert to stain
+  call stress2strain(ExxS,EyyS,EzzS,ExyS,ExzS,EyzS,lambda,mu,bsubc)
+  call stress2strain(ExxR,EyyR,EzzR,ExyR,ExzR,EyzR,lambda,mu,bsubc)
+
+#ifndef TomoObsConvSrc
+! correct green stress caused by Fz
+   call corr_green(ExxR,EyyR,EzzR,ExyR,ExzR,EyzR,knt,n0_sgt)
+#endif
 
 ! cal kernel
-do n_i=0,dims(1)-1
-do n_j=0,dims(2)-1
-do n_k=0,dims(3)-1
-   write(*,"(i10,2(i2),a,3(i2))") n_i,n_j,n_k, ' of ',dims
-   call swmpi_change_fnm(n_i,n_j,n_k)
-   call swmpi_set_gindx(n_i,n_j,n_k)
-   call media_import
-do m=1,ker_num
-   nid=ker_id(m)
+   call cal_kernel(Vz,Uz,              &
+        ExxR,EyyR,EzzR,ExyR,ExzR,EyzR, &
+        ExxS,EyyS,EzzS,ExyS,ExzS,EyzS, &
+        lambda,mu,                     &
+        nt1,nt2,ker_dt,bsubc,          &
+        Kap,Kaq,Kbp,Kbq)
+! put
+   call nfseis_put(ncid,kapzid,Kap,bsubs,bsubc,bsubt)
+   call nfseis_put(ncid,kaqzid,Kaq,bsubs,bsubc,bsubt)
+   call nfseis_put(ncid,kbpzid,Kbp,bsubs,bsubc,bsubt)
+   call nfseis_put(ncid,kbqzid,Kbq,bsubs,bsubc,bsubt)
 
-   write(*,*) '       snap_id=',nid
+end do
+end do
+end do
 
-   ! locate snap output in pnm_result_source
-   filenm=get_fnm_snapnode_n( &
-          trim(pnm_result_source),'norm_',nid,1,n_i,n_j,n_k)
-   inquire(file=trim(filenm),exist=iflag)
-   if (.not. iflag) cycle
-
-   call nfseis_attget(filenm,'subs',subs)
-   call nfseis_attget(filenm,'subc',subc)
-   call nfseis_attget(filenm,'subt',subt)
-   call nfseis_attget(filenm,'sube',sube)
-   call nfseis_attget(filenm,'gsubs',gsubs)
-   call nfseis_attget(filenm,'gsubc',gsubc)
-   call nfseis_attget(filenm,'gsubt',gsubt)
-   call nfseis_attget(filenm,'gsube',gsube)
-
-   ! create kernel nc file
-   filenm=get_fnm_snapnode_n(pnm_ker,'kernel_',nid,0,n_i,n_j,n_k)
-   call nfseis_data_create(filenm,subc(1),subc(2),subc(3), &
-        "Finite frequency kernel")
-   call nfseis_attput(filenm,'subs',subs)
-   call nfseis_attput(filenm,'subc',subc)
-   call nfseis_attput(filenm,'subt',subt)
-   call nfseis_attput(filenm,'sube',sube)
-   call nfseis_attput(filenm,'gsubs',gsubs)
-   call nfseis_attput(filenm,'gsubc',gsubc)
-   call nfseis_attput(filenm,'gsubt',gsubt)
-   call nfseis_attput(filenm,'gsube',gsube)
-#ifdef TomoFx
-   call nfseis_data_addvar(filenm,'Kapx')
-   call nfseis_data_addvar(filenm,'Kaqx')
-   call nfseis_data_addvar(filenm,'Kbpx')
-   call nfseis_data_addvar(filenm,'Kbqx')
-#endif
-#ifdef TomoFy
-   call nfseis_data_addvar(filenm,'Kapy')
-   call nfseis_data_addvar(filenm,'Kaqy')
-   call nfseis_data_addvar(filenm,'Kbpy')
-   call nfseis_data_addvar(filenm,'Kbqy')
-#endif
-#ifdef TomoFz
-   call nfseis_data_addvar(filenm,'Kapz')
-   call nfseis_data_addvar(filenm,'Kaqz')
-   call nfseis_data_addvar(filenm,'Kbpz')
-   call nfseis_data_addvar(filenm,'Kbqz')
-#endif
-
-   call nfseis_open(filenm,ncid)
-
-#ifdef TomoFx
-   call nfseis_inq_varid(ncid,'Kapx',kapxid)
-   call nfseis_inq_varid(ncid,'Kaqx',kaqxid)
-   call nfseis_inq_varid(ncid,'Kbpx',kbpxid)
-   call nfseis_inq_varid(ncid,'Kbqx',kbqxid)
-#endif
-#ifdef TomoFy
-   call nfseis_inq_varid(ncid,'Kapy',kapyid)
-   call nfseis_inq_varid(ncid,'Kaqy',kaqyid)
-   call nfseis_inq_varid(ncid,'Kbpy',kbpyid)
-   call nfseis_inq_varid(ncid,'Kbqy',kbqyid)
-#endif
-#ifdef TomoFz
-   call nfseis_inq_varid(ncid,'Kapz',kapzid)
-   call nfseis_inq_varid(ncid,'Kaqz',kaqzid)
-   call nfseis_inq_varid(ncid,'Kbpz',kbpzid)
-   call nfseis_inq_varid(ncid,'Kbqz',kbqzid)
-#endif
-
-   subs(1)=inn_i(subs(1));subs(2)=inn_j(subs(2));subs(3)=inn_k(subs(3))
-   sube(1)=inn_i(sube(1));sube(2)=inn_j(sube(2));sube(3)=inn_k(sube(3))
-
-sk=0
-do k=subs(3),sube(3),subt(3)
-   sk=sk+1; sj=0
-   write(*,*) '          k=',k
-do j=subs(2),sube(2),subt(2)
-   sj=sj+1; si=0
-do i=subs(1),sube(1),subt(1)
-   si=si+1
-
-   ! read inner source stress
-   fnm_prefix=trim(pnm_result_source)                            &
-       //'/'//trim(io_enum('norm_',nid))                         &
-       //'_'//trim(set_mpi_subfix(n_i,n_j,n_k))
-   call retrieve_snap_seis(fnm_prefix,si,sj,sk,'Txx',Txx(1:nt2),nt2)
-   call retrieve_snap_seis(fnm_prefix,si,sj,sk,'Tyy',Tyy(1:nt2),nt2)
-   call retrieve_snap_seis(fnm_prefix,si,sj,sk,'Tzz',Tzz(1:nt2),nt2)
-   Txx(0)=0.0;Tyy(0)=0.0;Tzz(0)=0.0;
-   fnm_prefix=trim(pnm_result_source)                            &
-       //'/'//trim(io_enum('shear_',nid))                        &
-       //'_'//trim(set_mpi_subfix(n_i,n_j,n_k))
-   call retrieve_snap_seis(fnm_prefix,si,sj,sk,'Txy',Txy(1:nt2),nt2)
-   call retrieve_snap_seis(fnm_prefix,si,sj,sk,'Txz',Txz(1:nt2),nt2)
-   call retrieve_snap_seis(fnm_prefix,si,sj,sk,'Tyz',Tyz(1:nt2),nt2)
-   Txy(0)=0.0;Txz(0)=0.0;Tyz(0)=0.0;
-   call stress2strain(Txx,Tyy,Tzz,Txy,Txz,Tyz,                   &
-        ExxS,EyyS,EzzS,ExyS,ExzS,EyzS,                           &
-        ker_nt, nt2, lambda(i,j,k),mu(i,j,k))
-
-#ifdef TomoFx
-   ! read green stress caused by Fx
-   fnm_prefix=trim(pnm_result_fx)                                &
-       //'/'//trim(io_enum('norm_',nid))                         &
-       //'_'//trim(set_mpi_subfix(n_i,n_j,n_k))
-   call retrieve_snap_seis(fnm_prefix,si,sj,sk,'Txx',Txx(1:nt2),nt2)
-   call retrieve_snap_seis(fnm_prefix,si,sj,sk,'Tyy',Tyy(1:nt2),nt2)
-   call retrieve_snap_seis(fnm_prefix,si,sj,sk,'Tzz',Tzz(1:nt2),nt2)
-   Txx(0)=0.0;Tyy(0)=0.0;Tzz(0)=0.0;
-   fnm_prefix=trim(pnm_result_fx)                                &
-       //'/'//trim(io_enum('shear_',nid))                        &
-       //'_'//trim(set_mpi_subfix(n_i,n_j,n_k))
-   call retrieve_snap_seis(fnm_prefix,si,sj,sk,'Txy',Txy(1:nt2),nt2)
-   call retrieve_snap_seis(fnm_prefix,si,sj,sk,'Txz',Txz(1:nt2),nt2)
-   call retrieve_snap_seis(fnm_prefix,si,sj,sk,'Tyz',Tyz(1:nt2),nt2)
-   Txy(0)=0.0;Txz(0)=0.0;Tyz(0)=0.0;
-#ifndef TomoObsConvSrc
-   call corr_green(Txx,Tyy,Tzz,Txy,Txz,Tyz,stf_t0,ker_dt,ker_nt)
-#endif
-   call stress2strain(Txx,Tyy,Tzz,Txy,Txz,Tyz,     &
-        ExxR,EyyR,EzzR,ExyR,ExzR,EyzR,             &
-        ker_nt, nt2,lambda(i,j,k),mu(i,j,k))
-   ! cal
-   call cal_kernel(Vx,Ux,                          &
-        ExxR,EyyR,EzzR,ExyR,ExzR,EyzR,             &
-        ExxS,EyyS,EzzS,ExyS,ExzS,EyzS,             &
-        lambda(i,j,k),mu(i,j,k),                   &
-        ker_nt,nt1,nt2,ker_dt,Kap,Kaq,Kbp,Kbq)
-   !put
-   call nfseis_put(ncid,kapxid,Kap,(/si,sj,sk/),(/1,1,1/),(/1,1,1/))
-   call nfseis_put(ncid,kaqxid,Kaq,(/si,sj,sk/),(/1,1,1/),(/1,1,1/))
-   call nfseis_put(ncid,kbpxid,Kbp,(/si,sj,sk/),(/1,1,1/),(/1,1,1/))
-   call nfseis_put(ncid,kbqxid,Kbq,(/si,sj,sk/),(/1,1,1/),(/1,1,1/))
-#endif
-
-#ifdef TomoFy
-   ! read green stress caused by Fy
-   fnm_prefix=trim(pnm_result_fy)                                &
-       //'/'//trim(io_enum('norm_',nid))                         &
-       //'_'//trim(set_mpi_subfix(n_i,n_j,n_k))
-   call retrieve_snap_seis(fnm_prefix,si,sj,sk,'Txx',Txx(1:nt2),nt2)
-   call retrieve_snap_seis(fnm_prefix,si,sj,sk,'Tyy',Tyy(1:nt2),nt2)
-   call retrieve_snap_seis(fnm_prefix,si,sj,sk,'Tzz',Tzz(1:nt2),nt2)
-   Txx(0)=0.0;Tyy(0)=0.0;Tzz(0)=0.0;
-   fnm_prefix=trim(pnm_result_fy)                                &
-       //'/'//trim(io_enum('shear_',nid))                        &
-       //'_'//trim(set_mpi_subfix(n_i,n_j,n_k))
-   call retrieve_snap_seis(fnm_prefix,si,sj,sk,'Txy',Txy(1:nt2),nt2)
-   call retrieve_snap_seis(fnm_prefix,si,sj,sk,'Txz',Txz(1:nt2),nt2)
-   call retrieve_snap_seis(fnm_prefix,si,sj,sk,'Tyz',Tyz(1:nt2),nt2)
-   Txy(0)=0.0;Txz(0)=0.0;Tyz(0)=0.0;
-#ifndef TomoObsConvSrc
-   call corr_green(Txx,Tyy,Tzz,Txy,Txz,Tyz,stf_t0,ker_dt,ker_nt)
-#endif
-   call stress2strain(Txx,Tyy,Tzz,Txy,Txz,Tyz,     &
-        ExxR,EyyR,EzzR,ExyR,ExzR,EyzR,             &
-        ker_nt, nt2,lambda(i,j,k),mu(i,j,k))
-   ! cal
-   call cal_kernel(Vy,Uy,                          &
-        ExxR,EyyR,EzzR,ExyR,ExzR,EyzR,             &
-        ExxS,EyyS,EzzS,ExyS,ExzS,EyzS,             &
-        lambda(i,j,k),mu(i,j,k),                   &
-        ker_nt,nt1,nt2,ker_dt,Kap,Kaq,Kbp,Kbq)
-   !put
-   call nfseis_put(ncid,kapyid,Kap,(/si,sj,sk/),(/1,1,1/),(/1,1,1/))
-   call nfseis_put(ncid,kaqyid,Kaq,(/si,sj,sk/),(/1,1,1/),(/1,1,1/))
-   call nfseis_put(ncid,kbpyid,Kbp,(/si,sj,sk/),(/1,1,1/),(/1,1,1/))
-   call nfseis_put(ncid,kbqyid,Kbq,(/si,sj,sk/),(/1,1,1/),(/1,1,1/))
-#endif
-
-#ifdef TomoFz
-   ! read green stress caused by Fz
-   fnm_prefix=trim(pnm_result_fz)                                &
-       //'/'//trim(io_enum('norm_',nid))                         &
-       //'_'//trim(set_mpi_subfix(n_i,n_j,n_k))
-   call retrieve_snap_seis(fnm_prefix,si,sj,sk,'Txx',Txx(1:nt2),nt2)
-   call retrieve_snap_seis(fnm_prefix,si,sj,sk,'Tyy',Tyy(1:nt2),nt2)
-   call retrieve_snap_seis(fnm_prefix,si,sj,sk,'Tzz',Tzz(1:nt2),nt2)
-   Txx(0)=0.0;Tyy(0)=0.0;Tzz(0)=0.0;
-   fnm_prefix=trim(pnm_result_fz)                                &
-       //'/'//trim(io_enum('shear_',nid))                        &
-       //'_'//trim(set_mpi_subfix(n_i,n_j,n_k))
-   call retrieve_snap_seis(fnm_prefix,si,sj,sk,'Txy',Txy(1:nt2),nt2)
-   call retrieve_snap_seis(fnm_prefix,si,sj,sk,'Txz',Txz(1:nt2),nt2)
-   call retrieve_snap_seis(fnm_prefix,si,sj,sk,'Tyz',Tyz(1:nt2),nt2)
-   Txy(0)=0.0;Txz(0)=0.0;Tyz(0)=0.0;
-#ifndef TomoObsConvSrc
-   call corr_green(Txx,Tyy,Tzz,Txy,Txz,Tyz,stf_t0,ker_dt,ker_nt)
-#endif
-   call stress2strain(Txx,Tyy,Tzz,Txy,Txz,Tyz,     &
-        ExxR,EyyR,EzzR,ExyR,ExzR,EyzR,             &
-        ker_nt, nt2,lambda(i,j,k),mu(i,j,k))
-   ! cal
-   call cal_kernel(Vz,Uz,                          &
-        ExxR,EyyR,EzzR,ExyR,ExzR,EyzR,             &
-        ExxS,EyyS,EzzS,ExyS,ExzS,EyzS,             &
-        lambda(i,j,k),mu(i,j,k),                   &
-        ker_nt,nt1,nt2,ker_dt,Kap,Kaq,Kbp,Kbq)
-   !put
-   call nfseis_put(ncid,kapzid,Kap,(/si,sj,sk/),(/1,1,1/),(/1,1,1/))
-   call nfseis_put(ncid,kaqzid,Kaq,(/si,sj,sk/),(/1,1,1/),(/1,1,1/))
-   call nfseis_put(ncid,kbpzid,Kbp,(/si,sj,sk/),(/1,1,1/),(/1,1,1/))
-   call nfseis_put(ncid,kbqzid,Kbq,(/si,sj,sk/),(/1,1,1/),(/1,1,1/))
-#endif
-
-end do !i
-end do !j
-end do !k
+if (snap_tcnt(ker_id)>=knt) then
+   call nfseis_close(ncidS)
+   call nfseis_close(ncidF)
+end if
 
    call nfseis_close(ncid)
 
-end do !m
+end if kernode_if
 
-end do !n_k
-end do
-end do !n_i
-
+!-----------------------------------------------------------------------------
+call media_destroy
 call dealloc_local
 
-!----------------------------------------------------------------------!
-contains
-!----------------------------------------------------------------------!
+#ifdef USEMPI
+call MPI_BARRIER(SWMPI_COMM,ierr)
+call MPI_FINALIZE(ierr)
+#endif
 
-subroutine alloc_local(nt)
-  integer nt
-  allocate(Vx(0:nt)); Vx=0.0
-  allocate(Vy(0:nt)); Vy=0.0
-  allocate(Vz(0:nt)); Vz=0.0
-  allocate(Ux(0:nt)); Ux=0.0
-  allocate(Uy(0:nt)); Uy=0.0
-  allocate(Uz(0:nt)); Uz=0.0
-  allocate(T (0:nt)); T =0.0
-  allocate(S (0:nt)); S =0.0
-  allocate(Txx(0:nt),Tyy(0:nt),Tzz(0:nt),Txy(0:nt),Txz(0:nt),Tyz(0:nt))
-  allocate(ExxS(0:nt),EyyS(0:nt),EzzS(0:nt),ExyS(0:nt),ExzS(0:nt),EyzS(0:nt))
-  allocate(ExxR(0:nt),EyyR(0:nt),EzzR(0:nt),ExyR(0:nt),ExzR(0:nt),EyzR(0:nt))
-  allocate(Es(0:nt),Er(0:nt),Econ(0:nt))
-  allocate(Ka(0:nt),Kb(0:nt))
+!-----------------------------------------------------------------------!
+contains
+!-----------------------------------------------------------------------!
+
+subroutine read_tomo_conf(fnm_conf)
+character (len=*),intent(in) :: fnm_conf
+character (len=SEIS_STRLEN) :: fnm_src
+character (len=SEIS_STRLEN) :: stf_type
+integer fid,n
+fid=5002
+open(fid,file=trim(fnm_conf),status='old')
+call string_conf(fid,1,'MAIN_CONF',2,fnm_main_conf)
+
+call string_conf(fid,1,'OBS_SEISMINFO_ROOT',2,pnm_obsinfo)
+call string_conf(fid,1,'OBS_ROOT',2,pnm_obs)
+call string_conf(fid,1,'id_of_obs',2,id_of_obs)
+call string_conf(fid,1,'indx_in_obs',2,indx_in_obs)
+call string_conf(fid,1,'component_of_obs',2,varnm_obs)
+call string_conf(fid,1,'time_window',2,ker_win(1))
+call string_conf(fid,1,'time_window',3,ker_win(2))
+call string_conf(fid,1,'GREEN_SRC_CONF',2,fnm_src)
+call string_conf(fid,1,"GREEN_SRC_M0",2,src_m0)
+
+call string_conf(fid,1,'WAVE_ROOT',2,pnm_result_source)
+call string_conf(fid,1,'GREEN_ROOT',2,pnm_result_fz)
+call string_conf(fid,1,'KERNEL_ROOT',2,pnm_ker)
+call string_conf(fid,1,'kernel_snap_id',2,ker_id)
+call string_conf(fid,1,'kernel_snap_nt',2,ker_nt)
+do n=1,SEIS_GEO
+ !call string_conf(fid,1,'kernel_triple',n+1,ker_subs(n))
+ !call string_conf(fid,1,'kernel_triple',n+1+SEIS_GEO,ker_subc(n))
+ !call string_conf(fid,1,'kernel_triple',n+1+2*SEIS_GEO,ker_subt(n))
+ call string_conf(fid,1,'kernel_block_len',n+1,ker_blk_len(n))
+end do
+close(fid)
+
+open(fid,file=trim(fnm_src),status='old')
+   call string_conf(fid,1,"number_of_force_source",2,num_force)
+   call string_conf(fid,1,"force_stf_window",2,ntwin_force)
+   if (num_force/=1 .or. ntwin_force/=1) then
+      print *, "Green function only need 1 force source and 1 time window"
+      stop 1
+   end if
+   call string_conf(fid,1,"force_stf_type",2,stf_type)
+   frcstf_id=stf_name2id(trim(stf_type))
+   call src_alloc_force(num_force,ntwin_force)
+   do n=1,ntwin_force
+      call string_conf(fid,1,"force_stf_timefactor",n+1,frcstf_time(n))
+      call string_conf(fid,1,"force_stf_freqfactor",n+1,frcstf_freq(n))
+   end do
+close(fid)
+end subroutine read_tomo_conf
+
+subroutine ker_para_reinit
+where (ker_blk_len==-1)
+   ker_blk_len=snap_subc(:,ker_id)  
+end where
+
+ker_blk_n=(snap_subc(:,ker_id)+ker_blk_len-1)/ker_blk_len
+
+end subroutine ker_para_reinit
+
+subroutine alloc_seismo(nt)
+  integer,intent(in) :: nt
+  allocate(Vz(nt)); Vz=0.0
+  allocate(Uz(nt)); Uz=0.0
+  allocate(T (nt)); T =0.0
+  allocate(S (nt)); S =0.0
+end subroutine alloc_seismo
+
+subroutine alloc_local(ki,kj,kk,kt,nt2)
+  integer,intent(in) :: ki,kj,kk,kt,nt2
+  allocate(ExxS(ki,kj,kk,kt)); ExxS=0.0
+  allocate(EyyS(ki,kj,kk,kt)); EyyS=0.0
+  allocate(EzzS(ki,kj,kk,kt)); EzzS=0.0
+  allocate(ExyS(ki,kj,kk,kt)); ExyS=0.0
+  allocate(ExzS(ki,kj,kk,kt)); ExzS=0.0
+  allocate(EyzS(ki,kj,kk,kt)); EyzS=0.0
+  allocate(ExxR(ki,kj,kk,kt)); ExxR=0.0
+  allocate(EyyR(ki,kj,kk,kt)); EyyR=0.0
+  allocate(EzzR(ki,kj,kk,kt)); EzzR=0.0
+  allocate(ExyR(ki,kj,kk,kt)); ExyR=0.0
+  allocate(ExzR(ki,kj,kk,kt)); ExzR=0.0
+  allocate(EyzR(ki,kj,kk,kt)); EyzR=0.0
+
+  allocate(Kap(ki,kj,kk   )); Kap=0.0
+  allocate(Kaq(ki,kj,kk   )); Kaq=0.0
+  allocate(Kbp(ki,kj,kk   )); Kbp=0.0
+  allocate(Kbq(ki,kj,kk   )); Kbq=0.0
+
+  allocate(Ka(knt),Kb(knt));Ka=0.0;Kb=0.0
+  allocate(E11S(nt2)); E11S=0.0
+  allocate(E22S(nt2)); E22S=0.0
+  allocate(E33S(nt2)); E33S=0.0
+  allocate(E12S(nt2)); E12S=0.0
+  allocate(E13S(nt2)); E13S=0.0
+  allocate(E23S(nt2)); E23S=0.0
+  allocate(E11R(nt2)); E11R=0.0
+  allocate(E22R(nt2)); E22R=0.0
+  allocate(E33R(nt2)); E33R=0.0
+  allocate(E12R(nt2)); E12R=0.0
+  allocate(E13R(nt2)); E13R=0.0
+  allocate(E23R(nt2)); E23R=0.0
 end subroutine alloc_local
 
+subroutine alloc_media_local(ki,kj,kk)
+  integer,intent(in) :: ki,kj,kk
+  allocate(lambda(ki,kj,kk)); lambda=0.0
+  allocate(mu(ki,kj,kk)); mu=0.0
+end subroutine alloc_media_local
+
 subroutine dealloc_local
-  if (allocated(Vx)) deallocate(Vx)
-  if (allocated(Vy)) deallocate(Vy)
   if (allocated(Vz)) deallocate(Vz)
-  if (allocated(Ux)) deallocate(Ux)
-  if (allocated(Uy)) deallocate(Uy)
   if (allocated(Uz)) deallocate(Uz)
   if (allocated(T )) deallocate(T )
-  if (allocated(Txx)) deallocate(Txx)
-  if (allocated(Tyy)) deallocate(Tyy)
-  if (allocated(Tzz)) deallocate(Tzz)
-  if (allocated(Txy)) deallocate(Txy)
-  if (allocated(Txz)) deallocate(Txz)
-  if (allocated(Tyz)) deallocate(Tyz)
   if (allocated(ExxS)) deallocate(ExxS)
   if (allocated(EyyS)) deallocate(EyyS)
   if (allocated(EzzS)) deallocate(EzzS)
@@ -448,222 +531,145 @@ subroutine dealloc_local
   if (allocated(EyzR)) deallocate(EyzR)
   if (allocated(Ka)) deallocate(Ka)
   if (allocated(Kb)) deallocate(Kb)
+  if (allocated(Kap)) deallocate(Kap)
+  if (allocated(Kaq)) deallocate(Kaq)
+  if (allocated(Kbp)) deallocate(Kbp)
+  if (allocated(Kbq)) deallocate(Kbq)
 end subroutine dealloc_local
 
-subroutine read_tomo_conf(fnm_conf)
-character (len=*) :: fnm_conf
-character (len=SEIS_STRLEN) :: fnm_src
-character (len=SEIS_STRLEN) :: stf_type
-integer fid,n
-fid=5002
-open(fid,file=trim(fnm_conf),status='old')
-call string_conf(fid,1,'fnm_main_conf',2,fnm_main_conf)
-call string_conf(fid,1,'fnm_ker_log',2,fnm_ker_log)
+subroutine realloc_local(ki,kj,kk,kt)
+  integer,intent(in) :: ki,kj,kk,kt
+  if (allocated(ExxS)) deallocate(ExxS)
+  if (allocated(EyyS)) deallocate(EyyS)
+  if (allocated(EzzS)) deallocate(EzzS)
+  if (allocated(ExyS)) deallocate(ExyS)
+  if (allocated(ExzS)) deallocate(ExzS)
+  if (allocated(EyzS)) deallocate(EyzS)
+  if (allocated(ExxR)) deallocate(ExxR)
+  if (allocated(EyyR)) deallocate(EyyR)
+  if (allocated(EzzR)) deallocate(EzzR)
+  if (allocated(ExyR)) deallocate(ExyR)
+  if (allocated(ExzR)) deallocate(ExzR)
+  if (allocated(EyzR)) deallocate(EyzR)
+  if (allocated(Kap)) deallocate(Kap)
+  if (allocated(Kaq)) deallocate(Kaq)
+  if (allocated(Kbp)) deallocate(Kbp)
+  if (allocated(Kbq)) deallocate(Kbq)
 
-call string_conf(fid,1,'pnm_obsinfo',2,pnm_obsinfo)
-call string_conf(fid,1,'pnm_obs',2,pnm_obs)
-call string_conf(fid,1,'id_of_obs',2,id_of_obs)
-call string_conf(fid,1,'indx_in_obs',2,indx_in_obs)
-call string_conf(fid,1,'time_window',2,ker_win(1))
-call string_conf(fid,1,'time_window',3,ker_win(2))
-call string_conf(fid,1,'fnm_src_conf',2,fnm_src)
-call string_conf(fid,1,"m0",2,src_m0)
+  allocate(ExxS(ki,kj,kk,kt)); ExxS=0.0
+  allocate(EyyS(ki,kj,kk,kt)); EyyS=0.0
+  allocate(EzzS(ki,kj,kk,kt)); EzzS=0.0
+  allocate(ExyS(ki,kj,kk,kt)); ExyS=0.0
+  allocate(ExzS(ki,kj,kk,kt)); ExzS=0.0
+  allocate(EyzS(ki,kj,kk,kt)); EyzS=0.0
+  allocate(ExxR(ki,kj,kk,kt)); ExxR=0.0
+  allocate(EyyR(ki,kj,kk,kt)); EyyR=0.0
+  allocate(EzzR(ki,kj,kk,kt)); EzzR=0.0
+  allocate(ExyR(ki,kj,kk,kt)); ExyR=0.0
+  allocate(ExzR(ki,kj,kk,kt)); ExzR=0.0
+  allocate(EyzR(ki,kj,kk,kt)); EyzR=0.0
 
-call string_conf(fid,1,'pnm_result_source',2,pnm_result_source)
-call string_conf(fid,1,'pnm_result_fx',2,pnm_result_fx)
-call string_conf(fid,1,'pnm_result_fy',2,pnm_result_fy)
-call string_conf(fid,1,'pnm_result_fz',2,pnm_result_fz)
-call string_conf(fid,1,'pnm_tomo_kernel',2,pnm_ker)
-call string_conf(fid,1,'kernel_snap_nt',2,ker_nt)
-call string_conf(fid,1,'num_kernel',2,ker_num)
-allocate(ker_id(ker_num))
-do n=1,ker_num
-   call string_conf(fid,1,'kernel_snap_id',n+1,ker_id(n))
-end do
-close(fid)
+  allocate(Kap(ki,kj,kk   )); Kap=0.0 
+  allocate(Kaq(ki,kj,kk   )); Kaq=0.0 
+  allocate(Kbp(ki,kj,kk   )); Kbp=0.0 
+  allocate(Kbq(ki,kj,kk   )); Kbq=0.0 
+end subroutine realloc_local
 
-open(fid,file=trim(fnm_src),status='old')
-call string_conf(fid,1,"ntwin",2,ntwin)
-allocate(twin(2,ntwin))
-do n=1,ntwin
-   call string_conf(fid,1,"twin",2*n,twin(1,n))
-   call string_conf(fid,1,"twin",2*n+1,twin(2,n))
-end do
-call string_conf(fid,1,"stf",2,stf_type)
-select case (trim(stf_type))
-case ('bell_int')
-     stf_t0=twin(2,1)-twin(1,1)
-     stf_alpha=0.0
-     flag_stf_type=SIG_SVF_BELL
-case ('bell')
-     stf_t0=twin(2,1)-twin(1,1)
-     stf_alpha=0.0
-     flag_stf_type=SIG_STF_BELL
-case ('triangle_int')
-     stf_t0=twin(2,1)-twin(1,1)
-     stf_alpha=0.0
-     flag_stf_type=SIG_SVF_TRIANGLE
-case ('ricker')
-     call string_conf(fid,1,"stf_para",2,stf_alpha)
-     call string_conf(fid,1,"stf_para",3,stf_t0)
-     flag_stf_type=SIG_STF_RICKER
-case ('B(shift)')
-     call string_conf(fid,1,"stf_para",2,stf_t0)
-     flag_stf_type=SIG_STF_BSHIFT
-     print *, 'B(shift) not finished'
-     stop 1
-case default
-     print *, "Have you told me how to generate the STF of ", trim(stf_type)
-     stop 1
-end select
-close(fid)
-end subroutine read_tomo_conf
+subroutine create_kernc(filenm)
+character (len=*),intent(in) :: filenm
+integer,dimension(SEIS_GEO) :: subs,subc,sube
+subs=snap_subs(:,ker_id); subc=snap_subc(:,ker_id);sube=snap_sube(:,ker_id)
+subs(1) =out_i(subs(1));subs(2)=out_j(subs(2));subs(3)=out_k(subs(3))
+sube(1) =out_i(sube(1));sube(2)=out_j(sube(2));sube(3)=out_k(sube(3))
 
-subroutine cal_kernel_conv(V,U,           &
-           ExxR,EyyR,EzzR,ExyR,ExzR,EyzR, &
-           ExxS,EyyS,EzzS,ExyS,ExzS,EyzS, &
-           lam,miu,                       &
-           nt,nt1,nt2,dt,Kap,Kaq,Kbp,Kbq)
-
-integer :: nt,nt1,nt2
-real(SP),dimension(0:nt) :: V,U,    &
-     ExxS,EyyS,EzzS,ExyS,ExzS,EyzS, &
-     ExxR,EyyR,EzzR,ExyR,ExzR,EyzR
-real(SP) :: miu,lam
-real(SP) :: dt,Kap,Kaq,Kbp,Kbq
-
-integer n
-real(SP) Vprho,Vsrho
-
-!p=minloc(T,T>=t1); nt1=p(1)
-!p=maxloc(T,T<=t2); nt2=p(1)
-
-do n=0,nt2
-   Er(n)=ExxR(n)+EyyR(n)+EzzR(n)
-   Es(n)=ExxS(n)+EyyS(n)+EzzS(n)
-end do
-
-! for Kap
-call cal_convolv(nt,Er,Es,Econ,dt,nt1,nt2)
-
-! for Kbp
-do n=nt1,nt2
-   Es(n)= -Econ(n)
-end do
-call cal_convolv(nt,ExxR,ExxS,Er,dt,nt1,nt2)
-do n=nt1,nt2
-   Es(n)=Es(n)+Er(n)
-end do
-call cal_convolv(nt,EyyR,EyyS,Er,dt,nt1,nt2)
-do n=nt1,nt2
-   Es(n)=Es(n)+Er(n)
-end do
-call cal_convolv(nt,EzzR,EzzS,Er,dt,nt1,nt2)
-do n=nt1,nt2
-   Es(n)=Es(n)+Er(n)
-end do
-call cal_convolv(nt,ExyR,ExyS,Er,dt,nt1,nt2)
-do n=nt1,nt2
-   Es(n)=Es(n)+Er(n)*2.0
-end do
-call cal_convolv(nt,ExzR,ExzS,Er,dt,nt1,nt2)
-do n=nt1,nt2
-   Es(n)=Es(n)+Er(n)*2.0
-end do
-call cal_convolv(nt,EyzR,EyzS,Er,dt,nt1,nt2)
-do n=nt1,nt2
-   Es(n)=Es(n)+Er(n)*2.0
-   Es(n)=2.0*Es(n)
-end do
- 
-!   Forming GSDF kernels for tau_p and tau_q.
-Kap=0.5*dt*(V(nt1)*Econ(nt1)+V(nt2)*Econ(nt2))
-Kaq=0.5*dt*(U(nt1)*Econ(nt1)+U(nt2)*Econ(nt2))
-Kbp=0.5*dt*(V(nt1)*Es(nt1)+V(nt2)*Es(nt2))
-Kbq=0.5*dt*(U(nt1)*Es(nt1)+U(nt2)*Es(nt2))
-do n=nt1+1,nt2-1
-   Kap=Kap+V(n)*Econ(n)*dt
-   Kaq=Kaq+U(n)*Econ(n)*dt
-   Kbp=Kbp+V(n)*Es(n)*dt
-   Kbq=Kbq+U(n)*Es(n)*dt
-end do
-
-!Vprho=sqrt( (lam+2.0*miu)*dens )
-!Vsrho=sqrt( miu*dens )
-Vprho= lam+2.0*miu
-Vsrho= miu
-Kap=Kap*2.0*Vprho
-Kaq=-Kaq*2.0*Vprho
-Kbp=Kbp*2.0*Vsrho
-Kbq=-Kbq*2.0*Vsrho
-end subroutine cal_kernel_conv
+call nfseis_data_create(filenm,subc(1),subc(2),subc(3), &
+        "Finite frequency kernel of component "//trim(varnm_obs))
+call nfseis_attput(filenm,'subs',subs)
+call nfseis_attput(filenm,'subc',snap_subc(:,ker_id))
+call nfseis_attput(filenm,'subt',snap_subt(:,ker_id))
+call nfseis_attput(filenm,'sube',sube)
+call nfseis_attput(filenm,'gsubs',snap_gsubs(:,ker_id))
+call nfseis_attput(filenm,'gsubc',snap_gsubc(:,ker_id))
+call nfseis_attput(filenm,'gsubt',snap_gsubt(:,ker_id))
+call nfseis_attput(filenm,'gsube',snap_gsube(:,ker_id))
+call nfseis_data_addvar(filenm,'Kap')
+call nfseis_data_addvar(filenm,'Kaq')
+call nfseis_data_addvar(filenm,'Kbp')
+call nfseis_data_addvar(filenm,'Kbq')
+end subroutine create_kernc
 
 subroutine cal_kernel(V,U,                &
            ExxR,EyyR,EzzR,ExyR,ExzR,EyzR, &
            ExxS,EyyS,EzzS,ExyS,ExzS,EyzS, &
            lam,miu,                       &
-           nt,nt1,nt2,dt,Kap,Kaq,Kbp,Kbq)
+           nt1,nt2,dt,subc,Kap,Kaq,Kbp,Kbq)
 
-integer :: nt,nt1,nt2
-real(SP),dimension(0:nt) :: V,U,          &
-     ExxS,EyyS,EzzS,ExyS,ExzS,EyzS,       &
+integer,intent(in) :: nt1,nt2
+real(SP),dimension(:),intent(in) :: V,U
+real(SP),dimension(:,:,:,:),intent(in) ::         &
+     ExxS,EyyS,EzzS,ExyS,ExzS,EyzS, &
      ExxR,EyyR,EzzR,ExyR,ExzR,EyzR
-real(SP) :: miu,lam
-real(SP) :: dt,Kap,Kaq,Kbp,Kbq
+real(SP),dimension(:,:,:),intent(in) :: miu,lam
+real(SP),dimension(:,:,:),intent(out) :: Kap,Kaq,Kbp,Kbq
+integer,dimension(SEIS_GEO),intent(in) :: subc
+real(SP) :: dt
 
-integer n,i
+integer m,n,i,j,k
 real(SP) Vprho,Vsrho
-real(kind=TP) :: x1,x2
+real(kind=SP) :: x1,x2
 
-x1=0.0_TP
-x2=0.0_TP
+do k=1,subc(3)
+do j=1,subc(2)
+do i=1,subc(1)
+   E11R=ExxR(i,j,k,1:nt2);E22R=EyyR(i,j,k,1:nt2);E33R=EzzR(i,j,k,1:nt2)
+   E12R=ExyR(i,j,k,1:nt2);E13R=ExzR(i,j,k,1:nt2);E23R=EyzR(i,j,k,1:nt2)
+   E11S=ExxS(i,j,k,1:nt2);E22S=EyyS(i,j,k,1:nt2);E33S=EzzS(i,j,k,1:nt2)
+   E12S=ExyS(i,j,k,1:nt2);E13S=ExzS(i,j,k,1:nt2);E23S=EyzS(i,j,k,1:nt2)
 
 do n=nt1,nt2
-
-x1= 0.5_TP*dt*(ExxR(0)+EyyR(0)+EzzR(0))*(ExxS(n)+EyyS(n)+EzzS(n)) &
-   +0.5_TP*dt*(ExxR(n)+EyyR(n)+EzzR(n))*(ExxS(0)+EyyS(0)+EzzS(0))
-x2= 0.5_TP*dt*( ExxR(0)*ExxS(n)+EyyR(0)*EyyS(n)+EzzR(0)*EzzS(n)                         &
-               +2.0_TP*ExyR(0)*ExyS(n)+2.0_TP*ExzR(0)*ExzS(n)+2.0_TP*EyzR(0)*EyzS(n) )  &
-   +0.5_TP*dt*( ExxR(n)*ExxS(0)+EyyR(n)*EyyS(0)+EzzR(n)*EzzS(0)                         &
-               +2.0_TP*ExyR(n)*ExyS(0)+2.0_TP*ExzR(n)*ExzS(0)+2.0_TP*EyzR(n)*EyzS(0) )
-do i=1,n-1
-   x1=x1+1.0_TP*dt*(ExxR(i)+EyyR(i)+EzzR(i))*(ExxS(n-i)+EyyS(n-i)+EzzS(n-i))
-   x2=x2+1.0_TP*dt*( ExxR(i)*ExxS(n-i)+EyyR(i)*EyyS(n-i)+EzzR(i)*EzzS(n-i)     &
-               +2.0_TP*ExyR(i)*ExyS(n-i)+2.0_TP*ExzR(i)*ExzS(n-i)+2.0_TP*EyzR(i)*EyzS(n-i) )
+   x1=0.0_SP; x2=0.0_SP
+do m=1,n-1
+   x1=x1+1.0_SP*dt*(E11R(m)+E22R(m)+E33R(m))*(E11S(n-m)+E22S(n-m)+E33S(n-m))
+   x2=x2+1.0_SP*dt*( E11R(m)*E11S(n-m)+E22R(m)*E22S(n-m)+E33R(m)*E33S(n-m)     &
+               +2.0_SP*E12R(m)*E12S(n-m)+2.0_SP*E13R(m)*E13S(n-m)+2.0_SP*E23R(m)*E23S(n-m) )
 end do
-Ka(n)=x1
-Kb(n)=2.0_TP*(x2-x1)
+Ka(n)=x1; Kb(n)=2.0_SP*(x2-x1)
 end do
 
 !   Forming GSDF kernels for tau_p and tau_q.
-Kap=0.5*dt*(V(nt1)*Ka(nt1)+V(nt2)*Ka(nt2))
-Kaq=0.5*dt*(U(nt1)*Ka(nt1)+U(nt2)*Ka(nt2))
-Kbp=0.5*dt*(V(nt1)*Kb(nt1)+V(nt2)*Kb(nt2))
-Kbq=0.5*dt*(U(nt1)*Kb(nt1)+U(nt2)*Kb(nt2))
+Kap(i,j,k)=0.5*dt*(V(nt1)*Ka(nt1)+V(nt2)*Ka(nt2))
+Kaq(i,j,k)=0.5*dt*(U(nt1)*Ka(nt1)+U(nt2)*Ka(nt2))
+Kbp(i,j,k)=0.5*dt*(V(nt1)*Kb(nt1)+V(nt2)*Kb(nt2))
+Kbq(i,j,k)=0.5*dt*(U(nt1)*Kb(nt1)+U(nt2)*Kb(nt2))
 do n=nt1+1,nt2-1
-   Kap=Kap+V(n)*Ka(n)*dt
-   Kaq=Kaq+U(n)*Ka(n)*dt
-   Kbp=Kbp+V(n)*Kb(n)*dt
-   Kbq=Kbq+U(n)*Kb(n)*dt
+   Kap(i,j,k)=Kap(i,j,k)+V(n)*Ka(n)*dt
+   Kaq(i,j,k)=Kaq(i,j,k)+U(n)*Ka(n)*dt
+   Kbp(i,j,k)=Kbp(i,j,k)+V(n)*Kb(n)*dt
+   Kbq(i,j,k)=Kbq(i,j,k)+U(n)*Kb(n)*dt
 end do
 
-Vprho= lam+2.0*miu
-Vsrho= miu
-Kap=Kap*2.0*Vprho
-Kaq=-Kaq*2.0*Vprho
-Kbp=Kbp*2.0*Vsrho
-Kbq=-Kbq*2.0*Vsrho
+Vprho= lam(i,j,k)+2.0*miu(i,j,k); Vsrho= miu(i,j,k)
+Kap(i,j,k)= Kap(i,j,k)*2.0*Vprho
+Kaq(i,j,k)=-Kaq(i,j,k)*2.0*Vprho
+Kbp(i,j,k)= Kbp(i,j,k)*2.0*Vsrho
+Kbq(i,j,k)=-Kbq(i,j,k)*2.0*Vsrho
+
+end do
+end do
+end do
 end subroutine cal_kernel
 
-subroutine cal_convolv(nt,U,V,W,dt,nt1,nt2)
-integer nt,nt1,nt2
-real(SP),dimension(0:nt) :: U,V,W
-real(SP) dt
+subroutine cal_convolv(U,V,W,dt,nt1,nt2)
+integer,intent(in) :: nt1,nt2
+real(SP),dimension(:),intent(in) :: U,V
+real(SP),dimension(:),intent(out) :: W
+real(SP),intent(in) :: dt
 integer i,j
 
 !W=0.0
 do i=nt1,nt2
-   W(i)=0.5*dt*U(0)*V(i)+0.5*dt*U(i)*V(0)
+   !W(i)=0.5*dt*U(0)*V(i)+0.5*dt*U(i)*V(0)
+   W(i)=0.0_SP
    do j=1,i-1
       W(i)=W(i)+dt*U(j)*V(i-j)
    end do
@@ -671,90 +677,79 @@ end do
 end subroutine cal_convolv
 
 subroutine vel2disp(V,U,ntpt,dt)
-integer ntpt
-real(SP),dimension(0:ntpt) :: V,U
-real(SP) dt
+real(SP),dimension(:),intent(in) :: V
+real(SP),dimension(:),intent(out) :: U
+integer,intent(in) :: ntpt
+real(SP),intent(in) :: dt
 integer n
 
 !U=(sum(V(1:nt-1))+V(nt)*0.5)*dt
-U(0)=0.0
-do n=1,ntpt
+!U(0)=0.0
+U(1)=0.5*V(1)*dt
+do n=2,ntpt
    U(n)=U(n-1)+0.5*(V(n-1)+V(n))*dt
 end do
 end subroutine vel2disp
 
-subroutine corr_green(Txx,Tyy,Tzz,Txy,Txz,Tyz,t0,dt,num)
-real(SP),dimension(:) :: Txx,Tyy,Tzz,Txy,Txz,Tyz
-real(SP) :: t0,dt
-integer num
-integer n0
-
-n0=nint(t0/dt)
-Txx(1:num-n0)=Txx(n0+1:num)
-Tyy(1:num-n0)=Tyy(n0+1:num)
-Tzz(1:num-n0)=Tzz(n0+1:num)
-Txy(1:num-n0)=Txy(n0+1:num)
-Txz(1:num-n0)=Txz(n0+1:num)
-Tyz(1:num-n0)=Tyz(n0+1:num)
-!Txx=Txx/src_m0; Tyy=Tyy/src_m0; Tzz=Tzz/src_m0
-!Txy=Txy/src_m0; Txz=Txz/src_m0; Tyz=Tyz/src_m0
+subroutine corr_green(Txx,Tyy,Tzz,Txy,Txz,Tyz,nlen,nshift)
+real(SP),dimension(:,:,:,:),intent(inout) :: Txx,Tyy,Tzz,Txy,Txz,Tyz
+integer,intent(in) :: nlen,nshift
+Txx(:,:,:,1:nlen-nshift)=Txx(:,:,:,nshift+1:nlen)
+Tyy(:,:,:,1:nlen-nshift)=Tyy(:,:,:,nshift+1:nlen)
+Tzz(:,:,:,1:nlen-nshift)=Tzz(:,:,:,nshift+1:nlen)
+Txy(:,:,:,1:nlen-nshift)=Txy(:,:,:,nshift+1:nlen)
+Txz(:,:,:,1:nlen-nshift)=Txz(:,:,:,nshift+1:nlen)
+Tyz(:,:,:,1:nlen-nshift)=Tyz(:,:,:,nshift+1:nlen)
 end subroutine corr_green
 
-subroutine stress2strain(Txx,Tyy,Tzz,Txy,Txz,Tyz, &
-   Exx,Eyy,Ezz,Exy,Exz,Eyz,                       &
-   nt,nt2,lam,miu)
-integer nt,nt2
-real(SP),dimension(0:nt) :: Txx,Tyy,Tzz,Txy,Txz,Tyz
-real(SP),dimension(0:nt) :: Exx,Eyy,Ezz,Exy,Exz,Eyz
-real(SP) lam,miu
-real(SP) E1,E2,E3
-integer n
+subroutine stress2strain(Exx,Eyy,Ezz,Exy,Exz,Eyz,lam,miu,scl)
+real(SP),dimension(:,:,:,:),intent(inout) :: Exx,Eyy,Ezz,Exy,Exz,Eyz
+real(SP),dimension(:,:,:),intent(in) :: lam,miu
+integer,dimension(SEIS_GEO),intent(in) :: scl
+real(SP) E1,E2,E3,E0
+integer i,j,k,n,n0
 
-E1=(lam+miu)/(miu*(3.0*lam+2.0*miu))
-E2=-lam/(2.0*miu*(3.0*lam+2.0*miu))
-E3=1.0/miu
-Exx(0)=0.0;Eyy(0)=0.0;Ezz(0)=0.0
-Exy(0)=0.0;Exz(0)=0.0;Eyz(0)=0.0
-do n=1,nt2
-   Exx(n)=E1*Txx(n)+E2*Tyy(n)+E2*Tzz(n)
-   Eyy(n)=E2*Txx(n)+E1*Tyy(n)+E2*Tzz(n)
-   Ezz(n)=E2*Txx(n)+E2*Tyy(n)+E1*Tzz(n)
-   Exy(n)=0.5*E3*Txy(n)
-   Exz(n)=0.5*E3*Txz(n)
-   Eyz(n)=0.5*E3*Tyz(n)
+n0=size(Exx,4)
+do n=1,n0
+do k=1,scl(3)
+do j=1,scl(2)
+do i=1,scl(1)
+   E1=(lam(i,j,k)+miu(i,j,k))/(miu(i,j,k)*(3.0*lam(i,j,k)+2.0*miu(i,j,k)))
+   E2=-lam(i,j,k)/(2.0*miu(i,j,k)*(3.0*lam(i,j,k)+2.0*miu(i,j,k)))
+   E3=1.0/miu(i,j,k)
+   E0=E2*(Exx(i,j,k,n)+Eyy(i,j,k,n)+Ezz(i,j,k,n))
+   Exx(i,j,k,n)=E0-(E2-E1)*Exx(i,j,k,n)
+   Eyy(i,j,k,n)=E0-(E2-E1)*Eyy(i,j,k,n)
+   Ezz(i,j,k,n)=E0-(E2-E1)*Ezz(i,j,k,n)
+   Exy(i,j,k,n)=0.5*E3*Exy(i,j,k,n)
+   Exz(i,j,k,n)=0.5*E3*Exz(i,j,k,n)
+   Eyz(i,j,k,n)=0.5*E3*Eyz(i,j,k,n)
+end do
+end do
+end do
 end do
 end subroutine stress2strain
 
-subroutine gen_stf(S,nt,dt,n0)
-integer nt,n0
-real(SP),dimension(0:nt) :: S
-real(SP) :: riset,rate,dt,t
-integer n
-S=0.0
-riset=twin(2,1)-twin(1,1)
-do n=1,nt
-   t=n*dt
+subroutine green_stf_halfwin(dt,n0,t0)
+real(SP),intent(in) :: dt
+integer,intent(out) :: n0
+real(SP),intent(out) :: t0
 
-select case(flag_stf_type)
+select case(frcstf_id)
 case (SIG_STF_BELL)
-   rate= fun_bell(t,riset)
-   n0=nint(riset/2.0/dt)
+   t0=frcstf_freq(1)/2.0_SP
 case (SIG_STF_RICKER)
-   rate=fun_ricker(t,stf_alpha,stf_t0)
-   n0=nint(stf_t0/dt)
+   t0=frcstf_time(1)
 case (SIG_STF_GAUSS)
-   rate=fun_gauss(t,stf_alpha,stf_t0)
-   n0=nint(stf_t0/dt)
+   t0=frcstf_time(1)/2.0_SP
 case default
-   print *, "Have you told me how to generate the STF of ", flag_stf_type
+   print *, "Need to set halfwin for stf "//trim(stf_id2name(frcstf_id))
    stop 1
 end select
-if (abs(rate)<SEIS_ZERO) rate=0.0
-  
-   S(n)=rate
-
-end do
-print *, sum(S)*dt
-end subroutine gen_stf
+n0=int(n0/dt+0.5)
+end subroutine green_stf_halfwin
 
 end program tomo_kernel
+
+! vim:ft=fortran:ts=4:sw=4:nu:et:ai:
+

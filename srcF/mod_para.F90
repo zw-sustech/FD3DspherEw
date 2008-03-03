@@ -9,20 +9,21 @@
 ! $Revision$
 ! $LastChangedBy$
 
-#include "mod_macdrp.h"
 !-----------------------------------------------------------------------------
 module para_mod
 !-----------------------------------------------------------------------------
+
+#include "mod_macdrp.h"
 
 use constants_mod
 use string_mod, only : string_conf
 implicit none
 !private
 
-public :: para_init,get_conf_name, &
-          inn_i,inn_j,inn_k ,      &
-          out_i,out_j,out_k ,      &
-          loct_i,loct_j,loct_k
+public :: para_init,get_conf_name,      &
+          inn_i,inn_j,inn_k,inn_ijk,    &
+          out_i,out_j,out_k,out_ijk,    &
+          loct_i,loct_j,loct_k,loct_ijk
 
 !-----------------------------------------------------------------------------
 integer,public ::                     &
@@ -32,10 +33,8 @@ integer,public ::                     &
     ngx1,ngx2,ngy1,ngy2,ngz1,ngz2 ! same as above with ghost
 integer,dimension(SEIS_GEO*2),public :: &
     point_in_this
-real,dimension(SEIS_GEO),public ::      &
-    coord0
 integer,public :: nt
-real(SP),public :: stept,stepx,stepy,stepz
+real(SP),public :: stept
 real(SP),public :: cur_time, cur_nt
 character (len=SEIS_STRLEN),public :: fnm_conf
 
@@ -79,23 +78,20 @@ open(fid,file=trim(fnm_conf),status="old")
   nx=nx2-nx1+1; ny=ny2-ny1+1; nz=nz2-nz1+1
 
   call string_conf(fid,1,'stept',2,stept)
-  call string_conf(fid,1,'dtheta',2,stepx)
-  call string_conf(fid,1,'dphi',2,stepy)
-  call string_conf(fid,1,'dr',2,stepz)
-  stepx=stepx*PI/180.0_SP
-  stepy=stepy*PI/180.0_SP
-do n=1,SEIS_GEO
-  call string_conf(fid,1,'X1Y1Ztop',n+1,coord0(n))
-end do
-  coord0(1:2)=coord0(1:2)*PI/180.0_SP
 close(fid)
   cur_time=0.0
   cur_nt  = 0
 end subroutine para_init
 
+subroutine reset_nt(ntime)
+integer,intent(in) :: ntime
+nt = ntime
+print *, 'reset nt to ',nt,' step'
+end subroutine reset_nt
+
 subroutine set_cur_time(ntime,incr)
-integer :: ntime
-real(SP) :: incr
+integer,intent(in) :: ntime
+real(SP),intent(in) :: incr
 cur_nt = ntime
 cur_time = (ntime+incr)*stept
 end subroutine set_cur_time
@@ -115,6 +111,13 @@ function inn_k(ok) result(kk)
   integer :: kk
   kk=ok+nk1-1
 end function inn_k
+function inn_ijk(ijk) result(indx)
+  integer,dimension(SEIS_GEO),intent(in) :: ijk
+  integer,dimension(SEIS_GEO) :: indx
+  indx(1)=ijk(1)+ni1-1
+  indx(2)=ijk(2)+nj1-1
+  indx(3)=ijk(3)+nk1-1
+end function inn_ijk
 
 function out_i(ii) result(oi)
   integer,intent(in) :: ii
@@ -131,6 +134,14 @@ function out_k(kk) result(ok)
   integer :: ok
   ok=kk-nk1+1
 end function out_k
+function out_ijk(ijk) result(indx)
+  integer,dimension(SEIS_GEO),intent(in) :: ijk
+  integer,dimension(SEIS_GEO) :: indx
+  indx(1)=ijk(1)-ni1+1
+  indx(2)=ijk(2)-nj1+1
+  indx(3)=ijk(3)-nk1+1
+end function out_ijk
+
 function loct_i(n) result(i)
   integer,intent(in) :: n
   integer :: i
@@ -146,5 +157,12 @@ function loct_k(n) result(k)
   integer :: k
   k=n+nz1-1
 end function loct_k
+function loct_ijk(ijk) result(indx)
+  integer,dimension(SEIS_GEO),intent(in) :: ijk
+  integer,dimension(SEIS_GEO) :: indx
+  indx(1)=ijk(1)+nx1-1
+  indx(2)=ijk(2)+ny1-1
+  indx(3)=ijk(3)+nz1-1
+end function loct_ijk
 
 end module para_mod

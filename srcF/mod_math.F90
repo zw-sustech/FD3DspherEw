@@ -16,9 +16,9 @@ module math_mod
     !use fd_cons_mod
 implicit none
 
-real(kind=8),parameter,private ::  &
-    PI=3.141592653589793238462643383279502884197d0
 INTEGER, PARAMETER,private :: DP = KIND(1.0D0)
+real(kind=DP),parameter,private ::  &
+    PI=3.1415926535897932d0
 
 #ifdef DataTypeDouble
 INTEGER, PARAMETER,private :: SP = KIND(1.0D0)
@@ -29,6 +29,11 @@ INTEGER, PARAMETER,private :: SP = KIND(1.0)
     interface invert
        module procedure invert_DP
        module procedure invert_real
+    end interface
+
+    interface times_product
+       module procedure times_product_DP
+       module procedure times_product_real
     end interface
 
 contains
@@ -86,9 +91,9 @@ subroutine invert_DP(matrix)
     end do
 end subroutine invert_DP
 
-subroutine times_product(A,B,C)
-    real(SP),intent(in) :: A(:),B(:)
-    real(SP),intent(out) :: C(:)
+subroutine times_product_real(A,B,C)
+    real,intent(in) :: A(:),B(:)
+    real,intent(out) :: C(:)
     integer n
     n=ubound(A,1)
     if (n==3) then
@@ -96,9 +101,23 @@ subroutine times_product(A,B,C)
       C(2)=A(3)*B(1)-A(1)*B(3)
       C(3)=A(1)*B(2)-A(2)*B(1)
     else
-      print *, "wrong dimension for times_product"; stop 1
+      print *, "wrong dimension for times_product_real"; stop 1
     end if
-end subroutine times_product
+end subroutine times_product_real
+
+subroutine times_product_DP(A,B,C)
+    real(DP),intent(in) :: A(:),B(:)
+    real(DP),intent(out) :: C(:)
+    integer n
+    n=ubound(A,1)
+    if (n==3) then
+      C(1)=A(2)*B(3)-A(3)*B(2)
+      C(2)=A(3)*B(1)-A(1)*B(3)
+      C(3)=A(1)*B(2)-A(2)*B(1)
+    else
+      print *, "wrong dimension for times_product_DP"; stop 1
+    end if
+end subroutine times_product_DP
 
 function norm(A) result(c)
    real(SP),dimension(:),intent(in) :: A
@@ -108,9 +127,10 @@ end function norm
 
 !-- derivative and interpolate
 function interp_2d(x,y,z,ni,nj,xi,yi) result(zi)
-  integer ni,nj
-  real(SP) :: x(ni),y(nj),z(ni,nj)
-  real(SP) :: xi,yi,zi
+  integer,intent(in) :: ni,nj
+  real(SP),intent(in) :: x(ni),y(nj),z(ni,nj)
+  real(SP),intent(in) :: xi,yi
+  real(SP) :: zi
   real(SP),dimension(ni) :: Lx,xt,xb
   real(SP),dimension(nj) :: Ly,yt,yb
   integer i,j
@@ -142,9 +162,10 @@ function interp_2d(x,y,z,ni,nj,xi,yi) result(zi)
 end function interp_2d
 
 function interp_3d(x,y,z,f,ni,nj,nk,xi,yi,zi) result(fi)
-  integer ni,nj,nk
-  real(SP) :: x(ni),y(nj),z(nk),f(ni,nj,nk)
-  real(SP) :: xi,yi,zi,fi
+  integer,intent(in) :: ni,nj,nk
+  real(SP),intent(in) :: x(ni),y(nj),z(nk),f(ni,nj,nk)
+  real(SP),intent(in) :: xi,yi,zi
+  real(SP) :: fi
   real(SP),dimension(ni) :: Lx,xt,xb
   real(SP),dimension(nj) :: Ly,yt,yb
   real(SP),dimension(nk) :: Lz,zt,zb
@@ -188,3 +209,6 @@ function interp_3d(x,y,z,f,ni,nj,nk,xi,yi,zi) result(fi)
 end function interp_3d
 
 end module math_mod
+
+! vim:ft=fortran:ts=4:sw=4:nu:et:ai:
+

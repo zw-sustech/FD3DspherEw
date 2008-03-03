@@ -9,10 +9,11 @@
 ! $Revision$
 ! $LastChangedBy$
 
-#include "mod_macdrp.h"
 !-----------------------------------------------------------------------------
 program seis3d_media
 !-----------------------------------------------------------------------------
+
+#include "mod_macdrp.h"
 
 use constants_mod
 use string_mod, only : string_conf
@@ -27,10 +28,11 @@ use io_mod
 
 implicit none
 
-integer,parameter :: NGRID=4
-integer,parameter :: NGRIDX=1
-integer,parameter :: NGRIDY=1
-integer,parameter :: NGRIDZ=4
+!integer,parameter :: NGRID=4
+!integer,parameter :: NGRIDX=1
+!integer,parameter :: NGRIDY=1
+!integer,parameter :: NGRIDZ=4
+integer :: NGRIDX,NGRIDY,NGRIDZ
 
 integer,dimension(SEIS_GEO) ::         &
      subs,subc,subt,                   &
@@ -40,11 +42,13 @@ integer,dimension(SEIS_GEO) ::         &
 integer,dimension(LenFD) :: indx_x1,indx_x2,indx_y1,indx_y2,indx_z1,indx_z2
 integer :: i,j,k,n_i,n_j,n_k
 character (len=SEIS_STRLEN) :: filenm
-logical :: flagnc,flaglayer
 
-real(SP) Vp,dtmax,dtlocal
+real(DP),dimension(:,:,:),allocatable :: &
+     gx,gy,gz
+real(SP) :: Vp,dtmax
+real(DP) :: dtlocal
 integer,dimension(SEIS_GEO) :: dtnode,dtindx
-real(SP) dtLe,dtmaxVp,dtmaxL
+real(SP) :: dtLe,dtmaxVp,dtmaxL
 
 !-----------------------------------------------------------------------------
 
@@ -57,6 +61,10 @@ call grid_fnm_init(fnm_conf)
 call media_fnm_init(fnm_conf)
 call media_alloc
 call grid_alloc
+
+allocate(gx(nx1:nx2,ny1:ny2,nz1:nz2)); gx=0.0_DP
+allocate(gy(nx1:nx2,ny1:ny2,nz1:nz2)); gy=0.0_DP
+allocate(gz(nx1:nx2,ny1:ny2,nz1:nz2)); gz=0.0_DP
 
 print *, 'init media ...'
 ! generate nc file
@@ -88,14 +96,8 @@ end do
 end do
 end do
 
-! media from nc
-call read_media_nc(fnm_media_conf)
-
 ! media by layered
 call read_media_layered(fnm_media_conf)
-
-! media by mod_custom.f90
-call read_media_custom(fnm_media_conf)
 
 ! exchange
 subs_x1=(/ ni2+1,ny1  ,nz1  /); subc_x1=(/ LenFD , ny    , nz    /)
@@ -125,11 +127,53 @@ do n_k=0,dims(3)-1
    call media_import
 ! check
    call grid_import
+
+   do k=nz1,nz2
+   do j=ny1,ny2
+   do i=nx1,nx2
+      gx(i,j,k)=z(k)*cos(real(y(j),DP))*cos(real(x(i),DP))
+      gy(i,j,k)=z(k)*cos(real(y(j),DP))*sin(real(x(i),DP))
+      gz(i,j,k)=z(k)*sin(real(y(j),DP))
+   end do
+   end do
+   end do
+   
    do k=nk1,nk2
    do j=nj1,nj2
    do i=ni1,ni2
       Vp=sqrt( (lambda(i,j,k)+2.0*mu(i,j,k))/rho(i,j,k) )
-      dtLe=min( stepx*xsin(i)*z(k),stepy*z(k),stepz)
+      dtLe=min( dist_point2plane(gx(i,j,k),gy(i,j,k),gz(i,j,k),             &
+                   (/ gx(i-1,j  ,k  ),gy(i-1,j  ,k  ),gz(i-1,j  ,k  ) /),   &
+                   (/ gx(i  ,j-1,k  ),gy(i  ,j-1,k  ),gz(i  ,j-1,k  ) /),   &
+                   (/ gx(i  ,j  ,k-1),gy(i  ,j  ,k-1),gz(i  ,j  ,k-1) /)) , &
+                dist_point2plane(gx(i,j,k),gy(i,j,k),gz(i,j,k),             &
+                   (/ gx(i+1,j  ,k  ),gy(i+1,j  ,k  ),gz(i+1,j  ,k  ) /),   &
+                   (/ gx(i  ,j-1,k  ),gy(i  ,j-1,k  ),gz(i  ,j-1,k  ) /),   &
+                   (/ gx(i  ,j  ,k-1),gy(i  ,j  ,k-1),gz(i  ,j  ,k-1) /)) , &
+                dist_point2plane(gx(i,j,k),gy(i,j,k),gz(i,j,k),             &
+                   (/ gx(i-1,j  ,k  ),gy(i-1,j  ,k  ),gz(i-1,j  ,k  ) /),   &
+                   (/ gx(i  ,j+1,k  ),gy(i  ,j+1,k  ),gz(i  ,j+1,k  ) /),   &
+                   (/ gx(i  ,j  ,k-1),gy(i  ,j  ,k-1),gz(i  ,j  ,k-1) /)) , &
+                dist_point2plane(gx(i,j,k),gy(i,j,k),gz(i,j,k),             &
+                   (/ gx(i+1,j  ,k  ),gy(i+1,j  ,k  ),gz(i+1,j  ,k  ) /),   &
+                   (/ gx(i  ,j+1,k  ),gy(i  ,j+1,k  ),gz(i  ,j+1,k  ) /),   &
+                   (/ gx(i  ,j  ,k-1),gy(i  ,j  ,k-1),gz(i  ,j  ,k-1) /)) , &
+                dist_point2plane(gx(i,j,k),gy(i,j,k),gz(i,j,k),             &
+                   (/ gx(i-1,j  ,k  ),gy(i-1,j  ,k  ),gz(i-1,j  ,k  ) /),   &
+                   (/ gx(i  ,j-1,k  ),gy(i  ,j-1,k  ),gz(i  ,j-1,k  ) /),   &
+                   (/ gx(i  ,j  ,k+1),gy(i  ,j  ,k+1),gz(i  ,j  ,k+1) /)) , &
+                dist_point2plane(gx(i,j,k),gy(i,j,k),gz(i,j,k),             &
+                   (/ gx(i+1,j  ,k  ),gy(i+1,j  ,k  ),gz(i+1,j  ,k  ) /),   &
+                   (/ gx(i  ,j-1,k  ),gy(i  ,j-1,k  ),gz(i  ,j-1,k  ) /),   &
+                   (/ gx(i  ,j  ,k+1),gy(i  ,j  ,k+1),gz(i  ,j  ,k+1) /)) , &
+                dist_point2plane(gx(i,j,k),gy(i,j,k),gz(i,j,k),             &
+                   (/ gx(i-1,j  ,k  ),gy(i-1,j  ,k  ),gz(i-1,j  ,k  ) /),   &
+                   (/ gx(i  ,j+1,k  ),gy(i  ,j+1,k  ),gz(i  ,j+1,k  ) /),   &
+                   (/ gx(i  ,j  ,k+1),gy(i  ,j  ,k+1),gz(i  ,j  ,k+1) /)) , &
+                dist_point2plane(gx(i,j,k),gy(i,j,k),gz(i,j,k),             &
+                   (/ gx(i+1,j  ,k  ),gy(i+1,j  ,k  ),gz(i+1,j  ,k  ) /),   &
+                   (/ gx(i  ,j+1,k  ),gy(i  ,j+1,k  ),gz(i  ,j+1,k  ) /),   &
+                   (/ gx(i  ,j  ,k+1),gy(i  ,j  ,k+1),gz(i  ,j  ,k+1) /)) )
       dtlocal=1.3/Vp * dtLe 
       if (dtlocal<dtmax) then
          dtmax=dtlocal
@@ -221,131 +265,16 @@ end if
 
 call media_destroy
 call grid_dealloc
+deallocate(gx)
+deallocate(gy)
+deallocate(gz)
 
 !-----------------------------------------------------------
 contains
 !-----------------------------------------------------------
 
-subroutine read_media_nc(fnm_conf)
-character (len=*) :: fnm_conf
-
-integer,dimension(SEIS_GEO) :: ijknc,subsnc,subcnc
-integer,dimension(SEIS_GEO) :: subs,subc,subt
-character (len=SEIS_STRLEN) ::  fnm_list_nc,filenm
-
-integer fid
-integer k,n,gk,k1,k2
-integer n1,n2,n3
-integer n_i,n_j,n_k
-real(SP),dimension(:,:),allocatable :: grho,glam,gmu
-#ifdef WITHQS
-real(SP),dimension(:,:),allocatable :: gQs
-real(SP) Qf0
-#endif
-
-fid=1001
-! read parameters
-open(fid,file=trim(fnm_conf),status="old")
-call string_conf(fid,1,'fnm_list_nc',2,fnm_list_nc)
-do n=1,SEIS_GEO
-   call string_conf(fid,1,'I1J1K1_in_nc',n+1,ijknc(n))
-end do
-#ifdef WITHQS
-call string_conf(fid,1,'Qf0',2, Qf0)
-#endif
-close(fid)
-
-! return if nc isn't needed
-flagnc=.false.
-if (any(ijknc==0)) return
-flagnc=.true.
-
-! allocate
-n1=swmpi_globi(nx2,dims(1)-1)
-n2=swmpi_globj(ny2,dims(2)-1)
-n3=swmpi_globk(nz2,dims(3)-1)
-allocate(grho(nx1:n1,ny1:n2))
-allocate(glam(nx1:n1,ny1:n2))
-allocate(gmu(nx1:n1,ny1:n2))
-#ifdef WITHQS
-allocate(gQs(nx1:n1,ny1:n2))
-#endif
-
-! parameters
-n1=swmpi_globi(ni2,dims(1)-1)
-n2=swmpi_globj(nj2,dims(2)-1)
-n3=swmpi_globk(nk2,dims(3)-1)
-
-! loop gk
-do gk=nk1,n3
-   subsnc=(/ijknc(1),ijknc(2),ijknc(3)+(gk-nk1)/)
-   subcnc=(/ni*dims(1),nj*dims(2),1/)
-! read from nc
-call read_nc_list('./',fnm_list_nc,'rho',    &
-     grho(ni1:n1,nj1:n2),subsnc,subcnc)
-call read_nc_list('./',fnm_list_nc,'lambda', &
-     glam(ni1:n1,nj1:n2),subsnc,subcnc)
-call read_nc_list('./',fnm_list_nc,'mu',     &
-     gmu(ni1:n1,nj1:n2),subsnc,subcnc)
-#ifdef WITHQS
-call read_nc_list('./',fnm_list_nc,'Q',      &
-     gQs(ni1:n1,nj1:n2),subsnc,subcnc)
-     gQs(ni1:n1,nj1:n2)=exp((-PI*Qf0*stept)/gQs(ni1:n1,nj1:n2))
-#endif
-
-! check
-if (     any(grho(ni1:n1,nj1:n2)<=0.0) &
-    .or. any(glam(ni1:n1,nj1:n2)<=0.0) &
-    .or. any(gmu (ni1:n1,nj1:n2)<=0.0)) then
-   print *, 'read_media from nc error, parameter zero'
-   print *, gk
-   stop 1
-end if
-
-! put to nc
-   n_k=(gk-nk1)/nk
-   k=swmpi_loclk(gk,n_k)
-do n=1,LenFD
-   grho(ni1-n,:)=grho(ni1,:); grho(ni2+n,:)=grho(ni2,:)
-   glam(ni1-n,:)=glam(ni1,:); glam(ni2+n,:)=glam(ni2,:)
-   gmu (ni1-n,:)=gmu (ni1,:); gmu (ni2+n,:)=gmu (ni2,:)
-#ifdef WITHQS
-   gQs(ni1-n,:)=gQs(ni1,:); gQs(ni2+n,:)=gQs(ni2,:)
-#endif
-end do
-if (n_k==0 .and. k==nk1) then
-   k1=nz1; k2=nk1
-elseif (n_k==dims(3)-1 .and. k==nk2) then
-   k1=nk2; k2=nz2
-else
-   k1=k; k2=k
-end if
-do k=k1,k2
-do n_i=0,dims(1)-1
-do n_j=0,dims(2)-1
-   call swmpi_change_fnm(n_i,n_j,n_k)
-   call swmpi_set_gindx(n_i,n_j,n_k)
-   filenm=swmpi_rename_fnm(pnm_grid,fnm_metric)
-   subs=(/ nx1,ny1,k /); subc=(/ nx,ny,1 /); subt=(/ 1,1,1 /)
-   call nfseis_varput(filenm,'rho',grho(ngx1:ngx2,ngy1:ngy1),subs,subc,subt)
-   call nfseis_varput(filenm,'lambda',glam(ngx1:ngx2,ngy1:ngy1),subs,subc,subt)
-   call nfseis_varput(filenm,'mu',gmu(ngx1:ngx2,ngy1:ngy1),subs,subc,subt)
-#ifdef WITHQS
-   call nfseis_varput(filenm,'Qs',gQs(ngx1:ngx2,ngy1:ngy1),subs,subc,subt)
-#endif
-end do
-end do !n_i
-end do
-
-end do !gk
-deallocate(grho,glam,gmu)
-#ifdef WITHQS
-deallocate(gQs)
-#endif
-end subroutine read_media_nc
-
 subroutine read_media_layered(fnm_conf)
-character (len=*) :: fnm_conf
+character (len=*),intent(in) :: fnm_conf
 
 !integer,parameter :: NXGRID=5,NYGRID=5,NZGRID=10
 
@@ -361,30 +290,30 @@ real(SP) x1,y1,z1,L1,L2
 integer imax,jmax,nlayer,i1vec(1),j1vec(1)
 
 character (len=SEIS_STRLEN) :: str
-real(SP) d2m,v2ms,d2kgm3
-real(SP) Qf0
+real(SP) :: layer_sealevel,d2m,v2ms,d2kgm3
+real(SP) :: Qf0
 
 integer fid
 integer :: i,j,k,n,i1,i2,j1,j2,mi,mj,mk
 integer n_i,n_j,n_k
-
-flaglayer=.false.
-if (flagnc) return
-flaglayer=.true.
+real(SP) :: dx1,dx2,dy1,dy2,dz1,dz2
 
 fid=1001
 open(fid,file=trim(fnm_conf),status="old")
 call string_conf(fid,1,'nlayer',2,nlayer)
 if (nlayer<1) then
-   flaglayer=.false.
-   close(fid)
-   return
+   print *, "nlayer should >=1"
+   stop 1
 end if
 call string_conf(fid,1,'imax',2,imax)
 call string_conf(fid,1,'jmax',2,jmax)
 call string_conf(fid,1,'distance2meter',2,d2m)
 call string_conf(fid,1,'velocity2m/s',2,v2ms)
 call string_conf(fid,1,'density2kg/m^3',2,d2kgm3)
+call string_conf(fid,1,'layer_sealevel',2,layer_sealevel)
+call string_conf(fid,1,'half_sample_point',2,NGRIDX)
+call string_conf(fid,1,'half_sample_point',3,NGRIDY)
+call string_conf(fid,1,'half_sample_point',4,NGRIDZ)
 allocate (dom_vs(2,nlayer))
 allocate (dom_vp(2,nlayer))
 allocate (dom_p (2,nlayer))
@@ -445,8 +374,8 @@ end do
 !x_layer=x_layer*d2m; y_layer=y_layer*d2m;
 x_layer=x_layer*PI/180.0_SP
 y_layer=y_layer*PI/180.0_SP
+z_layer=z_layer+layer_sealevel
 z_layer=z_layer*d2m
-z_layer=z_layer+coord0(3)
 close(fid)
 
 write(*,*) "get media through media_layered ..."
@@ -468,14 +397,32 @@ do i=ni1,ni2
    rho   (i,j,k)=0.0
    lambda(i,j,k)=0.0
    mu    (i,j,k)=0.0
+   dx1=(x(i)-x(i-1))/2.0/NGRIDX; dx2=(x(i+1)-x(i))/2.0/NGRIDX
+   dy1=(y(j)-y(j-1))/2.0/NGRIDY; dy2=(y(j+1)-y(j))/2.0/NGRIDY
+   dz1=(z(k)-z(k-1))/2.0/NGRIDZ; dz2=(z(k+1)-z(k))/2.0/NGRIDZ
 
 do mk=-NGRIDZ,NGRIDZ
 do mj=-NGRIDY,NGRIDY
 do mi=-NGRIDX,NGRIDX
    if (mi*mj*mk==0) cycle
-   x1=x(i)+(mi*0.5_SP/(NGRIDX+1.0_SP))*stepx
-   y1=y(j)+(mj*0.5_SP/(NGRIDY+1.0_SP))*stepy
-   z1=z(k)+(mk*0.5_SP/(NGRIDZ+1.0_SP))*stepz
+   !x1=x(i)+(mi*0.5_SP/(NGRIDX+1.0_SP))*stepx
+   !y1=y(j)+(mj*0.5_SP/(NGRIDY+1.0_SP))*stepy
+   !z1=z(k)+(mk*0.5_SP/(NGRIDZ+1.0_SP))*stepz
+   if (mi<0) then
+      x1=x(i)+(mi+0.5)*dx1
+   else
+      x1=x(i)+(mi-0.5)*dx2
+   end if
+   if (mj<0) then
+      y1=y(j)+(mj+0.5)*dy1
+   else
+      y1=y(j)+(mj-0.5)*dy2
+   end if
+   if (mk<0) then
+      z1=z(k)+(mk+0.5)*dz1
+   else
+      z1=z(k)+(mk-0.5)*dz2
+   end if
 
    x1=min(max(x1,x_layer(1)),x_layer(imax))
    y1=min(max(y1,y_layer(1)),y_layer(jmax))
@@ -586,95 +533,6 @@ end do
   if (allocated(vecz)) deallocate(vecz)
 end subroutine read_media_layered
 
-subroutine read_media_custom(fnm_conf)
-character (len=*) :: fnm_conf
-
-real,dimension(2) ::  &
-   lam, miu, Qatt,    &
-   Vp,Vs,dens
-real x1,y1,z1
-
-real Qf0
-
-integer fid
-integer :: i,j,k,mi,mj,mk,si,sj,sk
-integer n_i,n_j,n_k
-character (len=SEIS_STRLEN) :: model_name
-real dx1,dx2,dy1,dy2,dz1,dz2
-
-if (flagnc .or. flaglayer) return
-
-fid=1001
-open(fid,file=trim(fnm_conf),status="old")
-call string_conf(fid,1,'model_custom',2,model_name)
-close(fid)
-
-write(*,*) "get media through media_custom ..."
-
-! model
-do n_i=0,dims(1)-1
-do n_j=0,dims(2)-1
-do n_k=0,dims(3)-1
-
-  write(*,"(i10,2(i2),a,3(i2))") n_i,n_j,n_k, ' of ',dims
-  call swmpi_change_fnm(n_i,n_j,n_k)
-  call swmpi_set_gindx(n_i,n_j,n_k)
-  call grid_import
-
-do k=nk1,nk2
-do j=nj1,nj2
-do i=ni1,ni2
-
-   rho   (i,j,k)=0.0
-   lambda(i,j,k)=0.0
-   mu    (i,j,k)=0.0
-
-do mk=-NGRID,NGRID
-do mj=-NGRID,NGRID
-do mi=-NGRID,NGRID
-   if (mi*mj*mk==0) cycle
-   x1=x(i)+(mi-0.5_SP*sign(1,mi))*stepx
-   y1=y(j)+(mj-0.5_SP*sign(1,mj))*stepy
-   z1=z(k)+(mk-0.5_SP*sign(1,mk))*stepz
-
-   call custom_media(x1,y1,z1,Vp,Vs,dens,Qatt,Qf0,model_name)
-   miu=dens*Vs*Vs
-   lam=Vp*Vp*dens - 2.0*miu
-   !accumulate
-   rho(i,j,k)=rho(i,j,k)+0.5*(dens(1)+dens(2))
-    mu(i,j,k)=mu(i,j,k)+0.5*(1.0/miu(1)+1.0/miu(2))
-   lambda(i,j,k)=lambda(i,j,k)+0.5*(1.0/lam(1)+1.0/lam(2))
-#ifdef WITHQS
-   Qs(i,j,k)=Qs(i,j,k)+0.5(Qatt(1)+Qatt(2))
-#endif
-end do !mi
-end do !mj
-end do !mk
-    rho   (i,j,k)=rho(i,j,k)/((2*NGRID)**3)
-    mu    (i,j,k)=((2*NGRID)**3)/mu(i,j,k)
-    lambda(i,j,k)=((2*NGRID)**3)/lambda(i,j,k)
-#ifdef WITHQS
-    Qs(i,j,k)=Qs(i,j,k)/((2*NGRID)**3)
-    Qs(i,j,k)=exp((-PI*Qf0*stept)/Qs(i,j,k))
-#endif
-end do !i
-end do !j
-end do !k
-
-  call media_extend
-  filenm=swmpi_rename_fnm(pnm_media,fnm_media)
-  call nfseis_varput(filenm,'rho',rho,subs,subc,subt)
-  call nfseis_varput(filenm,'mu',mu,subs,subc,subt)
-  call nfseis_varput(filenm,'lambda',lambda,subs,subc,subt)
-#ifdef WITHQS
-  call nfseis_varput(filenm,'Qs',Qs,subs,subc,subt)
-#endif
-
-end do
-end do
-end do
-end subroutine read_media_custom
-
 subroutine media_extend
   call extend_equal(rho)
   call extend_equal(mu)
@@ -715,11 +573,11 @@ subroutine extend_equal(w)
    end do
 end subroutine extend_equal
 function dist_point2plane(x0,y0,z0,A,B,C) result (L)
-real(SP) x0,y0,z0
-real(SP),dimension(SEIS_GEO) :: A,B,C
-real(SP) L
-real(SP),dimension(SEIS_GEO) :: AB,AC,p
-real(SP) c1,c2,c3,d
+real(DP),intent(in) :: x0,y0,z0
+real(DP),dimension(SEIS_GEO),intent(in) :: A,B,C
+real(DP) L
+real(DP),dimension(SEIS_GEO) :: AB,AC,p
+real(DP) c1,c2,c3,d
 
 AB=B-A; AC=C-A
 call times_product(AB,AC,p)
@@ -730,3 +588,4 @@ end function dist_point2plane
 
 end program seis3d_media
 
+! vim:ft=fortran:ts=4:sw=4:nu:et:ai:

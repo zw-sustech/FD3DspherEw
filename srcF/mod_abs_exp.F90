@@ -1,7 +1,8 @@
 !******************************************************************************!
 !*  This module is used for absorbing outgoing waves based on                 *!
 !*    Cerjan and Kosloff's nonreflecting boundary condition                   *!
-!*    Cerjan C., et al.(1985), Geophysics, 50(4):705-708                      *!
+!*    (Cerjan C., et al.(1985), Geophysics, 50(4):705-708)                    *!
+!*    with improvement of taking into account time step value                 *!
 !*                                                                            *!
 !*  Author: Wei ZHANG     Email: zhangw.pku@gmail.com                         *!
 !*  Copyright (C) Wei ZHANG, 2006. All Rights Reserved.                       *!
@@ -106,7 +107,7 @@ character (len=*) :: fnm_conf
 integer fid,n,m,i,j,k,ierr,npt
 real(SP),dimension(SEIS_GEO,2) :: Vs
 real(SP),dimension(SEIS_GEO) :: vec1
-real(SP) :: L
+real(SP) :: L,stepx,stepy,stepz
 
 fid=1001
 abs_number=0
@@ -140,6 +141,7 @@ W(n)%nj=nj             ;W(n)%nj1=nj1       ;W(n)%nj2=W(n)%nj1+W(n)%nj-1;
 W(n)%nk=nk             ;W(n)%nk1=nk1       ;W(n)%nk2=W(n)%nk1+W(n)%nk-1; 
 do i=W(n)%ni1,W(n)%ni2
    j=W(n)%nj1; k=W(n)%nk1
+   stepx=(x(i+1)-x(i-1))/2.0_SP
    L=stepx*xsin(i)*z(k)
    Ex(i)=cal_e(W(n)%ni -(i-W(n)%ni1),Vs(1,1),L,W(n)%ni)
 end do
@@ -153,6 +155,7 @@ W(n)%nj=nj             ;W(n)%nj1=nj1                  ;W(n)%nj2=W(n)%nj1+W(n)%nj
 W(n)%nk=nk             ;W(n)%nk1=nk1                  ;W(n)%nk2=W(n)%nk1+W(n)%nk-1; 
 do i=W(n)%ni1,W(n)%ni2
    j=W(n)%nj1; k=W(n)%nk1
+   stepx=(x(i+1)-x(i-1))/2.0_SP
    L=stepx*xsin(i)*z(k)
    Ex(i)=cal_e(i-W(n)%ni1+1         ,Vs(1,2),L,W(n)%ni)
 end do
@@ -167,6 +170,7 @@ W(n)%nj=abs_number(2,1)        ;W(n)%nj1=nj1                ;W(n)%nj2=W(n)%nj1+W
 W(n)%nk=nk                     ;W(n)%nk1=nk1                ;W(n)%nk2=W(n)%nk1+W(n)%nk-1; 
 do j=W(n)%nj1,W(n)%nj2
    i=W(n)%ni1; k=W(n)%nk1
+   stepy=(y(j+1)-y(j-1))/2.0_SP
    L=stepy*z(k)
    Ey(j)=cal_e(W(n)%nj -(j-W(n)%nj1),Vs(2,1),L,W(n)%nj)
 end do
@@ -180,6 +184,7 @@ W(n)%nj=abs_number(2,2)        ;W(n)%nj1=nj2-abs_number(2,2)+1;W(n)%nj2=W(n)%nj1
 W(n)%nk=nk                     ;W(n)%nk1=nk1                  ;W(n)%nk2=W(n)%nk1+W(n)%nk-1; 
 do j=W(n)%nj1,W(n)%nj2
    i=W(n)%ni1; k=W(n)%nk1
+   stepy=(y(j+1)-y(j-1))/2.0_SP
    L=stepy*z(k)
    Ey(j)=cal_e(j-W(n)%nj1+1         ,Vs(2,2),L,W(n)%nj)
 end do
@@ -194,6 +199,7 @@ W(n)%nj=nj-sum(abs_number(2,:));W(n)%nj1=nj1+abs_number(2,1);W(n)%nj2=W(n)%nj1+W
 W(n)%nk=abs_number(3,1)        ;W(n)%nk1=nk1                ;W(n)%nk2=W(n)%nk1+W(n)%nk-1; 
 do k=W(n)%nk1,W(n)%nk2
    i=W(n)%ni1; j=W(n)%nj1
+   stepz=(z(k+1)-z(k-1))/2.0_SP
    L=stepz
    Ez(k)=cal_e(W(n)%nk -(k-W(n)%nk1),Vs(3,1),L,W(n)%nk)
 end do
@@ -207,6 +213,7 @@ W(n)%nj=nj-sum(abs_number(2,:));W(n)%nj1=nj1+abs_number(2,1)  ;W(n)%nj2=W(n)%nj1
 W(n)%nk=abs_number(3,2)        ;W(n)%nk1=nk2-abs_number(3,2)+1;W(n)%nk2=W(n)%nk1+W(n)%nk-1; 
 do k=W(n)%nk1,W(n)%nk2
    i=W(n)%ni1; j=W(n)%nj1
+   stepz=(z(k+1)-z(k-1))/2.0_SP
    L=stepz
    Ez(k)=cal_e(k-W(n)%nk1+1         ,Vs(3,2),L,W(n)%nk)
 end do
@@ -299,3 +306,5 @@ d=exp(-d*(ie/nb)**2)
 end function cal_e
 
 end module abs_mod
+
+! vim:ft=fortran:ts=4:sw=4:nu:et:ai:

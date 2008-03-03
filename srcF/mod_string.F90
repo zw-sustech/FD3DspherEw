@@ -278,3 +278,5 @@ write(str,fmt_str) n
 end function string_enum
 
 end module string_mod
+
+! vim:ft=fortran:ts=4:sw=4:nu:et:ai:

@@ -89,7 +89,9 @@ do n_k=0,dims(3)-1
    call swmpi_set_gindx(n_i,n_j,n_k)
 if (seismo_on_this(pnm_grid,id,indx,n_i,n_j,n_k,npt)) then
    fnmstr=get_fnm_seismo(pnm_out,n_i,n_j,n_k)
-   call retrieve_recvline(fnmstr,npt,Vx,Vy,Vz,1,nt2,1,T)
+   call retrieve_recvline(fnmstr,npt,'Vx',Vx,1,nt2,1,T)
+   call retrieve_recvline(fnmstr,npt,'Vy',Vy,1,nt2,1)
+   call retrieve_recvline(fnmstr,npt,'Vz',Vz,1,nt2,1)
    exit
 endif
 end do
@@ -200,4 +202,4 @@ end subroutine locate_snap_indx
 
 end program tool_expt_seismo
 
-
+! vim:ft=fortran:ts=4:sw=4:nu:et:ai:

@@ -48,9 +48,9 @@ subroutine media_fnm_init(fnm_conf)
   integer fid
   fid=1001
   open(fid,file=trim(fnm_conf),status="old")
-    call string_conf(fid,1,'fnm_media_conf',2,fnm_media_conf)
-    call string_conf(fid,1,'pnm_media',2,pnm_media)
-    call string_conf(fid,1,'fnm_media',2,fnm_media)
+    call string_conf(fid,1,'MEDIA_CONF',2,fnm_media_conf)
+    call string_conf(fid,1,'MEDIA_ROOT',2,pnm_media)
+    fnm_media='media.nc'
   close(fid)
 end subroutine media_fnm_init
 
@@ -89,3 +89,5 @@ integer,dimension(SEIS_GEO) :: subs,subc,subt
 end subroutine media_import
   
 end module media_mod
+
+! vim:ft=fortran:ts=4:sw=4:nu:et:ai:

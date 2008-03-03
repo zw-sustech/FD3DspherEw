@@ -10,10 +10,11 @@
 ! $Revision$
 ! $LastChangedBy$
 
-#include "mod_macdrp.h"
 !-----------------------------------------------------------------------------
 module macdrp_mod
 !-----------------------------------------------------------------------------
+
+#include "mod_macdrp.h"
 
 use constants_mod, only : SEIS_GEO
 use math_mod
@@ -81,6 +82,9 @@ DEFLDDRK4B
 HOCWETL
 HOCWETR
 
+!integer,parameter,private :: NREQ=36
+integer,parameter,private :: NREQ=24
+
 real(SP),dimension(:,:,:),allocatable ::        &
       Txx, Tyy, Txy, Vx, Vy, Tzz, Txz, Tyz, Vz, &
      hTxx,hTyy,hTxy,hVx,hVy,hTzz,hTxz,hTyz,hVz, &
@@ -94,8 +98,8 @@ real(SP),dimension(4),public :: firRKa,firRKb, secRKa,secRKb
 integer,dimension(SEIS_GEO*2,SEIS_GEO*2+1),public :: indx
 integer ierr
 integer,dimension(MPI_STATUS_SIZE) :: istatus
-integer,dimension(36) :: reqXB, reqXF, reqYB, reqYF, reqZB, reqZF
-integer,dimension(MPI_STATUS_SIZE,36) :: reqstat
+integer,dimension(NREQ) :: reqXB, reqXF, reqYB, reqYF, reqZB, reqZF
+integer,dimension(MPI_STATUS_SIZE,NREQ) :: reqstat
 #ifdef VERBOSE
 integer fid_out
 #endif
@@ -244,7 +248,7 @@ end subroutine macdrp_syn
 
 !-- Generic RK --
 subroutine macdrp_RK_beg(rka,rkb)
- real(SP) :: rka,rkb
+ real(SP),intent(in) :: rka,rkb
  real(SP) :: a,b
  integer i,j,k
  a=rka*stept; b=rkb*stept
@@ -282,7 +286,7 @@ call free_symmetric
 end subroutine macdrp_RK_beg
 
 subroutine macdrp_RK_inn(rka,rkb)
- real(SP) :: rka,rkb
+ real(SP),intent(in) :: rka,rkb
  real(SP) :: a,b
  integer i,j,k
  a=rka*stept; b=rkb*stept
@@ -320,7 +324,7 @@ call free_symmetric
 end subroutine macdrp_RK_inn
 
 subroutine macdrp_RK_fin(rkb)
- real(SP) :: rkb
+ real(SP),intent(in) :: rkb
  real(SP) :: b
  integer i,j,k
  b=rkb*stept
@@ -383,15 +387,15 @@ subroutine in_LxF_LyF_LzF
   call free_timg
 #endif
   n=SEIS_GEO*2+1
-  call MPI_STARTALL(36,reqXF,ierr)
-  call MPI_STARTALL(36,reqYF,ierr)
-  call MPI_STARTALL(36,reqZF,ierr)
+  call MPI_STARTALL(NREQ,reqXF,ierr)
+  call MPI_STARTALL(NREQ,reqYF,ierr)
+  call MPI_STARTALL(NREQ,reqZF,ierr)
   call LxF_LyF_LzF( indx(1,n),indx(2,n), &
                     indx(3,n),indx(4,n), &
                     indx(5,n),indx(6,n) )
-  call MPI_WAITALL(36,reqXF,reqstat,ierr)
-  call MPI_WAITALL(36,reqYF,reqstat,ierr)
-  call MPI_WAITALL(36,reqZF,reqstat,ierr)
+  call MPI_WAITALL(NREQ,reqXF,reqstat,ierr)
+  call MPI_WAITALL(NREQ,reqYF,reqstat,ierr)
+  call MPI_WAITALL(NREQ,reqZF,reqstat,ierr)
 
   do n=1,SEIS_GEO*2
   call LxF_LyF_LzF( indx(1,n),indx(2,n), &
@@ -422,15 +426,15 @@ subroutine in_LxB_LyB_LzB
   !  Vx=1.0;Vy=2.0;Vz=3.0;Txx=4.0;Tyy=5.0;Tzz=6.0;Txy=7.0;Txz=8.0;Tyz=9.0
   !end if
 
-  call MPI_STARTALL(36,reqXB,ierr)
-  call MPI_STARTALL(36,reqYB,ierr)
-  call MPI_STARTALL(36,reqZB,ierr)
+  call MPI_STARTALL(NREQ,reqXB,ierr)
+  call MPI_STARTALL(NREQ,reqYB,ierr)
+  call MPI_STARTALL(NREQ,reqZB,ierr)
   call LxB_LyB_LzB( indx(1,n),indx(2,n), &
                     indx(3,n),indx(4,n), &
                     indx(5,n),indx(6,n) )
-  call MPI_WAITALL(36,reqXB,reqstat,ierr)
-  call MPI_WAITALL(36,reqYB,reqstat,ierr)
-  call MPI_WAITALL(36,reqZB,reqstat,ierr)
+  call MPI_WAITALL(NREQ,reqXB,reqstat,ierr)
+  call MPI_WAITALL(NREQ,reqYB,reqstat,ierr)
+  call MPI_WAITALL(NREQ,reqZB,reqstat,ierr)
 
   do n=1,SEIS_GEO*2
   call LxB_LyB_LzB( indx(1,n),indx(2,n), &
@@ -455,15 +459,15 @@ subroutine in_LxB_LyB_LzF
   call free_timg
 #endif
   n=SEIS_GEO*2+1
-  call MPI_STARTALL(36,reqXB,ierr)
-  call MPI_STARTALL(36,reqYB,ierr)
-  call MPI_STARTALL(36,reqZF,ierr)
+  call MPI_STARTALL(NREQ,reqXB,ierr)
+  call MPI_STARTALL(NREQ,reqYB,ierr)
+  call MPI_STARTALL(NREQ,reqZF,ierr)
   call LxB_LyB_LzF( indx(1,n),indx(2,n), &
                     indx(3,n),indx(4,n), &
                     indx(5,n),indx(6,n) )
-  call MPI_WAITALL(36,reqXB,reqstat,ierr)
-  call MPI_WAITALL(36,reqYB,reqstat,ierr)
-  call MPI_WAITALL(36,reqZF,reqstat,ierr)
+  call MPI_WAITALL(NREQ,reqXB,reqstat,ierr)
+  call MPI_WAITALL(NREQ,reqYB,reqstat,ierr)
+  call MPI_WAITALL(NREQ,reqZF,reqstat,ierr)
 
   do n=1,SEIS_GEO*2
   call LxB_LyB_LzF( indx(1,n),indx(2,n), &
@@ -488,15 +492,15 @@ subroutine in_LxF_LyF_LzB
   call free_timg
 #endif
   n=SEIS_GEO*2+1
-  call MPI_STARTALL(36,reqXF,ierr)
-  call MPI_STARTALL(36,reqYF,ierr)
-  call MPI_STARTALL(36,reqZB,ierr)
+  call MPI_STARTALL(NREQ,reqXF,ierr)
+  call MPI_STARTALL(NREQ,reqYF,ierr)
+  call MPI_STARTALL(NREQ,reqZB,ierr)
   call LxF_LyF_LzB( indx(1,n),indx(2,n), &
                     indx(3,n),indx(4,n), &
                     indx(5,n),indx(6,n) )
-  call MPI_WAITALL(36,reqXF,reqstat,ierr)
-  call MPI_WAITALL(36,reqYF,reqstat,ierr)
-  call MPI_WAITALL(36,reqZB,reqstat,ierr)
+  call MPI_WAITALL(NREQ,reqXF,reqstat,ierr)
+  call MPI_WAITALL(NREQ,reqYF,reqstat,ierr)
+  call MPI_WAITALL(NREQ,reqZB,reqstat,ierr)
 
   do n=1,SEIS_GEO*2
   call LxF_LyF_LzB( indx(1,n),indx(2,n), &
@@ -521,15 +525,15 @@ subroutine in_LxB_LyF_LzF
   call free_timg
 #endif
   n=SEIS_GEO*2+1
-  call MPI_STARTALL(36,reqXB,ierr)
-  call MPI_STARTALL(36,reqYF,ierr)
-  call MPI_STARTALL(36,reqZF,ierr)
+  call MPI_STARTALL(NREQ,reqXB,ierr)
+  call MPI_STARTALL(NREQ,reqYF,ierr)
+  call MPI_STARTALL(NREQ,reqZF,ierr)
   call LxB_LyF_LzF( indx(1,n),indx(2,n), &
                     indx(3,n),indx(4,n), &
                     indx(5,n),indx(6,n) )
-  call MPI_WAITALL(36,reqXB,reqstat,ierr)
-  call MPI_WAITALL(36,reqYF,reqstat,ierr)
-  call MPI_WAITALL(36,reqZF,reqstat,ierr)
+  call MPI_WAITALL(NREQ,reqXB,reqstat,ierr)
+  call MPI_WAITALL(NREQ,reqYF,reqstat,ierr)
+  call MPI_WAITALL(NREQ,reqZF,reqstat,ierr)
 
   do n=1,SEIS_GEO*2
   call LxB_LyF_LzF( indx(1,n),indx(2,n), &
@@ -554,15 +558,15 @@ subroutine in_LxF_LyB_LzB
   call free_timg
 #endif
   n=SEIS_GEO*2+1
-  call MPI_STARTALL(36,reqXF,ierr)
-  call MPI_STARTALL(36,reqYB,ierr)
-  call MPI_STARTALL(36,reqZB,ierr)
+  call MPI_STARTALL(NREQ,reqXF,ierr)
+  call MPI_STARTALL(NREQ,reqYB,ierr)
+  call MPI_STARTALL(NREQ,reqZB,ierr)
   call LxF_LyB_LzB( indx(1,n),indx(2,n), &
                     indx(3,n),indx(4,n), &
                     indx(5,n),indx(6,n) )
-  call MPI_WAITALL(36,reqXF,reqstat,ierr)
-  call MPI_WAITALL(36,reqYB,reqstat,ierr)
-  call MPI_WAITALL(36,reqZB,reqstat,ierr)
+  call MPI_WAITALL(NREQ,reqXF,reqstat,ierr)
+  call MPI_WAITALL(NREQ,reqYB,reqstat,ierr)
+  call MPI_WAITALL(NREQ,reqZB,reqstat,ierr)
 
   do n=1,SEIS_GEO*2
   call LxF_LyB_LzB( indx(1,n),indx(2,n), &
@@ -587,15 +591,15 @@ subroutine in_LxF_LyB_LzF
   call free_timg
 #endif
   n=SEIS_GEO*2+1
-  call MPI_STARTALL(36,reqXF,ierr)
-  call MPI_STARTALL(36,reqYB,ierr)
-  call MPI_STARTALL(36,reqZF,ierr)
+  call MPI_STARTALL(NREQ,reqXF,ierr)
+  call MPI_STARTALL(NREQ,reqYB,ierr)
+  call MPI_STARTALL(NREQ,reqZF,ierr)
   call LxF_LyB_LzF( indx(1,n),indx(2,n), &
                     indx(3,n),indx(4,n), &
                     indx(5,n),indx(6,n) )
-  call MPI_WAITALL(36,reqXF,reqstat,ierr)
-  call MPI_WAITALL(36,reqYB,reqstat,ierr)
-  call MPI_WAITALL(36,reqZF,reqstat,ierr)
+  call MPI_WAITALL(NREQ,reqXF,reqstat,ierr)
+  call MPI_WAITALL(NREQ,reqYB,reqstat,ierr)
+  call MPI_WAITALL(NREQ,reqZF,reqstat,ierr)
 
   do n=1,SEIS_GEO*2
   call LxF_LyB_LzF( indx(1,n),indx(2,n), &
@@ -620,15 +624,15 @@ subroutine in_LxB_LyF_LzB
   call free_timg
 #endif
   n=SEIS_GEO*2+1
-  call MPI_STARTALL(36,reqXB,ierr)
-  call MPI_STARTALL(36,reqYF,ierr)
-  call MPI_STARTALL(36,reqZB,ierr)
+  call MPI_STARTALL(NREQ,reqXB,ierr)
+  call MPI_STARTALL(NREQ,reqYF,ierr)
+  call MPI_STARTALL(NREQ,reqZB,ierr)
   call LxB_LyF_LzB( indx(1,n),indx(2,n), &
                     indx(3,n),indx(4,n), &
                     indx(5,n),indx(6,n) )
-  call MPI_WAITALL(36,reqXB,reqstat,ierr)
-  call MPI_WAITALL(36,reqYF,reqstat,ierr)
-  call MPI_WAITALL(36,reqZB,reqstat,ierr)
+  call MPI_WAITALL(NREQ,reqXB,reqstat,ierr)
+  call MPI_WAITALL(NREQ,reqYF,reqstat,ierr)
+  call MPI_WAITALL(NREQ,reqZB,reqstat,ierr)
 
   do n=1,SEIS_GEO*2
   call LxB_LyF_LzB( indx(1,n),indx(2,n), &
@@ -666,77 +670,77 @@ do i=I1,I2
    DxTxx = (              &
      m3d_FDxF1(Txx,i,j,k) &
      m3d_FDxF2(Txx,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxTxy = (              &
      m3d_FDxF1(Txy,i,j,k) &
      m3d_FDxF2(Txy,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxTxz = (              &
      m3d_FDxF1(Txz,i,j,k) &
      m3d_FDxF2(Txz,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxVx =  (              &
      m3d_FDxF1(Vx,i,j,k)  &
      m3d_FDxF2(Vx,i,j,k)  &
-     )/stepx
+     )*xi_x(i)
    DxVy = (               &
      m3d_FDxF1(Vy,i,j,k)  &
      m3d_FDxF2(Vy,i,j,k)  &
-     )/stepx
+     )*xi_x(i)
    DxVz = (               &
      m3d_FDxF1(Vz,i,j,k)  &
      m3d_FDxF2(Vz,i,j,k)  &
-     )/stepx
+     )*xi_x(i)
 
    DyTyy = (              &
      m3d_FDyF1(Tyy,i,j,k) &
      m3d_FDyF2(Tyy,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyTxy = (              &
      m3d_FDyF1(Txy,i,j,k) &
      m3d_FDyF2(Txy,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyTyz = (              &
      m3d_FDyF1(Tyz,i,j,k) &
      m3d_FDyF2(Tyz,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyVx = (               &
      m3d_FDyF1(Vx,i,j,k)  &
      m3d_FDyF2(Vx,i,j,k)  &
-     )/stepy
+     )*eta_y(j)
    DyVy = (               &
      m3d_FDyF1(Vy,i,j,k)  &
      m3d_FDyF2(Vy,i,j,k)  &
-     )/stepy
+     )*eta_y(j)
    DyVz = (               &
      m3d_FDyF1(Vz,i,j,k)  &
      m3d_FDyF2(Vz,i,j,k)  &
-     )/stepy
+     )*eta_y(j)
 
    DzTzz = (              &
      m3d_FDzF1(Tzz,i,j,k) &
      m3d_FDzF2(Tzz,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    DzTxz = (              &
      m3d_FDzF1(Txz,i,j,k) &
      m3d_FDzF2(Txz,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    DzTyz = (              &
      m3d_FDzF1(Tyz,i,j,k) &
      m3d_FDzF2(Tyz,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    DzVx = (               &
      m3d_FDzF1(Vx,i,j,k)  &
      m3d_FDzF2(Vx,i,j,k)  &
-     )/stepz
+     )*zeta_z(k)
    DzVy = (               &
      m3d_FDzF1(Vy,i,j,k)  &
      m3d_FDzF2(Vy,i,j,k)  &
-     )/stepz
+     )*zeta_z(k)
    DzVz = (               &
      m3d_FDzF1(Vz,i,j,k)  &
      m3d_FDzF2(Vz,i,j,k)  &
-     )/stepz
+     )*zeta_z(k)
 
    hVx(i,j,k)= rrho*( DxTxx/z(k)+DyTxy/z(k)/xsin(i)+DzTxz                    &
         +(3.0_SP*Txz(i,j,k)+Txx(i,j,k)*xcot(i)-Tyy(i,j,k)*xcot(i))/z(k) )
@@ -786,77 +790,77 @@ do i=I1,I2
    DxTxx = (              &
      m3d_FDxB1(Txx,i,j,k) &
      m3d_FDxB2(Txx,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxTxy = (              &
      m3d_FDxB1(Txy,i,j,k) &
      m3d_FDxB2(Txy,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxTxz = (              &
      m3d_FDxB1(Txz,i,j,k) &
      m3d_FDxB2(Txz,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxVx =  (              &
      m3d_FDxB1(Vx,i,j,k)  &
      m3d_FDxB2(Vx,i,j,k)  &
-     )/stepx
+     )*xi_x(i)
    DxVy = (               &
      m3d_FDxB1(Vy,i,j,k)  &
      m3d_FDxB2(Vy,i,j,k)  &
-     )/stepx
+     )*xi_x(i)
    DxVz = (               &
      m3d_FDxB1(Vz,i,j,k)  &
      m3d_FDxB2(Vz,i,j,k)  &
-     )/stepx
+     )*xi_x(i)
 
    DyTyy = (              &
      m3d_FDyB1(Tyy,i,j,k) &
      m3d_FDyB2(Tyy,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyTxy = (              &
      m3d_FDyB1(Txy,i,j,k) &
      m3d_FDyB2(Txy,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyTyz = (              &
      m3d_FDyB1(Tyz,i,j,k) &
      m3d_FDyB2(Tyz,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyVx = (               &
      m3d_FDyB1(Vx,i,j,k)  &
      m3d_FDyB2(Vx,i,j,k)  &
-     )/stepy
+     )*eta_y(j)
    DyVy = (               &
      m3d_FDyB1(Vy,i,j,k)  &
      m3d_FDyB2(Vy,i,j,k)  &
-     )/stepy
+     )*eta_y(j)
    DyVz = (               &
      m3d_FDyB1(Vz,i,j,k)  &
      m3d_FDyB2(Vz,i,j,k)  &
-     )/stepy
+     )*eta_y(j)
 
    DzTzz = (              &
      m3d_FDzB1(Tzz,i,j,k) &
      m3d_FDzB2(Tzz,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    DzTxz = (              &
      m3d_FDzB1(Txz,i,j,k) &
      m3d_FDzB2(Txz,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    DzTyz = (              &
      m3d_FDzB1(Tyz,i,j,k) &
      m3d_FDzB2(Tyz,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    DzVx = (               &
      m3d_FDzB1(Vx,i,j,k)  &
      m3d_FDzB2(Vx,i,j,k)  &
-     )/stepz
+     )*zeta_z(k)
    DzVy = (               &
      m3d_FDzB1(Vy,i,j,k)  &
      m3d_FDzB2(Vy,i,j,k)  &
-     )/stepz
+     )*zeta_z(k)
    DzVz = (               &
      m3d_FDzB1(Vz,i,j,k)  &
      m3d_FDzB2(Vz,i,j,k)  &
-     )/stepz
+     )*zeta_z(k)
 
    hVx(i,j,k)= rrho*( DxTxx/z(k)+DyTxy/z(k)/xsin(i)+DzTxz                    &
         +(3.0_SP*Txz(i,j,k)+Txx(i,j,k)*xcot(i)-Tyy(i,j,k)*xcot(i))/z(k) )
@@ -906,77 +910,77 @@ do i=I1,I2
    DxTxx = (              &
      m3d_FDxF1(Txx,i,j,k) &
      m3d_FDxF2(Txx,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxTxy = (              &
      m3d_FDxF1(Txy,i,j,k) &
      m3d_FDxF2(Txy,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxTxz = (              &
      m3d_FDxF1(Txz,i,j,k) &
      m3d_FDxF2(Txz,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxVx =  (              &
      m3d_FDxF1(Vx,i,j,k)  &
      m3d_FDxF2(Vx,i,j,k)  &
-     )/stepx
+     )*xi_x(i)
    DxVy = (               &
      m3d_FDxF1(Vy,i,j,k)  &
      m3d_FDxF2(Vy,i,j,k)  &
-     )/stepx
+     )*xi_x(i)
    DxVz = (               &
      m3d_FDxF1(Vz,i,j,k)  &
      m3d_FDxF2(Vz,i,j,k)  &
-     )/stepx
+     )*xi_x(i)
 
    DyTyy = (              &
      m3d_FDyF1(Tyy,i,j,k) &
      m3d_FDyF2(Tyy,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyTxy = (              &
      m3d_FDyF1(Txy,i,j,k) &
      m3d_FDyF2(Txy,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyTyz = (              &
      m3d_FDyF1(Tyz,i,j,k) &
      m3d_FDyF2(Tyz,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyVx = (               &
      m3d_FDyF1(Vx,i,j,k)  &
      m3d_FDyF2(Vx,i,j,k)  &
-     )/stepy
+     )*eta_y(j)
    DyVy = (               &
      m3d_FDyF1(Vy,i,j,k)  &
      m3d_FDyF2(Vy,i,j,k)  &
-     )/stepy
+     )*eta_y(j)
    DyVz = (               &
      m3d_FDyF1(Vz,i,j,k)  &
      m3d_FDyF2(Vz,i,j,k)  &
-     )/stepy
+     )*eta_y(j)
 
    DzTzz = (              &
      m3d_FDzB1(Tzz,i,j,k) &
      m3d_FDzB2(Tzz,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    DzTxz = (              &
      m3d_FDzB1(Txz,i,j,k) &
      m3d_FDzB2(Txz,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    DzTyz = (              &
      m3d_FDzB1(Tyz,i,j,k) &
      m3d_FDzB2(Tyz,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    DzVx = (               &
      m3d_FDzB1(Vx,i,j,k)  &
      m3d_FDzB2(Vx,i,j,k)  &
-     )/stepz
+     )*zeta_z(k)
    DzVy = (               &
      m3d_FDzB1(Vy,i,j,k)  &
      m3d_FDzB2(Vy,i,j,k)  &
-     )/stepz
+     )*zeta_z(k)
    DzVz = (               &
      m3d_FDzB1(Vz,i,j,k)  &
      m3d_FDzB2(Vz,i,j,k)  &
-     )/stepz
+     )*zeta_z(k)
 
    hVx(i,j,k)= rrho*( DxTxx/z(k)+DyTxy/z(k)/xsin(i)+DzTxz                    &
         +(3.0_SP*Txz(i,j,k)+Txx(i,j,k)*xcot(i)-Tyy(i,j,k)*xcot(i))/z(k) )
@@ -1026,77 +1030,77 @@ do i=I1,I2
    DxTxx = (              &
      m3d_FDxB1(Txx,i,j,k) &
      m3d_FDxB2(Txx,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxTxy = (              &
      m3d_FDxB1(Txy,i,j,k) &
      m3d_FDxB2(Txy,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxTxz = (              &
      m3d_FDxB1(Txz,i,j,k) &
      m3d_FDxB2(Txz,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxVx =  (              &
      m3d_FDxB1(Vx,i,j,k)  &
      m3d_FDxB2(Vx,i,j,k)  &
-     )/stepx
+     )*xi_x(i)
    DxVy = (               &
      m3d_FDxB1(Vy,i,j,k)  &
      m3d_FDxB2(Vy,i,j,k)  &
-     )/stepx
+     )*xi_x(i)
    DxVz = (               &
      m3d_FDxB1(Vz,i,j,k)  &
      m3d_FDxB2(Vz,i,j,k)  &
-     )/stepx
+     )*xi_x(i)
 
    DyTyy = (              &
      m3d_FDyB1(Tyy,i,j,k) &
      m3d_FDyB2(Tyy,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyTxy = (              &
      m3d_FDyB1(Txy,i,j,k) &
      m3d_FDyB2(Txy,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyTyz = (              &
      m3d_FDyB1(Tyz,i,j,k) &
      m3d_FDyB2(Tyz,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyVx = (               &
      m3d_FDyB1(Vx,i,j,k)  &
      m3d_FDyB2(Vx,i,j,k)  &
-     )/stepy
+     )*eta_y(j)
    DyVy = (               &
      m3d_FDyB1(Vy,i,j,k)  &
      m3d_FDyB2(Vy,i,j,k)  &
-     )/stepy
+     )*eta_y(j)
    DyVz = (               &
      m3d_FDyB1(Vz,i,j,k)  &
      m3d_FDyB2(Vz,i,j,k)  &
-     )/stepy
+     )*eta_y(j)
 
    DzTzz = (              &
      m3d_FDzF1(Tzz,i,j,k) &
      m3d_FDzF2(Tzz,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    DzTxz = (              &
      m3d_FDzF1(Txz,i,j,k) &
      m3d_FDzF2(Txz,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    DzTyz = (              &
      m3d_FDzF1(Tyz,i,j,k) &
      m3d_FDzF2(Tyz,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    DzVx = (               &
      m3d_FDzF1(Vx,i,j,k)  &
      m3d_FDzF2(Vx,i,j,k)  &
-     )/stepz
+     )*zeta_z(k)
    DzVy = (               &
      m3d_FDzF1(Vy,i,j,k)  &
      m3d_FDzF2(Vy,i,j,k)  &
-     )/stepz
+     )*zeta_z(k)
    DzVz = (               &
      m3d_FDzF1(Vz,i,j,k)  &
      m3d_FDzF2(Vz,i,j,k)  &
-     )/stepz
+     )*zeta_z(k)
 
    hVx(i,j,k)= rrho*( DxTxx/z(k)+DyTxy/z(k)/xsin(i)+DzTxz                    &
         +(3.0_SP*Txz(i,j,k)+Txx(i,j,k)*xcot(i)-Tyy(i,j,k)*xcot(i))/z(k) )
@@ -1146,77 +1150,77 @@ do i=I1,I2
    DxTxx = (              &
      m3d_FDxB1(Txx,i,j,k) &
      m3d_FDxB2(Txx,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxTxy = (              &
      m3d_FDxB1(Txy,i,j,k) &
      m3d_FDxB2(Txy,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxTxz = (              &
      m3d_FDxB1(Txz,i,j,k) &
      m3d_FDxB2(Txz,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxVx =  (              &
      m3d_FDxB1(Vx,i,j,k)  &
      m3d_FDxB2(Vx,i,j,k)  &
-     )/stepx
+     )*xi_x(i)
    DxVy = (               &
      m3d_FDxB1(Vy,i,j,k)  &
      m3d_FDxB2(Vy,i,j,k)  &
-     )/stepx
+     )*xi_x(i)
    DxVz = (               &
      m3d_FDxB1(Vz,i,j,k)  &
      m3d_FDxB2(Vz,i,j,k)  &
-     )/stepx
+     )*xi_x(i)
 
    DyTyy = (              &
      m3d_FDyF1(Tyy,i,j,k) &
      m3d_FDyF2(Tyy,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyTxy = (              &
      m3d_FDyF1(Txy,i,j,k) &
      m3d_FDyF2(Txy,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyTyz = (              &
      m3d_FDyF1(Tyz,i,j,k) &
      m3d_FDyF2(Tyz,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyVx = (               &
      m3d_FDyF1(Vx,i,j,k)  &
      m3d_FDyF2(Vx,i,j,k)  &
-     )/stepy
+     )*eta_y(j)
    DyVy = (               &
      m3d_FDyF1(Vy,i,j,k)  &
      m3d_FDyF2(Vy,i,j,k)  &
-     )/stepy
+     )*eta_y(j)
    DyVz = (               &
      m3d_FDyF1(Vz,i,j,k)  &
      m3d_FDyF2(Vz,i,j,k)  &
-     )/stepy
+     )*eta_y(j)
 
    DzTzz = (              &
      m3d_FDzF1(Tzz,i,j,k) &
      m3d_FDzF2(Tzz,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    DzTxz = (              &
      m3d_FDzF1(Txz,i,j,k) &
      m3d_FDzF2(Txz,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    DzTyz = (              &
      m3d_FDzF1(Tyz,i,j,k) &
      m3d_FDzF2(Tyz,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    DzVx = (               &
      m3d_FDzF1(Vx,i,j,k)  &
      m3d_FDzF2(Vx,i,j,k)  &
-     )/stepz
+     )*zeta_z(k)
    DzVy = (               &
      m3d_FDzF1(Vy,i,j,k)  &
      m3d_FDzF2(Vy,i,j,k)  &
-     )/stepz
+     )*zeta_z(k)
    DzVz = (               &
      m3d_FDzF1(Vz,i,j,k)  &
      m3d_FDzF2(Vz,i,j,k)  &
-     )/stepz
+     )*zeta_z(k)
 
    hVx(i,j,k)= rrho*( DxTxx/z(k)+DyTxy/z(k)/xsin(i)+DzTxz                    &
         +(3.0_SP*Txz(i,j,k)+Txx(i,j,k)*xcot(i)-Tyy(i,j,k)*xcot(i))/z(k) )
@@ -1266,77 +1270,77 @@ do i=I1,I2
    DxTxx = (              &
      m3d_FDxF1(Txx,i,j,k) &
      m3d_FDxF2(Txx,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxTxy = (              &
      m3d_FDxF1(Txy,i,j,k) &
      m3d_FDxF2(Txy,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxTxz = (              &
      m3d_FDxF1(Txz,i,j,k) &
      m3d_FDxF2(Txz,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxVx =  (              &
      m3d_FDxF1(Vx,i,j,k)  &
      m3d_FDxF2(Vx,i,j,k)  &
-     )/stepx
+     )*xi_x(i)
    DxVy = (               &
      m3d_FDxF1(Vy,i,j,k)  &
      m3d_FDxF2(Vy,i,j,k)  &
-     )/stepx
+     )*xi_x(i)
    DxVz = (               &
      m3d_FDxF1(Vz,i,j,k)  &
      m3d_FDxF2(Vz,i,j,k)  &
-     )/stepx
+     )*xi_x(i)
 
    DyTyy = (              &
      m3d_FDyB1(Tyy,i,j,k) &
      m3d_FDyB2(Tyy,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyTxy = (              &
      m3d_FDyB1(Txy,i,j,k) &
      m3d_FDyB2(Txy,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyTyz = (              &
      m3d_FDyB1(Tyz,i,j,k) &
      m3d_FDyB2(Tyz,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyVx = (               &
      m3d_FDyB1(Vx,i,j,k)  &
      m3d_FDyB2(Vx,i,j,k)  &
-     )/stepy
+     )*eta_y(j)
    DyVy = (               &
      m3d_FDyB1(Vy,i,j,k)  &
      m3d_FDyB2(Vy,i,j,k)  &
-     )/stepy
+     )*eta_y(j)
    DyVz = (               &
      m3d_FDyB1(Vz,i,j,k)  &
      m3d_FDyB2(Vz,i,j,k)  &
-     )/stepy
+     )*eta_y(j)
 
    DzTzz = (              &
      m3d_FDzB1(Tzz,i,j,k) &
      m3d_FDzB2(Tzz,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    DzTxz = (              &
      m3d_FDzB1(Txz,i,j,k) &
      m3d_FDzB2(Txz,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    DzTyz = (              &
      m3d_FDzB1(Tyz,i,j,k) &
      m3d_FDzB2(Tyz,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    DzVx = (               &
      m3d_FDzB1(Vx,i,j,k)  &
      m3d_FDzB2(Vx,i,j,k)  &
-     )/stepz
+     )*zeta_z(k)
    DzVy = (               &
      m3d_FDzB1(Vy,i,j,k)  &
      m3d_FDzB2(Vy,i,j,k)  &
-     )/stepz
+     )*zeta_z(k)
    DzVz = (               &
      m3d_FDzB1(Vz,i,j,k)  &
      m3d_FDzB2(Vz,i,j,k)  &
-     )/stepz
+     )*zeta_z(k)
 
    hVx(i,j,k)= rrho*( DxTxx/z(k)+DyTxy/z(k)/xsin(i)+DzTxz                    &
         +(3.0_SP*Txz(i,j,k)+Txx(i,j,k)*xcot(i)-Tyy(i,j,k)*xcot(i))/z(k) )
@@ -1386,77 +1390,77 @@ do i=I1,I2
    DxTxx = (              &
      m3d_FDxF1(Txx,i,j,k) &
      m3d_FDxF2(Txx,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxTxy = (              &
      m3d_FDxF1(Txy,i,j,k) &
      m3d_FDxF2(Txy,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxTxz = (              &
      m3d_FDxF1(Txz,i,j,k) &
      m3d_FDxF2(Txz,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxVx =  (              &
      m3d_FDxF1(Vx,i,j,k)  &
      m3d_FDxF2(Vx,i,j,k)  &
-     )/stepx
+     )*xi_x(i)
    DxVy = (               &
      m3d_FDxF1(Vy,i,j,k)  &
      m3d_FDxF2(Vy,i,j,k)  &
-     )/stepx
+     )*xi_x(i)
    DxVz = (               &
      m3d_FDxF1(Vz,i,j,k)  &
      m3d_FDxF2(Vz,i,j,k)  &
-     )/stepx
+     )*xi_x(i)
 
    DyTyy = (              &
      m3d_FDyB1(Tyy,i,j,k) &
      m3d_FDyB2(Tyy,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyTxy = (              &
      m3d_FDyB1(Txy,i,j,k) &
      m3d_FDyB2(Txy,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyTyz = (              &
      m3d_FDyB1(Tyz,i,j,k) &
      m3d_FDyB2(Tyz,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyVx = (               &
      m3d_FDyB1(Vx,i,j,k)  &
      m3d_FDyB2(Vx,i,j,k)  &
-     )/stepy
+     )*eta_y(j)
    DyVy = (               &
      m3d_FDyB1(Vy,i,j,k)  &
      m3d_FDyB2(Vy,i,j,k)  &
-     )/stepy
+     )*eta_y(j)
    DyVz = (               &
      m3d_FDyB1(Vz,i,j,k)  &
      m3d_FDyB2(Vz,i,j,k)  &
-     )/stepy
+     )*eta_y(j)
 
    DzTzz = (              &
      m3d_FDzF1(Tzz,i,j,k) &
      m3d_FDzF2(Tzz,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    DzTxz = (              &
      m3d_FDzF1(Txz,i,j,k) &
      m3d_FDzF2(Txz,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    DzTyz = (              &
      m3d_FDzF1(Tyz,i,j,k) &
      m3d_FDzF2(Tyz,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    DzVx = (               &
      m3d_FDzF1(Vx,i,j,k)  &
      m3d_FDzF2(Vx,i,j,k)  &
-     )/stepz
+     )*zeta_z(k)
    DzVy = (               &
      m3d_FDzF1(Vy,i,j,k)  &
      m3d_FDzF2(Vy,i,j,k)  &
-     )/stepz
+     )*zeta_z(k)
    DzVz = (               &
      m3d_FDzF1(Vz,i,j,k)  &
      m3d_FDzF2(Vz,i,j,k)  &
-     )/stepz
+     )*zeta_z(k)
 
    hVx(i,j,k)= rrho*( DxTxx/z(k)+DyTxy/z(k)/xsin(i)+DzTxz                    &
         +(3.0_SP*Txz(i,j,k)+Txx(i,j,k)*xcot(i)-Tyy(i,j,k)*xcot(i))/z(k) )
@@ -1506,77 +1510,77 @@ do i=I1,I2
    DxTxx = (              &
      m3d_FDxB1(Txx,i,j,k) &
      m3d_FDxB2(Txx,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxTxy = (              &
      m3d_FDxB1(Txy,i,j,k) &
      m3d_FDxB2(Txy,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxTxz = (              &
      m3d_FDxB1(Txz,i,j,k) &
      m3d_FDxB2(Txz,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxVx =  (              &
      m3d_FDxB1(Vx,i,j,k)  &
      m3d_FDxB2(Vx,i,j,k)  &
-     )/stepx
+     )*xi_x(i)
    DxVy = (               &
      m3d_FDxB1(Vy,i,j,k)  &
      m3d_FDxB2(Vy,i,j,k)  &
-     )/stepx
+     )*xi_x(i)
    DxVz = (               &
      m3d_FDxB1(Vz,i,j,k)  &
      m3d_FDxB2(Vz,i,j,k)  &
-     )/stepx
+     )*xi_x(i)
 
    DyTyy = (              &
      m3d_FDyF1(Tyy,i,j,k) &
      m3d_FDyF2(Tyy,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyTxy = (              &
      m3d_FDyF1(Txy,i,j,k) &
      m3d_FDyF2(Txy,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyTyz = (              &
      m3d_FDyF1(Tyz,i,j,k) &
      m3d_FDyF2(Tyz,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyVx = (               &
      m3d_FDyF1(Vx,i,j,k)  &
      m3d_FDyF2(Vx,i,j,k)  &
-     )/stepy
+     )*eta_y(j)
    DyVy = (               &
      m3d_FDyF1(Vy,i,j,k)  &
      m3d_FDyF2(Vy,i,j,k)  &
-     )/stepy
+     )*eta_y(j)
    DyVz = (               &
      m3d_FDyF1(Vz,i,j,k)  &
      m3d_FDyF2(Vz,i,j,k)  &
-     )/stepy
+     )*eta_y(j)
 
    DzTzz = (              &
      m3d_FDzB1(Tzz,i,j,k) &
      m3d_FDzB2(Tzz,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    DzTxz = (              &
      m3d_FDzB1(Txz,i,j,k) &
      m3d_FDzB2(Txz,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    DzTyz = (              &
      m3d_FDzB1(Tyz,i,j,k) &
      m3d_FDzB2(Tyz,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    DzVx = (               &
      m3d_FDzB1(Vx,i,j,k)  &
      m3d_FDzB2(Vx,i,j,k)  &
-     )/stepz
+     )*zeta_z(k)
    DzVy = (               &
      m3d_FDzB1(Vy,i,j,k)  &
      m3d_FDzB2(Vy,i,j,k)  &
-     )/stepz
+     )*zeta_z(k)
    DzVz = (               &
      m3d_FDzB1(Vz,i,j,k)  &
      m3d_FDzB2(Vz,i,j,k)  &
-     )/stepz
+     )*zeta_z(k)
 
    hVx(i,j,k)= rrho*( DxTxx/z(k)+DyTxy/z(k)/xsin(i)+DzTxz                    &
         +(3.0_SP*Txz(i,j,k)+Txx(i,j,k)*xcot(i)-Tyy(i,j,k)*xcot(i))/z(k) )
@@ -1629,28 +1633,28 @@ loop_xi:  do i=ni1,ni2
    DxVx(n) =  (          &
      m3d_FDxF1(Vx,i,j,k) &
      m3d_FDxF2(Vx,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxVy(n) = (           &
      m3d_FDxF1(Vy,i,j,k) &
      m3d_FDxF2(Vy,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxVz(n) = (           &
      m3d_FDxF1(Vz,i,j,k) &
      m3d_FDxF2(Vz,i,j,k) &
-     )/stepx
+     )*xi_x(i)
 
    DyVx(n) =  (          &
      m3d_FDyF1(Vx,i,j,k) &
      m3d_FDyF2(Vx,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyVy(n) = (           &
      m3d_FDyF1(Vy,i,j,k) &
      m3d_FDyF2(Vy,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyVz(n) = (           &
      m3d_FDyF1(Vz,i,j,k) &
      m3d_FDyF2(Vz,i,j,k) &
-     )/stepy
+     )*eta_y(j)
 
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
@@ -1666,33 +1670,33 @@ do n=LenFD,2,-1
    DxVx(n) =  (          &
      m3d_FDxF1(Vx,i,j,k) &
      m3d_FDxF2(Vx,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxVy(n) = (           &
      m3d_FDxF1(Vy,i,j,k) &
      m3d_FDxF2(Vy,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxVz(n) = (           &
      m3d_FDxF1(Vz,i,j,k) &
      m3d_FDxF2(Vz,i,j,k) &
-     )/stepx
+     )*xi_x(i)
 
    DyVx(n) =  (          &
      m3d_FDyF1(Vx,i,j,k) &
      m3d_FDyF2(Vx,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyVy(n) = (           &
      m3d_FDyF1(Vy,i,j,k) &
      m3d_FDyF2(Vy,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyVz(n) = (           &
      m3d_FDyF1(Vz,i,j,k) &
      m3d_FDyF2(Vz,i,j,k) &
-     )/stepy
+     )*eta_y(j)
 
    rhs_Dz= (                  &
      m3d_HOCzF1_RHS(Vx,i,j,k) &
      m3d_HOCzF2_RHS(Vx,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    lhs_Dz= (                  &
      vec_HOC_F_LHS(DzVx,n)    &
      )
@@ -1701,7 +1705,7 @@ do n=LenFD,2,-1
    rhs_Dz= (                  &
      m3d_HOCzF1_RHS(Vy,i,j,k) &
      m3d_HOCzF2_RHS(Vy,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    lhs_Dz= (                  &
      vec_HOC_F_LHS(DzVy,n)    &
      )
@@ -1710,7 +1714,7 @@ do n=LenFD,2,-1
    rhs_Dz= (                  &
      m3d_HOCzF1_RHS(Vz,i,j,k) &
      m3d_HOCzF2_RHS(Vz,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    lhs_Dz= (                  &
      vec_HOC_F_LHS(DzVz,n)    &
      )
@@ -1761,43 +1765,43 @@ loop_xi:  do i=ni1,ni2
    DzVx(n) =  (          &
      m3d_FDzB1(Vx,i,j,k) &
      m3d_FDzB2(Vx,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    DzVy(n) = (           &
      m3d_FDzB1(Vy,i,j,k) &
      m3d_FDzB2(Vy,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    DzVz(n) = (           &
      m3d_FDzB1(Vz,i,j,k) &
      m3d_FDzB2(Vz,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
 
    !-- k=nk2 --
    n=LenFD+1; k=nk2
    DxVx(n) =  (          &
      m3d_FDxB1(Vx,i,j,k) &
      m3d_FDxB2(Vx,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxVy(n) = (           &
      m3d_FDxB1(Vy,i,j,k) &
      m3d_FDxB2(Vy,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxVz(n) = (           &
      m3d_FDxB1(Vz,i,j,k) &
      m3d_FDxB2(Vz,i,j,k) &
-     )/stepx
+     )*xi_x(i)
 
    DyVx(n) =  (          &
      m3d_FDyB1(Vx,i,j,k) &
      m3d_FDyB2(Vx,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyVy(n) = (           &
      m3d_FDyB1(Vy,i,j,k) &
      m3d_FDyB2(Vy,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyVz(n) = (           &
      m3d_FDyB1(Vz,i,j,k) &
      m3d_FDyB2(Vz,i,j,k) &
-     )/stepy
+     )*eta_y(j)
 
    lam=lambda(i,j,k);miu=mu(i,j,k);lam2mu=lam+2.0*miu;rrho=1.0/rho(i,j,k)
 
@@ -1815,33 +1819,33 @@ do n=2,LenFD
    DxVx(n) =  (          &
      m3d_FDxB1(Vx,i,j,k) &
      m3d_FDxB2(Vx,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxVy(n) = (           &
      m3d_FDxB1(Vy,i,j,k) &
      m3d_FDxB2(Vy,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxVz(n) = (           &
      m3d_FDxB1(Vz,i,j,k) &
      m3d_FDxB2(Vz,i,j,k) &
-     )/stepx
+     )*xi_x(i)
 
    DyVx(n) =  (          &
      m3d_FDyB1(Vx,i,j,k) &
      m3d_FDyB2(Vx,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyVy(n) = (           &
      m3d_FDyB1(Vy,i,j,k) &
      m3d_FDyB2(Vy,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyVz(n) = (           &
      m3d_FDyB1(Vz,i,j,k) &
      m3d_FDyB2(Vz,i,j,k) &
-     )/stepy
+     )*eta_y(j)
 
    rhs_Dz= (                  &
      m3d_HOCzB1_RHS(Vx,i,j,k) &
      m3d_HOCzB2_RHS(Vx,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    lhs_Dz= (                  &
      vec_HOC_B_LHS(DzVx,n)    &
      )
@@ -1850,7 +1854,7 @@ do n=2,LenFD
    rhs_Dz= (                  &
      m3d_HOCzB1_RHS(Vy,i,j,k) &
      m3d_HOCzB2_RHS(Vy,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    lhs_Dz= (                  &
      vec_HOC_B_LHS(DzVy,n)    &
      )
@@ -1859,7 +1863,7 @@ do n=2,LenFD
    rhs_Dz= (                  &
      m3d_HOCzB1_RHS(Vz,i,j,k) &
      m3d_HOCzB2_RHS(Vz,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    lhs_Dz= (                  &
      vec_HOC_B_LHS(DzVz,n)    &
      )
@@ -1911,43 +1915,43 @@ loop_xi:  do i=ni1,ni2
    DzVx(n) =  (          &
      m3d_FDzB1(Vx,i,j,k) &
      m3d_FDzB2(Vx,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    DzVy(n) = (           &
      m3d_FDzB1(Vy,i,j,k) &
      m3d_FDzB2(Vy,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    DzVz(n) = (           &
      m3d_FDzB1(Vz,i,j,k) &
      m3d_FDzB2(Vz,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
 
    !-- k=nk2 --
    n=LenFD+1; k=nk2
    DxVx(n) =  (          &
      m3d_FDxF1(Vx,i,j,k) &
      m3d_FDxF2(Vx,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxVy(n) = (           &
      m3d_FDxF1(Vy,i,j,k) &
      m3d_FDxF2(Vy,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxVz(n) = (           &
      m3d_FDxF1(Vz,i,j,k) &
      m3d_FDxF2(Vz,i,j,k) &
-     )/stepx
+     )*xi_x(i)
 
    DyVx(n) =  (          &
      m3d_FDyF1(Vx,i,j,k) &
      m3d_FDyF2(Vx,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyVy(n) = (           &
      m3d_FDyF1(Vy,i,j,k) &
      m3d_FDyF2(Vy,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyVz(n) = (           &
      m3d_FDyF1(Vz,i,j,k) &
      m3d_FDyF2(Vz,i,j,k) &
-     )/stepy
+     )*eta_y(j)
 
    lam=lambda(i,j,k);miu=mu(i,j,k);lam2mu=lam+2.0*miu;rrho=1.0/rho(i,j,k)
 
@@ -1965,33 +1969,33 @@ do n=2,LenFD
    DxVx(n) =  (          &
      m3d_FDxF1(Vx,i,j,k) &
      m3d_FDxF2(Vx,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxVy(n) = (           &
      m3d_FDxF1(Vy,i,j,k) &
      m3d_FDxF2(Vy,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxVz(n) = (           &
      m3d_FDxF1(Vz,i,j,k) &
      m3d_FDxF2(Vz,i,j,k) &
-     )/stepx
+     )*xi_x(i)
 
    DyVx(n) =  (          &
      m3d_FDyF1(Vx,i,j,k) &
      m3d_FDyF2(Vx,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyVy(n) = (           &
      m3d_FDyF1(Vy,i,j,k) &
      m3d_FDyF2(Vy,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyVz(n) = (           &
      m3d_FDyF1(Vz,i,j,k) &
      m3d_FDyF2(Vz,i,j,k) &
-     )/stepy
+     )*eta_y(j)
 
    rhs_Dz= (                  &
      m3d_HOCzB1_RHS(Vx,i,j,k) &
      m3d_HOCzB2_RHS(Vx,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    lhs_Dz= (                  &
      vec_HOC_B_LHS(DzVx,n)    &
      )
@@ -2000,7 +2004,7 @@ do n=2,LenFD
    rhs_Dz= (                  &
      m3d_HOCzB1_RHS(Vy,i,j,k) &
      m3d_HOCzB2_RHS(Vy,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    lhs_Dz= (                  &
      vec_HOC_B_LHS(DzVy,n)    &
      )
@@ -2009,7 +2013,7 @@ do n=2,LenFD
    rhs_Dz= (                  &
      m3d_HOCzB1_RHS(Vz,i,j,k) &
      m3d_HOCzB2_RHS(Vz,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    lhs_Dz= (                  &
      vec_HOC_B_LHS(DzVz,n)    &
      )
@@ -2062,28 +2066,28 @@ loop_xi:  do i=ni1,ni2
    DxVx(n) =  (          &
      m3d_FDxB1(Vx,i,j,k) &
      m3d_FDxB2(Vx,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxVy(n) = (           &
      m3d_FDxB1(Vy,i,j,k) &
      m3d_FDxB2(Vy,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxVz(n) = (           &
      m3d_FDxB1(Vz,i,j,k) &
      m3d_FDxB2(Vz,i,j,k) &
-     )/stepx
+     )*xi_x(i)
 
    DyVx(n) =  (          &
      m3d_FDyB1(Vx,i,j,k) &
      m3d_FDyB2(Vx,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyVy(n) = (           &
      m3d_FDyB1(Vy,i,j,k) &
      m3d_FDyB2(Vy,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyVz(n) = (           &
      m3d_FDyB1(Vz,i,j,k) &
      m3d_FDyB2(Vz,i,j,k) &
-     )/stepy
+     )*eta_y(j)
 
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
@@ -2099,33 +2103,33 @@ do n=LenFD,2,-1
    DxVx(n) =  (          &
      m3d_FDxB1(Vx,i,j,k) &
      m3d_FDxB2(Vx,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxVy(n) = (           &
      m3d_FDxB1(Vy,i,j,k) &
      m3d_FDxB2(Vy,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxVz(n) = (           &
      m3d_FDxB1(Vz,i,j,k) &
      m3d_FDxB2(Vz,i,j,k) &
-     )/stepx
+     )*xi_x(i)
 
    DyVx(n) =  (          &
      m3d_FDyB1(Vx,i,j,k) &
      m3d_FDyB2(Vx,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyVy(n) = (           &
      m3d_FDyB1(Vy,i,j,k) &
      m3d_FDyB2(Vy,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyVz(n) = (           &
      m3d_FDyB1(Vz,i,j,k) &
      m3d_FDyB2(Vz,i,j,k) &
-     )/stepy
+     )*eta_y(j)
 
    rhs_Dz= (                  &
      m3d_HOCzF1_RHS(Vx,i,j,k) &
      m3d_HOCzF2_RHS(Vx,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    lhs_Dz= (                  &
      vec_HOC_F_LHS(DzVx,n)    &
      )
@@ -2134,7 +2138,7 @@ do n=LenFD,2,-1
    rhs_Dz= (                  &
      m3d_HOCzF1_RHS(Vy,i,j,k) &
      m3d_HOCzF2_RHS(Vy,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    lhs_Dz= (                  &
      vec_HOC_F_LHS(DzVy,n)    &
      )
@@ -2143,7 +2147,7 @@ do n=LenFD,2,-1
    rhs_Dz= (                  &
      m3d_HOCzF1_RHS(Vz,i,j,k) &
      m3d_HOCzF2_RHS(Vz,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    lhs_Dz= (                  &
      vec_HOC_F_LHS(DzVz,n)    &
      )
@@ -2197,28 +2201,28 @@ loop_xi:  do i=ni1,ni2
    DxVx(n) =  (          &
      m3d_FDxB1(Vx,i,j,k) &
      m3d_FDxB2(Vx,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxVy(n) = (           &
      m3d_FDxB1(Vy,i,j,k) &
      m3d_FDxB2(Vy,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxVz(n) = (           &
      m3d_FDxB1(Vz,i,j,k) &
      m3d_FDxB2(Vz,i,j,k) &
-     )/stepx
+     )*xi_x(i)
 
    DyVx(n) =  (          &
      m3d_FDyF1(Vx,i,j,k) &
      m3d_FDyF2(Vx,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyVy(n) = (           &
      m3d_FDyF1(Vy,i,j,k) &
      m3d_FDyF2(Vy,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyVz(n) = (           &
      m3d_FDyF1(Vz,i,j,k) &
      m3d_FDyF2(Vz,i,j,k) &
-     )/stepy
+     )*eta_y(j)
 
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
@@ -2234,33 +2238,33 @@ do n=LenFD,2,-1
    DxVx(n) =  (          &
      m3d_FDxB1(Vx,i,j,k) &
      m3d_FDxB2(Vx,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxVy(n) = (           &
      m3d_FDxB1(Vy,i,j,k) &
      m3d_FDxB2(Vy,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxVz(n) = (           &
      m3d_FDxB1(Vz,i,j,k) &
      m3d_FDxB2(Vz,i,j,k) &
-     )/stepx
+     )*xi_x(i)
 
    DyVx(n) =  (          &
      m3d_FDyF1(Vx,i,j,k) &
      m3d_FDyF2(Vx,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyVy(n) = (           &
      m3d_FDyF1(Vy,i,j,k) &
      m3d_FDyF2(Vy,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyVz(n) = (           &
      m3d_FDyF1(Vz,i,j,k) &
      m3d_FDyF2(Vz,i,j,k) &
-     )/stepy
+     )*eta_y(j)
 
    rhs_Dz= (                  &
      m3d_HOCzF1_RHS(Vx,i,j,k) &
      m3d_HOCzF2_RHS(Vx,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    lhs_Dz= (                  &
      vec_HOC_F_LHS(DzVx,n)    &
      )
@@ -2269,7 +2273,7 @@ do n=LenFD,2,-1
    rhs_Dz= (                  &
      m3d_HOCzF1_RHS(Vy,i,j,k) &
      m3d_HOCzF2_RHS(Vy,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    lhs_Dz= (                  &
      vec_HOC_F_LHS(DzVy,n)    &
      )
@@ -2278,7 +2282,7 @@ do n=LenFD,2,-1
    rhs_Dz= (                  &
      m3d_HOCzF1_RHS(Vz,i,j,k) &
      m3d_HOCzF2_RHS(Vz,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    lhs_Dz= (                  &
      vec_HOC_F_LHS(DzVz,n)    &
      )
@@ -2329,43 +2333,43 @@ loop_xi:  do i=ni1,ni2
    DzVx(n) =  (          &
      m3d_FDzB1(Vx,i,j,k) &
      m3d_FDzB2(Vx,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    DzVy(n) = (           &
      m3d_FDzB1(Vy,i,j,k) &
      m3d_FDzB2(Vy,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    DzVz(n) = (           &
      m3d_FDzB1(Vz,i,j,k) &
      m3d_FDzB2(Vz,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
 
    !-- k=nk2 --
    n=LenFD+1; k=nk2
    DxVx(n) =  (          &
      m3d_FDxF1(Vx,i,j,k) &
      m3d_FDxF2(Vx,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxVy(n) = (           &
      m3d_FDxF1(Vy,i,j,k) &
      m3d_FDxF2(Vy,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxVz(n) = (           &
      m3d_FDxF1(Vz,i,j,k) &
      m3d_FDxF2(Vz,i,j,k) &
-     )/stepx
+     )*xi_x(i)
 
    DyVx(n) =  (          &
      m3d_FDyB1(Vx,i,j,k) &
      m3d_FDyB2(Vx,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyVy(n) = (           &
      m3d_FDyB1(Vy,i,j,k) &
      m3d_FDyB2(Vy,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyVz(n) = (           &
      m3d_FDyB1(Vz,i,j,k) &
      m3d_FDyB2(Vz,i,j,k) &
-     )/stepy
+     )*eta_y(j)
 
    lam=lambda(i,j,k);miu=mu(i,j,k);lam2mu=lam+2.0*miu;rrho=1.0/rho(i,j,k)
 
@@ -2383,33 +2387,33 @@ do n=2,LenFD
    DxVx(n) =  (          &
      m3d_FDxF1(Vx,i,j,k) &
      m3d_FDxF2(Vx,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxVy(n) = (           &
      m3d_FDxF1(Vy,i,j,k) &
      m3d_FDxF2(Vy,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxVz(n) = (           &
      m3d_FDxF1(Vz,i,j,k) &
      m3d_FDxF2(Vz,i,j,k) &
-     )/stepx
+     )*xi_x(i)
 
    DyVx(n) =  (          &
      m3d_FDyB1(Vx,i,j,k) &
      m3d_FDyB2(Vx,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyVy(n) = (           &
      m3d_FDyB1(Vy,i,j,k) &
      m3d_FDyB2(Vy,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyVz(n) = (           &
      m3d_FDyB1(Vz,i,j,k) &
      m3d_FDyB2(Vz,i,j,k) &
-     )/stepy
+     )*eta_y(j)
 
    rhs_Dz= (                  &
      m3d_HOCzB1_RHS(Vx,i,j,k) &
      m3d_HOCzB2_RHS(Vx,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    lhs_Dz= (                  &
      vec_HOC_B_LHS(DzVx,n)    &
      )
@@ -2418,7 +2422,7 @@ do n=2,LenFD
    rhs_Dz= (                  &
      m3d_HOCzB1_RHS(Vy,i,j,k) &
      m3d_HOCzB2_RHS(Vy,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    lhs_Dz= (                  &
      vec_HOC_B_LHS(DzVy,n)    &
      )
@@ -2427,7 +2431,7 @@ do n=2,LenFD
    rhs_Dz= (                  &
      m3d_HOCzB1_RHS(Vz,i,j,k) &
      m3d_HOCzB2_RHS(Vz,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    lhs_Dz= (                  &
      vec_HOC_B_LHS(DzVz,n)    &
      )
@@ -2481,28 +2485,28 @@ loop_xi:  do i=ni1,ni2
    DxVx(n) =  (          &
      m3d_FDxF1(Vx,i,j,k) &
      m3d_FDxF2(Vx,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxVy(n) = (           &
      m3d_FDxF1(Vy,i,j,k) &
      m3d_FDxF2(Vy,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxVz(n) = (           &
      m3d_FDxF1(Vz,i,j,k) &
      m3d_FDxF2(Vz,i,j,k) &
-     )/stepx
+     )*xi_x(i)
 
    DyVx(n) =  (          &
      m3d_FDyB1(Vx,i,j,k) &
      m3d_FDyB2(Vx,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyVy(n) = (           &
      m3d_FDyB1(Vy,i,j,k) &
      m3d_FDyB2(Vy,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyVz(n) = (           &
      m3d_FDyB1(Vz,i,j,k) &
      m3d_FDyB2(Vz,i,j,k) &
-     )/stepy
+     )*eta_y(j)
 
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
@@ -2518,33 +2522,33 @@ do n=LenFD,2,-1
    DxVx(n) =  (          &
      m3d_FDxF1(Vx,i,j,k) &
      m3d_FDxF2(Vx,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxVy(n) = (           &
      m3d_FDxF1(Vy,i,j,k) &
      m3d_FDxF2(Vy,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxVz(n) = (           &
      m3d_FDxF1(Vz,i,j,k) &
      m3d_FDxF2(Vz,i,j,k) &
-     )/stepx
+     )*xi_x(i)
 
    DyVx(n) =  (          &
      m3d_FDyB1(Vx,i,j,k) &
      m3d_FDyB2(Vx,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyVy(n) = (           &
      m3d_FDyB1(Vy,i,j,k) &
      m3d_FDyB2(Vy,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyVz(n) = (           &
      m3d_FDyB1(Vz,i,j,k) &
      m3d_FDyB2(Vz,i,j,k) &
-     )/stepy
+     )*eta_y(j)
 
    rhs_Dz= (                  &
      m3d_HOCzF1_RHS(Vx,i,j,k) &
      m3d_HOCzF2_RHS(Vx,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    lhs_Dz= (                  &
      vec_HOC_F_LHS(DzVx,n)    &
      )
@@ -2553,7 +2557,7 @@ do n=LenFD,2,-1
    rhs_Dz= (                  &
      m3d_HOCzF1_RHS(Vy,i,j,k) &
      m3d_HOCzF2_RHS(Vy,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    lhs_Dz= (                  &
      vec_HOC_F_LHS(DzVy,n)    &
      )
@@ -2562,7 +2566,7 @@ do n=LenFD,2,-1
    rhs_Dz= (                  &
      m3d_HOCzF1_RHS(Vz,i,j,k) &
      m3d_HOCzF2_RHS(Vz,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    lhs_Dz= (                  &
      vec_HOC_F_LHS(DzVz,n)    &
      )
@@ -2613,43 +2617,43 @@ loop_xi:  do i=ni1,ni2
    DzVx(n) =  (          &
      m3d_FDzB1(Vx,i,j,k) &
      m3d_FDzB2(Vx,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    DzVy(n) = (           &
      m3d_FDzB1(Vy,i,j,k) &
      m3d_FDzB2(Vy,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    DzVz(n) = (           &
      m3d_FDzB1(Vz,i,j,k) &
      m3d_FDzB2(Vz,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
 
    !-- k=nk2 --
    n=LenFD+1; k=nk2
    DxVx(n) =  (          &
      m3d_FDxB1(Vx,i,j,k) &
      m3d_FDxB2(Vx,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxVy(n) = (           &
      m3d_FDxB1(Vy,i,j,k) &
      m3d_FDxB2(Vy,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxVz(n) = (           &
      m3d_FDxB1(Vz,i,j,k) &
      m3d_FDxB2(Vz,i,j,k) &
-     )/stepx
+     )*xi_x(i)
 
    DyVx(n) =  (          &
      m3d_FDyF1(Vx,i,j,k) &
      m3d_FDyF2(Vx,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyVy(n) = (           &
      m3d_FDyF1(Vy,i,j,k) &
      m3d_FDyF2(Vy,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyVz(n) = (           &
      m3d_FDyF1(Vz,i,j,k) &
      m3d_FDyF2(Vz,i,j,k) &
-     )/stepy
+     )*eta_y(j)
 
    lam=lambda(i,j,k);miu=mu(i,j,k);lam2mu=lam+2.0*miu;rrho=1.0/rho(i,j,k)
 
@@ -2667,33 +2671,33 @@ do n=2,LenFD
    DxVx(n) =  (          &
      m3d_FDxB1(Vx,i,j,k) &
      m3d_FDxB2(Vx,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxVy(n) = (           &
      m3d_FDxB1(Vy,i,j,k) &
      m3d_FDxB2(Vy,i,j,k) &
-     )/stepx
+     )*xi_x(i)
    DxVz(n) = (           &
      m3d_FDxB1(Vz,i,j,k) &
      m3d_FDxB2(Vz,i,j,k) &
-     )/stepx
+     )*xi_x(i)
 
    DyVx(n) =  (          &
      m3d_FDyF1(Vx,i,j,k) &
      m3d_FDyF2(Vx,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyVy(n) = (           &
      m3d_FDyF1(Vy,i,j,k) &
      m3d_FDyF2(Vy,i,j,k) &
-     )/stepy
+     )*eta_y(j)
    DyVz(n) = (           &
      m3d_FDyF1(Vz,i,j,k) &
      m3d_FDyF2(Vz,i,j,k) &
-     )/stepy
+     )*eta_y(j)
 
    rhs_Dz= (                  &
      m3d_HOCzB1_RHS(Vx,i,j,k) &
      m3d_HOCzB2_RHS(Vx,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    lhs_Dz= (                  &
      vec_HOC_B_LHS(DzVx,n)    &
      )
@@ -2702,7 +2706,7 @@ do n=2,LenFD
    rhs_Dz= (                  &
      m3d_HOCzB1_RHS(Vy,i,j,k) &
      m3d_HOCzB2_RHS(Vy,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    lhs_Dz= (                  &
      vec_HOC_B_LHS(DzVy,n)    &
      )
@@ -2711,7 +2715,7 @@ do n=2,LenFD
    rhs_Dz= (                  &
      m3d_HOCzB1_RHS(Vz,i,j,k) &
      m3d_HOCzB2_RHS(Vz,i,j,k) &
-     )/stepz
+     )*zeta_z(k)
    lhs_Dz= (                  &
      vec_HOC_B_LHS(DzVz,n)    &
      )
@@ -2842,72 +2846,51 @@ integer r1,r2,r3,r4,r5,r6,r7,r8,r9
 ! --- LxF ------------------------------------------------------------------
 ! to X1
 call MPI_SEND_INIT(Txx(ni1,ny1,nz1),1,DTypeXL,neigid(1,1),1131,SWMPI_COMM,s1,ierr)
-call MPI_SEND_INIT(Tyy(ni1,ny1,nz1),1,DTypeXL,neigid(1,1),1132,SWMPI_COMM,s2,ierr)
-call MPI_SEND_INIT(Tzz(ni1,ny1,nz1),1,DTypeXL,neigid(1,1),1133,SWMPI_COMM,s3,ierr)
+!call MPI_SEND_INIT(Tyy(ni1,ny1,nz1),1,DTypeXL,neigid(1,1),1132,SWMPI_COMM,s2,ierr)
+!call MPI_SEND_INIT(Tzz(ni1,ny1,nz1),1,DTypeXL,neigid(1,1),1133,SWMPI_COMM,s3,ierr)
 call MPI_SEND_INIT(Txy(ni1,ny1,nz1),1,DTypeXL,neigid(1,1),1134,SWMPI_COMM,s4,ierr)
 call MPI_SEND_INIT(Txz(ni1,ny1,nz1),1,DTypeXL,neigid(1,1),1135,SWMPI_COMM,s5,ierr)
-call MPI_SEND_INIT(Tyz(ni1,ny1,nz1),1,DTypeXL,neigid(1,1),1136,SWMPI_COMM,s6,ierr)
+!call MPI_SEND_INIT(Tyz(ni1,ny1,nz1),1,DTypeXL,neigid(1,1),1136,SWMPI_COMM,s6,ierr)
 call MPI_SEND_INIT(Vx (ni1,ny1,nz1),1,DTypeXL,neigid(1,1),1137,SWMPI_COMM,s7,ierr)
 call MPI_SEND_INIT(Vy (ni1,ny1,nz1),1,DTypeXL,neigid(1,1),1138,SWMPI_COMM,s8,ierr)
 call MPI_SEND_INIT(Vz (ni1,ny1,nz1),1,DTypeXL,neigid(1,1),1139,SWMPI_COMM,s9,ierr)
 ! from X2
 call MPI_RECV_INIT(Txx(ni2+1,ny1,nz1),1,DTypeXL,neigid(1,2),1131,SWMPI_COMM,r1,ierr)
-call MPI_RECV_INIT(Tyy(ni2+1,ny1,nz1),1,DTypeXL,neigid(1,2),1132,SWMPI_COMM,r2,ierr)
-call MPI_RECV_INIT(Tzz(ni2+1,ny1,nz1),1,DTypeXL,neigid(1,2),1133,SWMPI_COMM,r3,ierr)
+!call MPI_RECV_INIT(Tyy(ni2+1,ny1,nz1),1,DTypeXL,neigid(1,2),1132,SWMPI_COMM,r2,ierr)
+!call MPI_RECV_INIT(Tzz(ni2+1,ny1,nz1),1,DTypeXL,neigid(1,2),1133,SWMPI_COMM,r3,ierr)
 call MPI_RECV_INIT(Txy(ni2+1,ny1,nz1),1,DTypeXL,neigid(1,2),1134,SWMPI_COMM,r4,ierr)
 call MPI_RECV_INIT(Txz(ni2+1,ny1,nz1),1,DTypeXL,neigid(1,2),1135,SWMPI_COMM,r5,ierr)
-call MPI_RECV_INIT(Tyz(ni2+1,ny1,nz1),1,DTypeXL,neigid(1,2),1136,SWMPI_COMM,r6,ierr)
+!call MPI_RECV_INIT(Tyz(ni2+1,ny1,nz1),1,DTypeXL,neigid(1,2),1136,SWMPI_COMM,r6,ierr)
 call MPI_RECV_INIT(Vx (ni2+1,ny1,nz1),1,DTypeXL,neigid(1,2),1137,SWMPI_COMM,r7,ierr)
 call MPI_RECV_INIT(Vy (ni2+1,ny1,nz1),1,DTypeXL,neigid(1,2),1138,SWMPI_COMM,r8,ierr)
 call MPI_RECV_INIT(Vz (ni2+1,ny1,nz1),1,DTypeXL,neigid(1,2),1139,SWMPI_COMM,r9,ierr)
 ! put into array
-reqXF(1:18)=(/ s1,r1,s2,r2,s3,r3,s4,r4,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
+!reqXF(1:18)=(/ s1,r1,s2,r2,s3,r3,s4,r4,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
+reqXF(1:12)=(/ s1,r1,s4,r4,s5,r5,s7,r7,s8,r8,s9,r9 /)
 
-#ifdef PML
-!to X2
-call MPI_SEND_INIT(Txx(ni2-LenFDL+1,ny1,nz1),1,DTypeXL,neigid(1,2),1211,SWMPI_COMM,s1,ierr)
-call MPI_SEND_INIT(Tyy(ni2-LenFDL+1,ny1,nz1),1,DTypeXL,neigid(1,2),1212,SWMPI_COMM,s2,ierr)
-call MPI_SEND_INIT(Tzz(ni2-LenFDL+1,ny1,nz1),1,DTypeXL,neigid(1,2),1213,SWMPI_COMM,s3,ierr)
-call MPI_SEND_INIT(Txy(ni2-LenFDL+1,ny1,nz1),1,DTypeXL,neigid(1,2),1214,SWMPI_COMM,s4,ierr)
-call MPI_SEND_INIT(Txz(ni2-LenFDL+1,ny1,nz1),1,DTypeXL,neigid(1,2),1215,SWMPI_COMM,s5,ierr)
-call MPI_SEND_INIT(Tyz(ni2-LenFDL+1,ny1,nz1),1,DTypeXL,neigid(1,2),1216,SWMPI_COMM,s6,ierr)
-call MPI_SEND_INIT(Vx (ni2-LenFDL+1,ny1,nz1),1,DTypeXL,neigid(1,2),1217,SWMPI_COMM,s7,ierr)
-call MPI_SEND_INIT(Vy (ni2-LenFDL+1,ny1,nz1),1,DTypeXL,neigid(1,2),1218,SWMPI_COMM,s8,ierr)
-call MPI_SEND_INIT(Vz (ni2-LenFDL+1,ny1,nz1),1,DTypeXL,neigid(1,2),1219,SWMPI_COMM,s9,ierr)
-!from X1
-call MPI_RECV_INIT(Txx(ni1-LenFDL,ny1,nz1),1,DTypeXL,neigid(1,1),1211,SWMPI_COMM,r1,ierr)
-call MPI_RECV_INIT(Tyy(ni1-LenFDL,ny1,nz1),1,DTypeXL,neigid(1,1),1212,SWMPI_COMM,r2,ierr)
-call MPI_RECV_INIT(Tzz(ni1-LenFDL,ny1,nz1),1,DTypeXL,neigid(1,1),1213,SWMPI_COMM,r3,ierr)
-call MPI_RECV_INIT(Txy(ni1-LenFDL,ny1,nz1),1,DTypeXL,neigid(1,1),1214,SWMPI_COMM,r4,ierr)
-call MPI_RECV_INIT(Txz(ni1-LenFDL,ny1,nz1),1,DTypeXL,neigid(1,1),1215,SWMPI_COMM,r5,ierr)
-call MPI_RECV_INIT(Tyz(ni1-LenFDL,ny1,nz1),1,DTypeXL,neigid(1,1),1216,SWMPI_COMM,r6,ierr)
-call MPI_RECV_INIT(Vx (ni1-LenFDL,ny1,nz1),1,DTypeXL,neigid(1,1),1217,SWMPI_COMM,r7,ierr)
-call MPI_RECV_INIT(Vy (ni1-LenFDL,ny1,nz1),1,DTypeXL,neigid(1,1),1218,SWMPI_COMM,r8,ierr)
-call MPI_RECV_INIT(Vz (ni1-LenFDL,ny1,nz1),1,DTypeXL,neigid(1,1),1219,SWMPI_COMM,r9,ierr)
-#else
 !to X2
 call MPI_SEND_INIT(Txx(ni2-LenFDS+1,ny1,nz1),1,DTypeXS,neigid(1,2),1211,SWMPI_COMM,s1,ierr)
-call MPI_SEND_INIT(Tyy(ni2-LenFDS+1,ny1,nz1),1,DTypeXS,neigid(1,2),1212,SWMPI_COMM,s2,ierr)
-call MPI_SEND_INIT(Tzz(ni2-LenFDS+1,ny1,nz1),1,DTypeXS,neigid(1,2),1213,SWMPI_COMM,s3,ierr)
+!call MPI_SEND_INIT(Tyy(ni2-LenFDS+1,ny1,nz1),1,DTypeXS,neigid(1,2),1212,SWMPI_COMM,s2,ierr)
+!call MPI_SEND_INIT(Tzz(ni2-LenFDS+1,ny1,nz1),1,DTypeXS,neigid(1,2),1213,SWMPI_COMM,s3,ierr)
 call MPI_SEND_INIT(Txy(ni2-LenFDS+1,ny1,nz1),1,DTypeXS,neigid(1,2),1214,SWMPI_COMM,s4,ierr)
 call MPI_SEND_INIT(Txz(ni2-LenFDS+1,ny1,nz1),1,DTypeXS,neigid(1,2),1215,SWMPI_COMM,s5,ierr)
-call MPI_SEND_INIT(Tyz(ni2-LenFDS+1,ny1,nz1),1,DTypeXS,neigid(1,2),1216,SWMPI_COMM,s6,ierr)
+!call MPI_SEND_INIT(Tyz(ni2-LenFDS+1,ny1,nz1),1,DTypeXS,neigid(1,2),1216,SWMPI_COMM,s6,ierr)
 call MPI_SEND_INIT(Vx (ni2-LenFDS+1,ny1,nz1),1,DTypeXS,neigid(1,2),1217,SWMPI_COMM,s7,ierr)
 call MPI_SEND_INIT(Vy (ni2-LenFDS+1,ny1,nz1),1,DTypeXS,neigid(1,2),1218,SWMPI_COMM,s8,ierr)
 call MPI_SEND_INIT(Vz (ni2-LenFDS+1,ny1,nz1),1,DTypeXS,neigid(1,2),1219,SWMPI_COMM,s9,ierr)
 !from X1
 call MPI_RECV_INIT(Txx(ni1-LenFDS,ny1,nz1),1,DTypeXS,neigid(1,1),1211,SWMPI_COMM,r1,ierr)
-call MPI_RECV_INIT(Tyy(ni1-LenFDS,ny1,nz1),1,DTypeXS,neigid(1,1),1212,SWMPI_COMM,r2,ierr)
-call MPI_RECV_INIT(Tzz(ni1-LenFDS,ny1,nz1),1,DTypeXS,neigid(1,1),1213,SWMPI_COMM,r3,ierr)
+!call MPI_RECV_INIT(Tyy(ni1-LenFDS,ny1,nz1),1,DTypeXS,neigid(1,1),1212,SWMPI_COMM,r2,ierr)
+!call MPI_RECV_INIT(Tzz(ni1-LenFDS,ny1,nz1),1,DTypeXS,neigid(1,1),1213,SWMPI_COMM,r3,ierr)
 call MPI_RECV_INIT(Txy(ni1-LenFDS,ny1,nz1),1,DTypeXS,neigid(1,1),1214,SWMPI_COMM,r4,ierr)
 call MPI_RECV_INIT(Txz(ni1-LenFDS,ny1,nz1),1,DTypeXS,neigid(1,1),1215,SWMPI_COMM,r5,ierr)
-call MPI_RECV_INIT(Tyz(ni1-LenFDS,ny1,nz1),1,DTypeXS,neigid(1,1),1216,SWMPI_COMM,r6,ierr)
+!call MPI_RECV_INIT(Tyz(ni1-LenFDS,ny1,nz1),1,DTypeXS,neigid(1,1),1216,SWMPI_COMM,r6,ierr)
 call MPI_RECV_INIT(Vx (ni1-LenFDS,ny1,nz1),1,DTypeXS,neigid(1,1),1217,SWMPI_COMM,r7,ierr)
 call MPI_RECV_INIT(Vy (ni1-LenFDS,ny1,nz1),1,DTypeXS,neigid(1,1),1218,SWMPI_COMM,r8,ierr)
 call MPI_RECV_INIT(Vz (ni1-LenFDS,ny1,nz1),1,DTypeXS,neigid(1,1),1219,SWMPI_COMM,r9,ierr)
-#endif
 ! put into array
-reqXF(19:36)=(/ s1,r1,s2,r2,s3,r3,s4,r4,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
+!reqXF(19:36)=(/ s1,r1,s2,r2,s3,r3,s4,r4,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
+reqXF(13:24)=(/ s1,r1,s4,r4,s5,r5,s7,r7,s8,r8,s9,r9 /)
 !---------------------------------------------------------------------------
 end subroutine mesg_init_LxF
 
@@ -2915,74 +2898,53 @@ subroutine mesg_init_LxB
 integer s1,s2,s3,s4,s5,s6,s7,s8,s9
 integer r1,r2,r3,r4,r5,r6,r7,r8,r9
 ! --- LxB ------------------------------------------------------------------
-#ifdef PML
-! to X1
-call MPI_SEND_INIT(Txx(ni1,ny1,nz1),1,DTypeXL,neigid(1,1),1111,SWMPI_COMM,s1,ierr)
-call MPI_SEND_INIT(Tyy(ni1,ny1,nz1),1,DTypeXL,neigid(1,1),1112,SWMPI_COMM,s2,ierr)
-call MPI_SEND_INIT(Tzz(ni1,ny1,nz1),1,DTypeXL,neigid(1,1),1113,SWMPI_COMM,s3,ierr)
-call MPI_SEND_INIT(Txy(ni1,ny1,nz1),1,DTypeXL,neigid(1,1),1114,SWMPI_COMM,s4,ierr)
-call MPI_SEND_INIT(Txz(ni1,ny1,nz1),1,DTypeXL,neigid(1,1),1115,SWMPI_COMM,s5,ierr)
-call MPI_SEND_INIT(Tyz(ni1,ny1,nz1),1,DTypeXL,neigid(1,1),1116,SWMPI_COMM,s6,ierr)
-call MPI_SEND_INIT(Vx (ni1,ny1,nz1),1,DTypeXL,neigid(1,1),1117,SWMPI_COMM,s7,ierr)
-call MPI_SEND_INIT(Vy (ni1,ny1,nz1),1,DTypeXL,neigid(1,1),1118,SWMPI_COMM,s8,ierr)
-call MPI_SEND_INIT(Vz (ni1,ny1,nz1),1,DTypeXL,neigid(1,1),1119,SWMPI_COMM,s9,ierr)
-! from X2
-call MPI_RECV_INIT(Txx(ni2+1,ny1,nz1),1,DTypeXL,neigid(1,2),1111,SWMPI_COMM,r1,ierr)
-call MPI_RECV_INIT(Tyy(ni2+1,ny1,nz1),1,DTypeXL,neigid(1,2),1112,SWMPI_COMM,r2,ierr)
-call MPI_RECV_INIT(Tzz(ni2+1,ny1,nz1),1,DTypeXL,neigid(1,2),1113,SWMPI_COMM,r3,ierr)
-call MPI_RECV_INIT(Txy(ni2+1,ny1,nz1),1,DTypeXL,neigid(1,2),1114,SWMPI_COMM,r4,ierr)
-call MPI_RECV_INIT(Txz(ni2+1,ny1,nz1),1,DTypeXL,neigid(1,2),1115,SWMPI_COMM,r5,ierr)
-call MPI_RECV_INIT(Tyz(ni2+1,ny1,nz1),1,DTypeXL,neigid(1,2),1116,SWMPI_COMM,r6,ierr)
-call MPI_RECV_INIT(Vx (ni2+1,ny1,nz1),1,DTypeXL,neigid(1,2),1117,SWMPI_COMM,r7,ierr)
-call MPI_RECV_INIT(Vy (ni2+1,ny1,nz1),1,DTypeXL,neigid(1,2),1118,SWMPI_COMM,r8,ierr)
-call MPI_RECV_INIT(Vz (ni2+1,ny1,nz1),1,DTypeXL,neigid(1,2),1119,SWMPI_COMM,r9,ierr)
-#else
 ! to X1
 call MPI_SEND_INIT(Txx(ni1,ny1,nz1),1,DTypeXS,neigid(1,1),1111,SWMPI_COMM,s1,ierr)
-call MPI_SEND_INIT(Tyy(ni1,ny1,nz1),1,DTypeXS,neigid(1,1),1112,SWMPI_COMM,s2,ierr)
-call MPI_SEND_INIT(Tzz(ni1,ny1,nz1),1,DTypeXS,neigid(1,1),1113,SWMPI_COMM,s3,ierr)
+!call MPI_SEND_INIT(Tyy(ni1,ny1,nz1),1,DTypeXS,neigid(1,1),1112,SWMPI_COMM,s2,ierr)
+!call MPI_SEND_INIT(Tzz(ni1,ny1,nz1),1,DTypeXS,neigid(1,1),1113,SWMPI_COMM,s3,ierr)
 call MPI_SEND_INIT(Txy(ni1,ny1,nz1),1,DTypeXS,neigid(1,1),1114,SWMPI_COMM,s4,ierr)
 call MPI_SEND_INIT(Txz(ni1,ny1,nz1),1,DTypeXS,neigid(1,1),1115,SWMPI_COMM,s5,ierr)
-call MPI_SEND_INIT(Tyz(ni1,ny1,nz1),1,DTypeXS,neigid(1,1),1116,SWMPI_COMM,s6,ierr)
+!call MPI_SEND_INIT(Tyz(ni1,ny1,nz1),1,DTypeXS,neigid(1,1),1116,SWMPI_COMM,s6,ierr)
 call MPI_SEND_INIT(Vx (ni1,ny1,nz1),1,DTypeXS,neigid(1,1),1117,SWMPI_COMM,s7,ierr)
 call MPI_SEND_INIT(Vy (ni1,ny1,nz1),1,DTypeXS,neigid(1,1),1118,SWMPI_COMM,s8,ierr)
 call MPI_SEND_INIT(Vz (ni1,ny1,nz1),1,DTypeXS,neigid(1,1),1119,SWMPI_COMM,s9,ierr)
 ! from X2
 call MPI_RECV_INIT(Txx(ni2+1,ny1,nz1),1,DTypeXS,neigid(1,2),1111,SWMPI_COMM,r1,ierr)
-call MPI_RECV_INIT(Tyy(ni2+1,ny1,nz1),1,DTypeXS,neigid(1,2),1112,SWMPI_COMM,r2,ierr)
-call MPI_RECV_INIT(Tzz(ni2+1,ny1,nz1),1,DTypeXS,neigid(1,2),1113,SWMPI_COMM,r3,ierr)
+!call MPI_RECV_INIT(Tyy(ni2+1,ny1,nz1),1,DTypeXS,neigid(1,2),1112,SWMPI_COMM,r2,ierr)
+!call MPI_RECV_INIT(Tzz(ni2+1,ny1,nz1),1,DTypeXS,neigid(1,2),1113,SWMPI_COMM,r3,ierr)
 call MPI_RECV_INIT(Txy(ni2+1,ny1,nz1),1,DTypeXS,neigid(1,2),1114,SWMPI_COMM,r4,ierr)
 call MPI_RECV_INIT(Txz(ni2+1,ny1,nz1),1,DTypeXS,neigid(1,2),1115,SWMPI_COMM,r5,ierr)
-call MPI_RECV_INIT(Tyz(ni2+1,ny1,nz1),1,DTypeXS,neigid(1,2),1116,SWMPI_COMM,r6,ierr)
+!call MPI_RECV_INIT(Tyz(ni2+1,ny1,nz1),1,DTypeXS,neigid(1,2),1116,SWMPI_COMM,r6,ierr)
 call MPI_RECV_INIT(Vx (ni2+1,ny1,nz1),1,DTypeXS,neigid(1,2),1117,SWMPI_COMM,r7,ierr)
 call MPI_RECV_INIT(Vy (ni2+1,ny1,nz1),1,DTypeXS,neigid(1,2),1118,SWMPI_COMM,r8,ierr)
 call MPI_RECV_INIT(Vz (ni2+1,ny1,nz1),1,DTypeXS,neigid(1,2),1119,SWMPI_COMM,r9,ierr)
-#endif
 ! put into array
-reqXB(1:18)=(/ s1,r1,s2,r2,s3,r3,s4,r4,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
+!reqXB(1:18)=(/ s1,r1,s2,r2,s3,r3,s4,r4,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
+reqXB(1:12)=(/ s1,r1,s4,r4,s5,r5,s7,r7,s8,r8,s9,r9 /)
 
 ! to X2
 call MPI_SEND_INIT(Txx(ni2-LenFDL+1,ny1,nz1),1,DTypeXL,neigid(1,2),1231,SWMPI_COMM,s1,ierr)
-call MPI_SEND_INIT(Tyy(ni2-LenFDL+1,ny1,nz1),1,DTypeXL,neigid(1,2),1232,SWMPI_COMM,s2,ierr)
-call MPI_SEND_INIT(Tzz(ni2-LenFDL+1,ny1,nz1),1,DTypeXL,neigid(1,2),1233,SWMPI_COMM,s3,ierr)
+!call MPI_SEND_INIT(Tyy(ni2-LenFDL+1,ny1,nz1),1,DTypeXL,neigid(1,2),1232,SWMPI_COMM,s2,ierr)
+!call MPI_SEND_INIT(Tzz(ni2-LenFDL+1,ny1,nz1),1,DTypeXL,neigid(1,2),1233,SWMPI_COMM,s3,ierr)
 call MPI_SEND_INIT(Txy(ni2-LenFDL+1,ny1,nz1),1,DTypeXL,neigid(1,2),1234,SWMPI_COMM,s4,ierr)
 call MPI_SEND_INIT(Txz(ni2-LenFDL+1,ny1,nz1),1,DTypeXL,neigid(1,2),1235,SWMPI_COMM,s5,ierr)
-call MPI_SEND_INIT(Tyz(ni2-LenFDL+1,ny1,nz1),1,DTypeXL,neigid(1,2),1236,SWMPI_COMM,s6,ierr)
+!call MPI_SEND_INIT(Tyz(ni2-LenFDL+1,ny1,nz1),1,DTypeXL,neigid(1,2),1236,SWMPI_COMM,s6,ierr)
 call MPI_SEND_INIT(Vx (ni2-LenFDL+1,ny1,nz1),1,DTypeXL,neigid(1,2),1237,SWMPI_COMM,s7,ierr)
 call MPI_SEND_INIT(Vy (ni2-LenFDL+1,ny1,nz1),1,DTypeXL,neigid(1,2),1238,SWMPI_COMM,s8,ierr)
 call MPI_SEND_INIT(Vz (ni2-LenFDL+1,ny1,nz1),1,DTypeXL,neigid(1,2),1239,SWMPI_COMM,s9,ierr)
 ! from  X1
 call MPI_RECV_INIT(Txx(ni1-LenFDL,ny1,nz1),1,DTypeXL,neigid(1,1),1231,SWMPI_COMM,r1,ierr)
-call MPI_RECV_INIT(Tyy(ni1-LenFDL,ny1,nz1),1,DTypeXL,neigid(1,1),1232,SWMPI_COMM,r2,ierr)
-call MPI_RECV_INIT(Tzz(ni1-LenFDL,ny1,nz1),1,DTypeXL,neigid(1,1),1233,SWMPI_COMM,r3,ierr)
+!call MPI_RECV_INIT(Tyy(ni1-LenFDL,ny1,nz1),1,DTypeXL,neigid(1,1),1232,SWMPI_COMM,r2,ierr)
+!call MPI_RECV_INIT(Tzz(ni1-LenFDL,ny1,nz1),1,DTypeXL,neigid(1,1),1233,SWMPI_COMM,r3,ierr)
 call MPI_RECV_INIT(Txy(ni1-LenFDL,ny1,nz1),1,DTypeXL,neigid(1,1),1234,SWMPI_COMM,r4,ierr)
 call MPI_RECV_INIT(Txz(ni1-LenFDL,ny1,nz1),1,DTypeXL,neigid(1,1),1235,SWMPI_COMM,r5,ierr)
-call MPI_RECV_INIT(Tyz(ni1-LenFDL,ny1,nz1),1,DTypeXL,neigid(1,1),1236,SWMPI_COMM,r6,ierr)
+!call MPI_RECV_INIT(Tyz(ni1-LenFDL,ny1,nz1),1,DTypeXL,neigid(1,1),1236,SWMPI_COMM,r6,ierr)
 call MPI_RECV_INIT(Vx (ni1-LenFDL,ny1,nz1),1,DTypeXL,neigid(1,1),1237,SWMPI_COMM,r7,ierr)
 call MPI_RECV_INIT(Vy (ni1-LenFDL,ny1,nz1),1,DTypeXL,neigid(1,1),1238,SWMPI_COMM,r8,ierr)
 call MPI_RECV_INIT(Vz (ni1-LenFDL,ny1,nz1),1,DTypeXL,neigid(1,1),1239,SWMPI_COMM,r9,ierr)
 ! put into array
-reqXB(19:36)=(/ s1,r1,s2,r2,s3,r3,s4,r4,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
+!reqXB(19:36)=(/ s1,r1,s2,r2,s3,r3,s4,r4,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
+reqXB(13:24)=(/ s1,r1,s4,r4,s5,r5,s7,r7,s8,r8,s9,r9 /)
 !---------------------------------------------------------------------------
 end subroutine mesg_init_LxB
 
@@ -2991,74 +2953,53 @@ integer s1,s2,s3,s4,s5,s6,s7,s8,s9
 integer r1,r2,r3,r4,r5,r6,r7,r8,r9
 ! --- LyF ------------------------------------------------------------------
 ! to Y1
-call MPI_SEND_INIT(Txx(nx1,nj1,nz1),1,DTypeYL,neigid(2,1),2131,SWMPI_COMM,s1,ierr)
+!call MPI_SEND_INIT(Txx(nx1,nj1,nz1),1,DTypeYL,neigid(2,1),2131,SWMPI_COMM,s1,ierr)
 call MPI_SEND_INIT(Tyy(nx1,nj1,nz1),1,DTypeYL,neigid(2,1),2132,SWMPI_COMM,s2,ierr)
-call MPI_SEND_INIT(Tzz(nx1,nj1,nz1),1,DTypeYL,neigid(2,1),2133,SWMPI_COMM,s3,ierr)
+!call MPI_SEND_INIT(Tzz(nx1,nj1,nz1),1,DTypeYL,neigid(2,1),2133,SWMPI_COMM,s3,ierr)
 call MPI_SEND_INIT(Txy(nx1,nj1,nz1),1,DTypeYL,neigid(2,1),2134,SWMPI_COMM,s4,ierr)
-call MPI_SEND_INIT(Txz(nx1,nj1,nz1),1,DTypeYL,neigid(2,1),2135,SWMPI_COMM,s5,ierr)
+!call MPI_SEND_INIT(Txz(nx1,nj1,nz1),1,DTypeYL,neigid(2,1),2135,SWMPI_COMM,s5,ierr)
 call MPI_SEND_INIT(Tyz(nx1,nj1,nz1),1,DTypeYL,neigid(2,1),2136,SWMPI_COMM,s6,ierr)
 call MPI_SEND_INIT(Vx (nx1,nj1,nz1),1,DTypeYL,neigid(2,1),2137,SWMPI_COMM,s7,ierr)
 call MPI_SEND_INIT(Vy (nx1,nj1,nz1),1,DTypeYL,neigid(2,1),2138,SWMPI_COMM,s8,ierr)
 call MPI_SEND_INIT(Vz (nx1,nj1,nz1),1,DTypeYL,neigid(2,1),2139,SWMPI_COMM,s9,ierr)
 ! from Y2
-call MPI_RECV_INIT(Txx(nx1,nj2+1,nz1),1,DTypeYL,neigid(2,2),2131,SWMPI_COMM,r1,ierr)
+!call MPI_RECV_INIT(Txx(nx1,nj2+1,nz1),1,DTypeYL,neigid(2,2),2131,SWMPI_COMM,r1,ierr)
 call MPI_RECV_INIT(Tyy(nx1,nj2+1,nz1),1,DTypeYL,neigid(2,2),2132,SWMPI_COMM,r2,ierr)
-call MPI_RECV_INIT(Tzz(nx1,nj2+1,nz1),1,DTypeYL,neigid(2,2),2133,SWMPI_COMM,r3,ierr)
+!call MPI_RECV_INIT(Tzz(nx1,nj2+1,nz1),1,DTypeYL,neigid(2,2),2133,SWMPI_COMM,r3,ierr)
 call MPI_RECV_INIT(Txy(nx1,nj2+1,nz1),1,DTypeYL,neigid(2,2),2134,SWMPI_COMM,r4,ierr)
-call MPI_RECV_INIT(Txz(nx1,nj2+1,nz1),1,DTypeYL,neigid(2,2),2135,SWMPI_COMM,r5,ierr)
+!call MPI_RECV_INIT(Txz(nx1,nj2+1,nz1),1,DTypeYL,neigid(2,2),2135,SWMPI_COMM,r5,ierr)
 call MPI_RECV_INIT(Tyz(nx1,nj2+1,nz1),1,DTypeYL,neigid(2,2),2136,SWMPI_COMM,r6,ierr)
 call MPI_RECV_INIT(Vx (nx1,nj2+1,nz1),1,DTypeYL,neigid(2,2),2137,SWMPI_COMM,r7,ierr)
 call MPI_RECV_INIT(Vy (nx1,nj2+1,nz1),1,DTypeYL,neigid(2,2),2138,SWMPI_COMM,r8,ierr)
 call MPI_RECV_INIT(Vz (nx1,nj2+1,nz1),1,DTypeYL,neigid(2,2),2139,SWMPI_COMM,r9,ierr)
 ! put into array
-reqYF(1:18)=(/ s1,r1,s2,r2,s3,r3,s4,r4,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
+!reqYF(1:18)=(/ s1,r1,s2,r2,s3,r3,s4,r4,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
+reqYF(1:12)=(/ s2,r2,s4,r4,s6,r6,s7,r7,s8,r8,s9,r9 /)
 !-----
 
-#ifdef PML
 ! to Y2
-call MPI_SEND_INIT(Txx(nx1,nj2-LenFDL+1,nz1),1,DTypeYL,neigid(2,2),2211,SWMPI_COMM,s1,ierr)
-call MPI_SEND_INIT(Tyy(nx1,nj2-LenFDL+1,nz1),1,DTypeYL,neigid(2,2),2212,SWMPI_COMM,s2,ierr)
-call MPI_SEND_INIT(Tzz(nx1,nj2-LenFDL+1,nz1),1,DTypeYL,neigid(2,2),2213,SWMPI_COMM,s3,ierr)
-call MPI_SEND_INIT(Txy(nx1,nj2-LenFDL+1,nz1),1,DTypeYL,neigid(2,2),2214,SWMPI_COMM,s4,ierr)
-call MPI_SEND_INIT(Txz(nx1,nj2-LenFDL+1,nz1),1,DTypeYL,neigid(2,2),2215,SWMPI_COMM,s5,ierr)
-call MPI_SEND_INIT(Tyz(nx1,nj2-LenFDL+1,nz1),1,DTypeYL,neigid(2,2),2216,SWMPI_COMM,s6,ierr)
-call MPI_SEND_INIT(Vx (nx1,nj2-LenFDL+1,nz1),1,DTypeYL,neigid(2,2),2217,SWMPI_COMM,s7,ierr)
-call MPI_SEND_INIT(Vy (nx1,nj2-LenFDL+1,nz1),1,DTypeYL,neigid(2,2),2218,SWMPI_COMM,s8,ierr)
-call MPI_SEND_INIT(Vz (nx1,nj2-LenFDL+1,nz1),1,DTypeYL,neigid(2,2),2219,SWMPI_COMM,s9,ierr)
-! from Y1
-call MPI_RECV_INIT(Txx(nx1,nj1-LenFDL,nz1),1,DTypeYL,neigid(2,1),2211,SWMPI_COMM,r1,ierr)
-call MPI_RECV_INIT(Tyy(nx1,nj1-LenFDL,nz1),1,DTypeYL,neigid(2,1),2212,SWMPI_COMM,r2,ierr)
-call MPI_RECV_INIT(Tzz(nx1,nj1-LenFDL,nz1),1,DTypeYL,neigid(2,1),2213,SWMPI_COMM,r3,ierr)
-call MPI_RECV_INIT(Txy(nx1,nj1-LenFDL,nz1),1,DTypeYL,neigid(2,1),2214,SWMPI_COMM,r4,ierr)
-call MPI_RECV_INIT(Txz(nx1,nj1-LenFDL,nz1),1,DTypeYL,neigid(2,1),2215,SWMPI_COMM,r5,ierr)
-call MPI_RECV_INIT(Tyz(nx1,nj1-LenFDL,nz1),1,DTypeYL,neigid(2,1),2216,SWMPI_COMM,r6,ierr)
-call MPI_RECV_INIT(Vx (nx1,nj1-LenFDL,nz1),1,DTypeYL,neigid(2,1),2217,SWMPI_COMM,r7,ierr)
-call MPI_RECV_INIT(Vy (nx1,nj1-LenFDL,nz1),1,DTypeYL,neigid(2,1),2218,SWMPI_COMM,r8,ierr)
-call MPI_RECV_INIT(Vz (nx1,nj1-LenFDL,nz1),1,DTypeYL,neigid(2,1),2219,SWMPI_COMM,r9,ierr)
-#else
-! to Y2
-call MPI_SEND_INIT(Txx(nx1,nj2-LenFDS+1,nz1),1,DTypeYS,neigid(2,2),2211,SWMPI_COMM,s1,ierr)
+!call MPI_SEND_INIT(Txx(nx1,nj2-LenFDS+1,nz1),1,DTypeYS,neigid(2,2),2211,SWMPI_COMM,s1,ierr)
 call MPI_SEND_INIT(Tyy(nx1,nj2-LenFDS+1,nz1),1,DTypeYS,neigid(2,2),2212,SWMPI_COMM,s2,ierr)
-call MPI_SEND_INIT(Tzz(nx1,nj2-LenFDS+1,nz1),1,DTypeYS,neigid(2,2),2213,SWMPI_COMM,s3,ierr)
+!call MPI_SEND_INIT(Tzz(nx1,nj2-LenFDS+1,nz1),1,DTypeYS,neigid(2,2),2213,SWMPI_COMM,s3,ierr)
 call MPI_SEND_INIT(Txy(nx1,nj2-LenFDS+1,nz1),1,DTypeYS,neigid(2,2),2214,SWMPI_COMM,s4,ierr)
-call MPI_SEND_INIT(Txz(nx1,nj2-LenFDS+1,nz1),1,DTypeYS,neigid(2,2),2215,SWMPI_COMM,s5,ierr)
+!call MPI_SEND_INIT(Txz(nx1,nj2-LenFDS+1,nz1),1,DTypeYS,neigid(2,2),2215,SWMPI_COMM,s5,ierr)
 call MPI_SEND_INIT(Tyz(nx1,nj2-LenFDS+1,nz1),1,DTypeYS,neigid(2,2),2216,SWMPI_COMM,s6,ierr)
 call MPI_SEND_INIT(Vx (nx1,nj2-LenFDS+1,nz1),1,DTypeYS,neigid(2,2),2217,SWMPI_COMM,s7,ierr)
 call MPI_SEND_INIT(Vy (nx1,nj2-LenFDS+1,nz1),1,DTypeYS,neigid(2,2),2218,SWMPI_COMM,s8,ierr)
 call MPI_SEND_INIT(Vz (nx1,nj2-LenFDS+1,nz1),1,DTypeYS,neigid(2,2),2219,SWMPI_COMM,s9,ierr)
 ! from Y1
-call MPI_RECV_INIT(Txx(nx1,nj1-LenFDS,nz1),1,DTypeYS,neigid(2,1),2211,SWMPI_COMM,r1,ierr)
+!call MPI_RECV_INIT(Txx(nx1,nj1-LenFDS,nz1),1,DTypeYS,neigid(2,1),2211,SWMPI_COMM,r1,ierr)
 call MPI_RECV_INIT(Tyy(nx1,nj1-LenFDS,nz1),1,DTypeYS,neigid(2,1),2212,SWMPI_COMM,r2,ierr)
-call MPI_RECV_INIT(Tzz(nx1,nj1-LenFDS,nz1),1,DTypeYS,neigid(2,1),2213,SWMPI_COMM,r3,ierr)
+!call MPI_RECV_INIT(Tzz(nx1,nj1-LenFDS,nz1),1,DTypeYS,neigid(2,1),2213,SWMPI_COMM,r3,ierr)
 call MPI_RECV_INIT(Txy(nx1,nj1-LenFDS,nz1),1,DTypeYS,neigid(2,1),2214,SWMPI_COMM,r4,ierr)
-call MPI_RECV_INIT(Txz(nx1,nj1-LenFDS,nz1),1,DTypeYS,neigid(2,1),2215,SWMPI_COMM,r5,ierr)
+!call MPI_RECV_INIT(Txz(nx1,nj1-LenFDS,nz1),1,DTypeYS,neigid(2,1),2215,SWMPI_COMM,r5,ierr)
 call MPI_RECV_INIT(Tyz(nx1,nj1-LenFDS,nz1),1,DTypeYS,neigid(2,1),2216,SWMPI_COMM,r6,ierr)
 call MPI_RECV_INIT(Vx (nx1,nj1-LenFDS,nz1),1,DTypeYS,neigid(2,1),2217,SWMPI_COMM,r7,ierr)
 call MPI_RECV_INIT(Vy (nx1,nj1-LenFDS,nz1),1,DTypeYS,neigid(2,1),2218,SWMPI_COMM,r8,ierr)
 call MPI_RECV_INIT(Vz (nx1,nj1-LenFDS,nz1),1,DTypeYS,neigid(2,1),2219,SWMPI_COMM,r9,ierr)
-#endif
 ! put into array
-reqYF(19:36)=(/ s1,r1,s2,r2,s3,r3,s4,r4,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
+!reqYF(19:36)=(/ s1,r1,s2,r2,s3,r3,s4,r4,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
+reqYF(13:24)=(/ s2,r2,s4,r4,s6,r6,s7,r7,s8,r8,s9,r9 /)
 !---------------------------------------------------------------------------
 end subroutine mesg_init_LyF
 
@@ -3066,150 +3007,107 @@ subroutine mesg_init_LyB
 integer s1,s2,s3,s4,s5,s6,s7,s8,s9
 integer r1,r2,r3,r4,r5,r6,r7,r8,r9
 ! --- LyB ------------------------------------------------------------------
-#ifdef PML
 ! to Y1
-call MPI_SEND_INIT(Txx(nx1,nj1,nz1),1,DTypeYL,neigid(2,1),2111,SWMPI_COMM,s1,ierr)
-call MPI_SEND_INIT(Tyy(nx1,nj1,nz1),1,DTypeYL,neigid(2,1),2112,SWMPI_COMM,s2,ierr)
-call MPI_SEND_INIT(Tzz(nx1,nj1,nz1),1,DTypeYL,neigid(2,1),2113,SWMPI_COMM,s3,ierr)
-call MPI_SEND_INIT(Txy(nx1,nj1,nz1),1,DTypeYL,neigid(2,1),2114,SWMPI_COMM,s4,ierr)
-call MPI_SEND_INIT(Txz(nx1,nj1,nz1),1,DTypeYL,neigid(2,1),2115,SWMPI_COMM,s5,ierr)
-call MPI_SEND_INIT(Tyz(nx1,nj1,nz1),1,DTypeYL,neigid(2,1),2116,SWMPI_COMM,s6,ierr)
-call MPI_SEND_INIT(Vx (nx1,nj1,nz1),1,DTypeYL,neigid(2,1),2117,SWMPI_COMM,s7,ierr)
-call MPI_SEND_INIT(Vy (nx1,nj1,nz1),1,DTypeYL,neigid(2,1),2118,SWMPI_COMM,s8,ierr)
-call MPI_SEND_INIT(Vz (nx1,nj1,nz1),1,DTypeYL,neigid(2,1),2119,SWMPI_COMM,s9,ierr)
-! from Y2
-call MPI_RECV_INIT(Txx(nx1,nj2+1,nz1),1,DTypeYL,neigid(2,2),2111,SWMPI_COMM,r1,ierr)
-call MPI_RECV_INIT(Tyy(nx1,nj2+1,nz1),1,DTypeYL,neigid(2,2),2112,SWMPI_COMM,r2,ierr)
-call MPI_RECV_INIT(Tzz(nx1,nj2+1,nz1),1,DTypeYL,neigid(2,2),2113,SWMPI_COMM,r3,ierr)
-call MPI_RECV_INIT(Txy(nx1,nj2+1,nz1),1,DTypeYL,neigid(2,2),2114,SWMPI_COMM,r4,ierr)
-call MPI_RECV_INIT(Txz(nx1,nj2+1,nz1),1,DTypeYL,neigid(2,2),2115,SWMPI_COMM,r5,ierr)
-call MPI_RECV_INIT(Tyz(nx1,nj2+1,nz1),1,DTypeYL,neigid(2,2),2116,SWMPI_COMM,r6,ierr)
-call MPI_RECV_INIT(Vx (nx1,nj2+1,nz1),1,DTypeYL,neigid(2,2),2117,SWMPI_COMM,r7,ierr)
-call MPI_RECV_INIT(Vy (nx1,nj2+1,nz1),1,DTypeYL,neigid(2,2),2118,SWMPI_COMM,r8,ierr)
-call MPI_RECV_INIT(Vz (nx1,nj2+1,nz1),1,DTypeYL,neigid(2,2),2119,SWMPI_COMM,r9,ierr)
-#else
-! to Y1
-call MPI_SEND_INIT(Txx(nx1,nj1,nz1),1,DTypeYS,neigid(2,1),2111,SWMPI_COMM,s1,ierr)
+!call MPI_SEND_INIT(Txx(nx1,nj1,nz1),1,DTypeYS,neigid(2,1),2111,SWMPI_COMM,s1,ierr)
 call MPI_SEND_INIT(Tyy(nx1,nj1,nz1),1,DTypeYS,neigid(2,1),2112,SWMPI_COMM,s2,ierr)
-call MPI_SEND_INIT(Tzz(nx1,nj1,nz1),1,DTypeYS,neigid(2,1),2113,SWMPI_COMM,s3,ierr)
+!call MPI_SEND_INIT(Tzz(nx1,nj1,nz1),1,DTypeYS,neigid(2,1),2113,SWMPI_COMM,s3,ierr)
 call MPI_SEND_INIT(Txy(nx1,nj1,nz1),1,DTypeYS,neigid(2,1),2114,SWMPI_COMM,s4,ierr)
-call MPI_SEND_INIT(Txz(nx1,nj1,nz1),1,DTypeYS,neigid(2,1),2115,SWMPI_COMM,s5,ierr)
+!call MPI_SEND_INIT(Txz(nx1,nj1,nz1),1,DTypeYS,neigid(2,1),2115,SWMPI_COMM,s5,ierr)
 call MPI_SEND_INIT(Tyz(nx1,nj1,nz1),1,DTypeYS,neigid(2,1),2116,SWMPI_COMM,s6,ierr)
 call MPI_SEND_INIT(Vx (nx1,nj1,nz1),1,DTypeYS,neigid(2,1),2117,SWMPI_COMM,s7,ierr)
 call MPI_SEND_INIT(Vy (nx1,nj1,nz1),1,DTypeYS,neigid(2,1),2118,SWMPI_COMM,s8,ierr)
 call MPI_SEND_INIT(Vz (nx1,nj1,nz1),1,DTypeYS,neigid(2,1),2119,SWMPI_COMM,s9,ierr)
 ! from Y2
-call MPI_RECV_INIT(Txx(nx1,nj2+1,nz1),1,DTypeYS,neigid(2,2),2111,SWMPI_COMM,r1,ierr)
+!call MPI_RECV_INIT(Txx(nx1,nj2+1,nz1),1,DTypeYS,neigid(2,2),2111,SWMPI_COMM,r1,ierr)
 call MPI_RECV_INIT(Tyy(nx1,nj2+1,nz1),1,DTypeYS,neigid(2,2),2112,SWMPI_COMM,r2,ierr)
-call MPI_RECV_INIT(Tzz(nx1,nj2+1,nz1),1,DTypeYS,neigid(2,2),2113,SWMPI_COMM,r3,ierr)
+!call MPI_RECV_INIT(Tzz(nx1,nj2+1,nz1),1,DTypeYS,neigid(2,2),2113,SWMPI_COMM,r3,ierr)
 call MPI_RECV_INIT(Txy(nx1,nj2+1,nz1),1,DTypeYS,neigid(2,2),2114,SWMPI_COMM,r4,ierr)
-call MPI_RECV_INIT(Txz(nx1,nj2+1,nz1),1,DTypeYS,neigid(2,2),2115,SWMPI_COMM,r5,ierr)
+!call MPI_RECV_INIT(Txz(nx1,nj2+1,nz1),1,DTypeYS,neigid(2,2),2115,SWMPI_COMM,r5,ierr)
 call MPI_RECV_INIT(Tyz(nx1,nj2+1,nz1),1,DTypeYS,neigid(2,2),2116,SWMPI_COMM,r6,ierr)
 call MPI_RECV_INIT(Vx (nx1,nj2+1,nz1),1,DTypeYS,neigid(2,2),2117,SWMPI_COMM,r7,ierr)
 call MPI_RECV_INIT(Vy (nx1,nj2+1,nz1),1,DTypeYS,neigid(2,2),2118,SWMPI_COMM,r8,ierr)
 call MPI_RECV_INIT(Vz (nx1,nj2+1,nz1),1,DTypeYS,neigid(2,2),2119,SWMPI_COMM,r9,ierr)
-#endif
 ! put into array
-reqYB(1:18)=(/ s1,r1,s2,r2,s3,r3,s4,r4,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
+!reqYB(1:18)=(/ s1,r1,s2,r2,s3,r3,s4,r4,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
+reqYB(1:12)=(/ s2,r2,s4,r4,s6,r6,s7,r7,s8,r8,s9,r9 /)
 
 ! to Y2
-call MPI_SEND_INIT(Txx(nx1,nj2-LenFDL+1,nz1),1,DTypeYL,neigid(2,2),2231,SWMPI_COMM,s1,ierr)
+!call MPI_SEND_INIT(Txx(nx1,nj2-LenFDL+1,nz1),1,DTypeYL,neigid(2,2),2231,SWMPI_COMM,s1,ierr)
 call MPI_SEND_INIT(Tyy(nx1,nj2-LenFDL+1,nz1),1,DTypeYL,neigid(2,2),2232,SWMPI_COMM,s2,ierr)
-call MPI_SEND_INIT(Tzz(nx1,nj2-LenFDL+1,nz1),1,DTypeYL,neigid(2,2),2233,SWMPI_COMM,s3,ierr)
+!call MPI_SEND_INIT(Tzz(nx1,nj2-LenFDL+1,nz1),1,DTypeYL,neigid(2,2),2233,SWMPI_COMM,s3,ierr)
 call MPI_SEND_INIT(Txy(nx1,nj2-LenFDL+1,nz1),1,DTypeYL,neigid(2,2),2234,SWMPI_COMM,s4,ierr)
-call MPI_SEND_INIT(Txz(nx1,nj2-LenFDL+1,nz1),1,DTypeYL,neigid(2,2),2235,SWMPI_COMM,s5,ierr)
+!call MPI_SEND_INIT(Txz(nx1,nj2-LenFDL+1,nz1),1,DTypeYL,neigid(2,2),2235,SWMPI_COMM,s5,ierr)
 call MPI_SEND_INIT(Tyz(nx1,nj2-LenFDL+1,nz1),1,DTypeYL,neigid(2,2),2236,SWMPI_COMM,s6,ierr)
 call MPI_SEND_INIT(Vx (nx1,nj2-LenFDL+1,nz1),1,DTypeYL,neigid(2,2),2237,SWMPI_COMM,s7,ierr)
 call MPI_SEND_INIT(Vy (nx1,nj2-LenFDL+1,nz1),1,DTypeYL,neigid(2,2),2238,SWMPI_COMM,s8,ierr)
 call MPI_SEND_INIT(Vz (nx1,nj2-LenFDL+1,nz1),1,DTypeYL,neigid(2,2),2239,SWMPI_COMM,s9,ierr)
 ! from Y1
-call MPI_RECV_INIT(Txx(nx1,nj1-LenFDL,nz1),1,DTypeYL,neigid(2,1),2231,SWMPI_COMM,r1,ierr)
+!call MPI_RECV_INIT(Txx(nx1,nj1-LenFDL,nz1),1,DTypeYL,neigid(2,1),2231,SWMPI_COMM,r1,ierr)
 call MPI_RECV_INIT(Tyy(nx1,nj1-LenFDL,nz1),1,DTypeYL,neigid(2,1),2232,SWMPI_COMM,r2,ierr)
-call MPI_RECV_INIT(Tzz(nx1,nj1-LenFDL,nz1),1,DTypeYL,neigid(2,1),2233,SWMPI_COMM,r3,ierr)
+!call MPI_RECV_INIT(Tzz(nx1,nj1-LenFDL,nz1),1,DTypeYL,neigid(2,1),2233,SWMPI_COMM,r3,ierr)
 call MPI_RECV_INIT(Txy(nx1,nj1-LenFDL,nz1),1,DTypeYL,neigid(2,1),2234,SWMPI_COMM,r4,ierr)
-call MPI_RECV_INIT(Txz(nx1,nj1-LenFDL,nz1),1,DTypeYL,neigid(2,1),2235,SWMPI_COMM,r5,ierr)
+!call MPI_RECV_INIT(Txz(nx1,nj1-LenFDL,nz1),1,DTypeYL,neigid(2,1),2235,SWMPI_COMM,r5,ierr)
 call MPI_RECV_INIT(Tyz(nx1,nj1-LenFDL,nz1),1,DTypeYL,neigid(2,1),2236,SWMPI_COMM,r6,ierr)
 call MPI_RECV_INIT(Vx (nx1,nj1-LenFDL,nz1),1,DTypeYL,neigid(2,1),2237,SWMPI_COMM,r7,ierr)
 call MPI_RECV_INIT(Vy (nx1,nj1-LenFDL,nz1),1,DTypeYL,neigid(2,1),2238,SWMPI_COMM,r8,ierr)
 call MPI_RECV_INIT(Vz (nx1,nj1-LenFDL,nz1),1,DTypeYL,neigid(2,1),2239,SWMPI_COMM,r9,ierr)
 ! put into array
-reqYB(19:36)=(/ s1,r1,s2,r2,s3,r3,s4,r4,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
+!reqYB(19:36)=(/ s1,r1,s2,r2,s3,r3,s4,r4,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
+reqYB(13:24)=(/ s2,r2,s4,r4,s6,r6,s7,r7,s8,r8,s9,r9 /)
 !---------------------------------------------------------------------------
 end subroutine mesg_init_LyB
-
 
 subroutine mesg_init_LzF
 integer s1,s2,s3,s4,s5,s6,s7,s8,s9
 integer r1,r2,r3,r4,r5,r6,r7,r8,r9
 ! --- LzF ------------------------------------------------------------------
 !to Z1
-call MPI_SEND_INIT(Txx(nx1,ny1,nk1),1,DTypeZL,neigid(3,1),3131,SWMPI_COMM,s1,ierr)
-call MPI_SEND_INIT(Tyy(nx1,ny1,nk1),1,DTypeZL,neigid(3,1),3132,SWMPI_COMM,s2,ierr)
+!call MPI_SEND_INIT(Txx(nx1,ny1,nk1),1,DTypeZL,neigid(3,1),3131,SWMPI_COMM,s1,ierr)
+!call MPI_SEND_INIT(Tyy(nx1,ny1,nk1),1,DTypeZL,neigid(3,1),3132,SWMPI_COMM,s2,ierr)
 call MPI_SEND_INIT(Tzz(nx1,ny1,nk1),1,DTypeZL,neigid(3,1),3133,SWMPI_COMM,s3,ierr)
-call MPI_SEND_INIT(Txy(nx1,ny1,nk1),1,DTypeZL,neigid(3,1),3134,SWMPI_COMM,s4,ierr)
+!call MPI_SEND_INIT(Txy(nx1,ny1,nk1),1,DTypeZL,neigid(3,1),3134,SWMPI_COMM,s4,ierr)
 call MPI_SEND_INIT(Txz(nx1,ny1,nk1),1,DTypeZL,neigid(3,1),3135,SWMPI_COMM,s5,ierr)
 call MPI_SEND_INIT(Tyz(nx1,ny1,nk1),1,DTypeZL,neigid(3,1),3136,SWMPI_COMM,s6,ierr)
 call MPI_SEND_INIT(Vx (nx1,ny1,nk1),1,DTypeZL,neigid(3,1),3137,SWMPI_COMM,s7,ierr)
 call MPI_SEND_INIT(Vy (nx1,ny1,nk1),1,DTypeZL,neigid(3,1),3138,SWMPI_COMM,s8,ierr)
 call MPI_SEND_INIT(Vz (nx1,ny1,nk1),1,DTypeZL,neigid(3,1),3139,SWMPI_COMM,s9,ierr)
 !from Z2
-call MPI_RECV_INIT(Txx(nx1,ny1,nk2+1),1,DTypeZL,neigid(3,2),3131,SWMPI_COMM,r1,ierr)
-call MPI_RECV_INIT(Tyy(nx1,ny1,nk2+1),1,DTypeZL,neigid(3,2),3132,SWMPI_COMM,r2,ierr)
+!call MPI_RECV_INIT(Txx(nx1,ny1,nk2+1),1,DTypeZL,neigid(3,2),3131,SWMPI_COMM,r1,ierr)
+!call MPI_RECV_INIT(Tyy(nx1,ny1,nk2+1),1,DTypeZL,neigid(3,2),3132,SWMPI_COMM,r2,ierr)
 call MPI_RECV_INIT(Tzz(nx1,ny1,nk2+1),1,DTypeZL,neigid(3,2),3133,SWMPI_COMM,r3,ierr)
-call MPI_RECV_INIT(Txy(nx1,ny1,nk2+1),1,DTypeZL,neigid(3,2),3134,SWMPI_COMM,r4,ierr)
+!call MPI_RECV_INIT(Txy(nx1,ny1,nk2+1),1,DTypeZL,neigid(3,2),3134,SWMPI_COMM,r4,ierr)
 call MPI_RECV_INIT(Txz(nx1,ny1,nk2+1),1,DTypeZL,neigid(3,2),3135,SWMPI_COMM,r5,ierr)
 call MPI_RECV_INIT(Tyz(nx1,ny1,nk2+1),1,DTypeZL,neigid(3,2),3136,SWMPI_COMM,r6,ierr)
 call MPI_RECV_INIT(Vx (nx1,ny1,nk2+1),1,DTypeZL,neigid(3,2),3137,SWMPI_COMM,r7,ierr)
 call MPI_RECV_INIT(Vy (nx1,ny1,nk2+1),1,DTypeZL,neigid(3,2),3138,SWMPI_COMM,r8,ierr)
 call MPI_RECV_INIT(Vz (nx1,ny1,nk2+1),1,DTypeZL,neigid(3,2),3139,SWMPI_COMM,r9,ierr)
 ! put into array
-reqZF(1:18)=(/ s1,r1,s2,r2,s3,r3,s4,r4,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
+!reqZF(1:18)=(/ s1,r1,s2,r2,s3,r3,s4,r4,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
+reqZF(1:12)=(/ s3,r3,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
 
-#ifdef PML
 !to Z2
-call MPI_SEND_INIT(Txx(nx1,ny1,nk2-LenFDL+1),1,DTypeZL,neigid(3,2),3211,SWMPI_COMM,s1,ierr)
-call MPI_SEND_INIT(Tyy(nx1,ny1,nk2-LenFDL+1),1,DTypeZL,neigid(3,2),3212,SWMPI_COMM,s2,ierr)
-call MPI_SEND_INIT(Tzz(nx1,ny1,nk2-LenFDL+1),1,DTypeZL,neigid(3,2),3213,SWMPI_COMM,s3,ierr)
-call MPI_SEND_INIT(Txy(nx1,ny1,nk2-LenFDL+1),1,DTypeZL,neigid(3,2),3214,SWMPI_COMM,s4,ierr)
-call MPI_SEND_INIT(Txz(nx1,ny1,nk2-LenFDL+1),1,DTypeZL,neigid(3,2),3215,SWMPI_COMM,s5,ierr)
-call MPI_SEND_INIT(Tyz(nx1,ny1,nk2-LenFDL+1),1,DTypeZL,neigid(3,2),3216,SWMPI_COMM,s6,ierr)
-call MPI_SEND_INIT(Vx (nx1,ny1,nk2-LenFDL+1),1,DTypeZL,neigid(3,2),3217,SWMPI_COMM,s7,ierr)
-call MPI_SEND_INIT(Vy (nx1,ny1,nk2-LenFDL+1),1,DTypeZL,neigid(3,2),3218,SWMPI_COMM,s8,ierr)
-call MPI_SEND_INIT(Vz (nx1,ny1,nk2-LenFDL+1),1,DTypeZL,neigid(3,2),3219,SWMPI_COMM,s9,ierr)
-!from Z1
-call MPI_RECV_INIT(Txx(nx1,ny1,nk1-LenFDL),1,DTypeZL,neigid(3,1),3211,SWMPI_COMM,r1,ierr)
-call MPI_RECV_INIT(Tyy(nx1,ny1,nk1-LenFDL),1,DTypeZL,neigid(3,1),3212,SWMPI_COMM,r2,ierr)
-call MPI_RECV_INIT(Tzz(nx1,ny1,nk1-LenFDL),1,DTypeZL,neigid(3,1),3213,SWMPI_COMM,r3,ierr)
-call MPI_RECV_INIT(Txy(nx1,ny1,nk1-LenFDL),1,DTypeZL,neigid(3,1),3214,SWMPI_COMM,r4,ierr)
-call MPI_RECV_INIT(Txz(nx1,ny1,nk1-LenFDL),1,DTypeZL,neigid(3,1),3215,SWMPI_COMM,r5,ierr)
-call MPI_RECV_INIT(Tyz(nx1,ny1,nk1-LenFDL),1,DTypeZL,neigid(3,1),3216,SWMPI_COMM,r6,ierr)
-call MPI_RECV_INIT(Vx (nx1,ny1,nk1-LenFDL),1,DTypeZL,neigid(3,1),3217,SWMPI_COMM,r7,ierr)
-call MPI_RECV_INIT(Vy (nx1,ny1,nk1-LenFDL),1,DTypeZL,neigid(3,1),3218,SWMPI_COMM,r8,ierr)
-call MPI_RECV_INIT(Vz (nx1,ny1,nk1-LenFDL),1,DTypeZL,neigid(3,1),3219,SWMPI_COMM,r9,ierr)
-#else
-!to Z2
-call MPI_SEND_INIT(Txx(nx1,ny1,nk2-LenFDS+1),1,DTypeZS,neigid(3,2),3211,SWMPI_COMM,s1,ierr)
-call MPI_SEND_INIT(Tyy(nx1,ny1,nk2-LenFDS+1),1,DTypeZS,neigid(3,2),3212,SWMPI_COMM,s2,ierr)
+!call MPI_SEND_INIT(Txx(nx1,ny1,nk2-LenFDS+1),1,DTypeZS,neigid(3,2),3211,SWMPI_COMM,s1,ierr)
+!call MPI_SEND_INIT(Tyy(nx1,ny1,nk2-LenFDS+1),1,DTypeZS,neigid(3,2),3212,SWMPI_COMM,s2,ierr)
 call MPI_SEND_INIT(Tzz(nx1,ny1,nk2-LenFDS+1),1,DTypeZS,neigid(3,2),3213,SWMPI_COMM,s3,ierr)
-call MPI_SEND_INIT(Txy(nx1,ny1,nk2-LenFDS+1),1,DTypeZS,neigid(3,2),3214,SWMPI_COMM,s4,ierr)
+!call MPI_SEND_INIT(Txy(nx1,ny1,nk2-LenFDS+1),1,DTypeZS,neigid(3,2),3214,SWMPI_COMM,s4,ierr)
 call MPI_SEND_INIT(Txz(nx1,ny1,nk2-LenFDS+1),1,DTypeZS,neigid(3,2),3215,SWMPI_COMM,s5,ierr)
 call MPI_SEND_INIT(Tyz(nx1,ny1,nk2-LenFDS+1),1,DTypeZS,neigid(3,2),3216,SWMPI_COMM,s6,ierr)
 call MPI_SEND_INIT(Vx (nx1,ny1,nk2-LenFDS+1),1,DTypeZS,neigid(3,2),3217,SWMPI_COMM,s7,ierr)
 call MPI_SEND_INIT(Vy (nx1,ny1,nk2-LenFDS+1),1,DTypeZS,neigid(3,2),3218,SWMPI_COMM,s8,ierr)
 call MPI_SEND_INIT(Vz (nx1,ny1,nk2-LenFDS+1),1,DTypeZS,neigid(3,2),3219,SWMPI_COMM,s9,ierr)
 !from Z1
-call MPI_RECV_INIT(Txx(nx1,ny1,nk1-LenFDS),1,DTypeZS,neigid(3,1),3211,SWMPI_COMM,r1,ierr)
-call MPI_RECV_INIT(Tyy(nx1,ny1,nk1-LenFDS),1,DTypeZS,neigid(3,1),3212,SWMPI_COMM,r2,ierr)
+!call MPI_RECV_INIT(Txx(nx1,ny1,nk1-LenFDS),1,DTypeZS,neigid(3,1),3211,SWMPI_COMM,r1,ierr)
+!call MPI_RECV_INIT(Tyy(nx1,ny1,nk1-LenFDS),1,DTypeZS,neigid(3,1),3212,SWMPI_COMM,r2,ierr)
 call MPI_RECV_INIT(Tzz(nx1,ny1,nk1-LenFDS),1,DTypeZS,neigid(3,1),3213,SWMPI_COMM,r3,ierr)
-call MPI_RECV_INIT(Txy(nx1,ny1,nk1-LenFDS),1,DTypeZS,neigid(3,1),3214,SWMPI_COMM,r4,ierr)
+!call MPI_RECV_INIT(Txy(nx1,ny1,nk1-LenFDS),1,DTypeZS,neigid(3,1),3214,SWMPI_COMM,r4,ierr)
 call MPI_RECV_INIT(Txz(nx1,ny1,nk1-LenFDS),1,DTypeZS,neigid(3,1),3215,SWMPI_COMM,r5,ierr)
 call MPI_RECV_INIT(Tyz(nx1,ny1,nk1-LenFDS),1,DTypeZS,neigid(3,1),3216,SWMPI_COMM,r6,ierr)
 call MPI_RECV_INIT(Vx (nx1,ny1,nk1-LenFDS),1,DTypeZS,neigid(3,1),3217,SWMPI_COMM,r7,ierr)
 call MPI_RECV_INIT(Vy (nx1,ny1,nk1-LenFDS),1,DTypeZS,neigid(3,1),3218,SWMPI_COMM,r8,ierr)
 call MPI_RECV_INIT(Vz (nx1,ny1,nk1-LenFDS),1,DTypeZS,neigid(3,1),3219,SWMPI_COMM,r9,ierr)
-#endif
 ! put into array
-reqZF(19:36)=(/ s1,r1,s2,r2,s3,r3,s4,r4,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
+!reqZF(19:36)=(/ s1,r1,s2,r2,s3,r3,s4,r4,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
+reqZF(13:24)=(/ s3,r3,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
 !---------------------------------------------------------------------------
 end subroutine mesg_init_LzF
 
@@ -3217,95 +3115,55 @@ subroutine mesg_init_LzB
 integer s1,s2,s3,s4,s5,s6,s7,s8,s9
 integer r1,r2,r3,r4,r5,r6,r7,r8,r9
 ! --- LzB ------------------------------------------------------------------
-#ifdef PML
 !to Z1
-call MPI_SEND_INIT(Txx(nx1,ny1,nk1),1,DTypeZL,neigid(3,1),3111,SWMPI_COMM,s1,ierr)
-call MPI_SEND_INIT(Tyy(nx1,ny1,nk1),1,DTypeZL,neigid(3,1),3112,SWMPI_COMM,s2,ierr)
-call MPI_SEND_INIT(Tzz(nx1,ny1,nk1),1,DTypeZL,neigid(3,1),3113,SWMPI_COMM,s3,ierr)
-call MPI_SEND_INIT(Txy(nx1,ny1,nk1),1,DTypeZL,neigid(3,1),3114,SWMPI_COMM,s4,ierr)
-call MPI_SEND_INIT(Txz(nx1,ny1,nk1),1,DTypeZL,neigid(3,1),3115,SWMPI_COMM,s5,ierr)
-call MPI_SEND_INIT(Tyz(nx1,ny1,nk1),1,DTypeZL,neigid(3,1),3116,SWMPI_COMM,s6,ierr)
-call MPI_SEND_INIT(Vx (nx1,ny1,nk1),1,DTypeZL,neigid(3,1),3117,SWMPI_COMM,s7,ierr)
-call MPI_SEND_INIT(Vy (nx1,ny1,nk1),1,DTypeZL,neigid(3,1),3118,SWMPI_COMM,s8,ierr)
-call MPI_SEND_INIT(Vz (nx1,ny1,nk1),1,DTypeZL,neigid(3,1),3119,SWMPI_COMM,s9,ierr)
-!from Z2
-call MPI_RECV_INIT(Txx(nx1,ny1,nk2+1),1,DTypeZL,neigid(3,2),3111,SWMPI_COMM,r1,ierr)
-call MPI_RECV_INIT(Tyy(nx1,ny1,nk2+1),1,DTypeZL,neigid(3,2),3112,SWMPI_COMM,r2,ierr)
-call MPI_RECV_INIT(Tzz(nx1,ny1,nk2+1),1,DTypeZL,neigid(3,2),3113,SWMPI_COMM,r3,ierr)
-call MPI_RECV_INIT(Txy(nx1,ny1,nk2+1),1,DTypeZL,neigid(3,2),3114,SWMPI_COMM,r4,ierr)
-call MPI_RECV_INIT(Txz(nx1,ny1,nk2+1),1,DTypeZL,neigid(3,2),3115,SWMPI_COMM,r5,ierr)
-call MPI_RECV_INIT(Tyz(nx1,ny1,nk2+1),1,DTypeZL,neigid(3,2),3116,SWMPI_COMM,r6,ierr)
-call MPI_RECV_INIT(Vx (nx1,ny1,nk2+1),1,DTypeZL,neigid(3,2),3117,SWMPI_COMM,r7,ierr)
-call MPI_RECV_INIT(Vy (nx1,ny1,nk2+1),1,DTypeZL,neigid(3,2),3118,SWMPI_COMM,r8,ierr)
-call MPI_RECV_INIT(Vz (nx1,ny1,nk2+1),1,DTypeZL,neigid(3,2),3119,SWMPI_COMM,r9,ierr)
-#else
-!to Z1
-call MPI_SEND_INIT(Txx(nx1,ny1,nk1),1,DTypeZS,neigid(3,1),3111,SWMPI_COMM,s1,ierr)
-call MPI_SEND_INIT(Tyy(nx1,ny1,nk1),1,DTypeZS,neigid(3,1),3112,SWMPI_COMM,s2,ierr)
+!call MPI_SEND_INIT(Txx(nx1,ny1,nk1),1,DTypeZS,neigid(3,1),3111,SWMPI_COMM,s1,ierr)
+!call MPI_SEND_INIT(Tyy(nx1,ny1,nk1),1,DTypeZS,neigid(3,1),3112,SWMPI_COMM,s2,ierr)
 call MPI_SEND_INIT(Tzz(nx1,ny1,nk1),1,DTypeZS,neigid(3,1),3113,SWMPI_COMM,s3,ierr)
-call MPI_SEND_INIT(Txy(nx1,ny1,nk1),1,DTypeZS,neigid(3,1),3114,SWMPI_COMM,s4,ierr)
+!call MPI_SEND_INIT(Txy(nx1,ny1,nk1),1,DTypeZS,neigid(3,1),3114,SWMPI_COMM,s4,ierr)
 call MPI_SEND_INIT(Txz(nx1,ny1,nk1),1,DTypeZS,neigid(3,1),3115,SWMPI_COMM,s5,ierr)
 call MPI_SEND_INIT(Tyz(nx1,ny1,nk1),1,DTypeZS,neigid(3,1),3116,SWMPI_COMM,s6,ierr)
 call MPI_SEND_INIT(Vx (nx1,ny1,nk1),1,DTypeZS,neigid(3,1),3117,SWMPI_COMM,s7,ierr)
 call MPI_SEND_INIT(Vy (nx1,ny1,nk1),1,DTypeZS,neigid(3,1),3118,SWMPI_COMM,s8,ierr)
 call MPI_SEND_INIT(Vz (nx1,ny1,nk1),1,DTypeZS,neigid(3,1),3119,SWMPI_COMM,s9,ierr)
 !from Z2
-call MPI_RECV_INIT(Txx(nx1,ny1,nk2+1),1,DTypeZS,neigid(3,2),3111,SWMPI_COMM,r1,ierr)
-call MPI_RECV_INIT(Tyy(nx1,ny1,nk2+1),1,DTypeZS,neigid(3,2),3112,SWMPI_COMM,r2,ierr)
+!call MPI_RECV_INIT(Txx(nx1,ny1,nk2+1),1,DTypeZS,neigid(3,2),3111,SWMPI_COMM,r1,ierr)
+!call MPI_RECV_INIT(Tyy(nx1,ny1,nk2+1),1,DTypeZS,neigid(3,2),3112,SWMPI_COMM,r2,ierr)
 call MPI_RECV_INIT(Tzz(nx1,ny1,nk2+1),1,DTypeZS,neigid(3,2),3113,SWMPI_COMM,r3,ierr)
-call MPI_RECV_INIT(Txy(nx1,ny1,nk2+1),1,DTypeZS,neigid(3,2),3114,SWMPI_COMM,r4,ierr)
+!call MPI_RECV_INIT(Txy(nx1,ny1,nk2+1),1,DTypeZS,neigid(3,2),3114,SWMPI_COMM,r4,ierr)
 call MPI_RECV_INIT(Txz(nx1,ny1,nk2+1),1,DTypeZS,neigid(3,2),3115,SWMPI_COMM,r5,ierr)
 call MPI_RECV_INIT(Tyz(nx1,ny1,nk2+1),1,DTypeZS,neigid(3,2),3116,SWMPI_COMM,r6,ierr)
 call MPI_RECV_INIT(Vx (nx1,ny1,nk2+1),1,DTypeZS,neigid(3,2),3117,SWMPI_COMM,r7,ierr)
 call MPI_RECV_INIT(Vy (nx1,ny1,nk2+1),1,DTypeZS,neigid(3,2),3118,SWMPI_COMM,r8,ierr)
 call MPI_RECV_INIT(Vz (nx1,ny1,nk2+1),1,DTypeZS,neigid(3,2),3119,SWMPI_COMM,r9,ierr)
-#endif
 ! put into array
-reqZB(1:18)=(/ s1,r1,s2,r2,s3,r3,s4,r4,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
+!reqZB(1:18)=(/ s1,r1,s2,r2,s3,r3,s4,r4,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
+reqZB(1:12)=(/ s3,r3,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
 
 !to Z2
-call MPI_SEND_INIT(Txx(nx1,ny1,nk2-LenFDL+1),1,DTypeZL,neigid(3,2),3231,SWMPI_COMM,s1,ierr)
-call MPI_SEND_INIT(Tyy(nx1,ny1,nk2-LenFDL+1),1,DTypeZL,neigid(3,2),3232,SWMPI_COMM,s2,ierr)
+!call MPI_SEND_INIT(Txx(nx1,ny1,nk2-LenFDL+1),1,DTypeZL,neigid(3,2),3231,SWMPI_COMM,s1,ierr)
+!call MPI_SEND_INIT(Tyy(nx1,ny1,nk2-LenFDL+1),1,DTypeZL,neigid(3,2),3232,SWMPI_COMM,s2,ierr)
 call MPI_SEND_INIT(Tzz(nx1,ny1,nk2-LenFDL+1),1,DTypeZL,neigid(3,2),3233,SWMPI_COMM,s3,ierr)
-call MPI_SEND_INIT(Txy(nx1,ny1,nk2-LenFDL+1),1,DTypeZL,neigid(3,2),3234,SWMPI_COMM,s4,ierr)
+!call MPI_SEND_INIT(Txy(nx1,ny1,nk2-LenFDL+1),1,DTypeZL,neigid(3,2),3234,SWMPI_COMM,s4,ierr)
 call MPI_SEND_INIT(Txz(nx1,ny1,nk2-LenFDL+1),1,DTypeZL,neigid(3,2),3235,SWMPI_COMM,s5,ierr)
 call MPI_SEND_INIT(Tyz(nx1,ny1,nk2-LenFDL+1),1,DTypeZL,neigid(3,2),3236,SWMPI_COMM,s6,ierr)
 call MPI_SEND_INIT(Vx (nx1,ny1,nk2-LenFDL+1),1,DTypeZL,neigid(3,2),3237,SWMPI_COMM,s7,ierr)
 call MPI_SEND_INIT(Vy (nx1,ny1,nk2-LenFDL+1),1,DTypeZL,neigid(3,2),3238,SWMPI_COMM,s8,ierr)
 call MPI_SEND_INIT(Vz (nx1,ny1,nk2-LenFDL+1),1,DTypeZL,neigid(3,2),3239,SWMPI_COMM,s9,ierr)
 !from Z2
-call MPI_RECV_INIT(Txx(nx1,ny1,nk1-LenFDL),1,DTypeZL,neigid(3,1),3231,SWMPI_COMM,r1,ierr)
-call MPI_RECV_INIT(Tyy(nx1,ny1,nk1-LenFDL),1,DTypeZL,neigid(3,1),3232,SWMPI_COMM,r2,ierr)
+!call MPI_RECV_INIT(Txx(nx1,ny1,nk1-LenFDL),1,DTypeZL,neigid(3,1),3231,SWMPI_COMM,r1,ierr)
+!call MPI_RECV_INIT(Tyy(nx1,ny1,nk1-LenFDL),1,DTypeZL,neigid(3,1),3232,SWMPI_COMM,r2,ierr)
 call MPI_RECV_INIT(Tzz(nx1,ny1,nk1-LenFDL),1,DTypeZL,neigid(3,1),3233,SWMPI_COMM,r3,ierr)
-call MPI_RECV_INIT(Txy(nx1,ny1,nk1-LenFDL),1,DTypeZL,neigid(3,1),3234,SWMPI_COMM,r4,ierr)
+!call MPI_RECV_INIT(Txy(nx1,ny1,nk1-LenFDL),1,DTypeZL,neigid(3,1),3234,SWMPI_COMM,r4,ierr)
 call MPI_RECV_INIT(Txz(nx1,ny1,nk1-LenFDL),1,DTypeZL,neigid(3,1),3235,SWMPI_COMM,r5,ierr)
 call MPI_RECV_INIT(Tyz(nx1,ny1,nk1-LenFDL),1,DTypeZL,neigid(3,1),3236,SWMPI_COMM,r6,ierr)
 call MPI_RECV_INIT(Vx (nx1,ny1,nk1-LenFDL),1,DTypeZL,neigid(3,1),3237,SWMPI_COMM,r7,ierr)
 call MPI_RECV_INIT(Vy (nx1,ny1,nk1-LenFDL),1,DTypeZL,neigid(3,1),3238,SWMPI_COMM,r8,ierr)
 call MPI_RECV_INIT(Vz (nx1,ny1,nk1-LenFDL),1,DTypeZL,neigid(3,1),3239,SWMPI_COMM,r9,ierr)
 ! put into array
-reqZB(19:36)=(/ s1,r1,s2,r2,s3,r3,s4,r4,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
+!reqZB(19:36)=(/ s1,r1,s2,r2,s3,r3,s4,r4,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
+reqZB(13:24)=(/ s3,r3,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
 end subroutine mesg_init_LzB
 
 end module macdrp_mod
 
-!
-!   hVx(i,j,k)= rrho*( DxTxx/z(k)/ysin(j)+DyTxy/z(k)+DzTxz                    &
-!        +(2.0_SP*Txy(i,j,k)*ycot(j)+3.0_SP*Txz(i,j,k))/z(k) )
-!   hVy(i,j,k)= rrho*( DxTxy/z(k)/ysin(j)+DyTyy/z(k)+DzTyz                    &
-!        +(3.0_SP*Tyz(i,j,k)+Tyy(i,j,k)*ycot(j)-Txx(i,j,k)*ycot(j))/z(k) )
-!   hVz(i,j,k)= rrho*( DxTxz/z(k)/ysin(j)+DyTyz/z(k)+DzTzz                    &
-!        +(2.0_SP*Tzz(i,j,k)+Tyz(i,j,k)*ycot(j)-Txx(i,j,k)-Tyy(i,j,k))/z(k) )
-!
-!   E11=(DxVx/ysin(j)+Vy(i,j,k)*ycot(j)+Vz(i,j,k))/z(k)
-!   E22=(DyVy+Vz(i,j,k))/z(k)
-!   E33=DzVz
-!   E12=(DxVy/ysin(j)+DyVx-Vx(i,j,k)*ycot(j))/z(k)/2.0_SP
-!   E13=(DxVz/z(k)/ysin(j)+DzVx-Vx(i,j,k)/z(k))/2.0_SP
-!   E23=(DyVz/z(k)+DzVy-Vy(i,j,k)/z(k))/2.0_SP
-!   hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
-!   hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
-!   hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
-!   hTxy(i,j,k)=miu*E12
-!   hTxz(i,j,k)=miu*E13
-!   hTyz(i,j,k)=miu*E23
+! vim:ft=fortran:ts=4:sw=4:nu:et:ai:

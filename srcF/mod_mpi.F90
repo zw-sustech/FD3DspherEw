@@ -9,11 +9,12 @@
 ! $Revision$
 ! $LastChangedBy$
 
-#include "mod_macdrp.h"
-!#define WithoutFreeSurface
 !-----------------------------------------------------------------------------
 module mpi_mod
 !-----------------------------------------------------------------------------
+
+#include "mod_macdrp.h"
+!#define WithoutFreeSurface
 
 use mpi
 
@@ -42,7 +43,8 @@ public :: swmpi_init,                          &
           swmpi_time_init,                     &
           swmpi_time_write,                    &
           swmpi_time_end,                      &
-          set_mpi_subfix
+          set_mpi_subfix,                      &
+          swmpi_except
 
 integer,public :: ndims
 integer,dimension(SEIS_GEO),public :: dims
@@ -69,6 +71,7 @@ integer hostlen !the hostname's char length
 character (len=8) :: str_d0,str_d1,str_d2
 character (len=10):: str_t0,str_t1,str_t2
 real (kind=8) :: wtime0,wtime1,wtime2
+integer :: wtimen0
 
 !-----------------------------------------------------------------------!
 contains
@@ -80,12 +83,15 @@ character (len=*) :: fnm_conf
 integer fid,n
 fid=1001
 open(fid,file=trim(fnm_conf),status="old")
-  call string_conf(fid,1,'ndims',2,ndims)
-       do n=1,ndims
-          call string_conf(fid,1,'dims',n+1,dims(n))
-          call string_conf(fid,1,'periods',n+1,periods(n))
-       end do
-  call string_conf(fid,1,'reorder',2,reorder)
+  !call string_conf(fid,1,'ndims',2,ndims)
+  ndims=3
+  do n=1,ndims
+     call string_conf(fid,1,'dims',n+1,dims(n))
+     !call string_conf(fid,1,'periods',n+1,periods(n))
+  end do
+  !call string_conf(fid,1,'reorder',2,reorder)
+  periods=.false.
+  reorder=.true.
 close(fid)
 end subroutine swmpi_init
 #ifdef MPI1DTOPO
@@ -335,16 +341,23 @@ end subroutine swmpi_datatype
 
 !---------------------------------------}
 
-subroutine swmpi_time_init(filenm)
-   character (len=*) :: filenm
+subroutine swmpi_time_init(filenm,ntime)
+   character (len=*),intent(in) :: filenm
+   integer,intent(in) :: ntime
    integer fid
    fid=1009
    if (myid/=0) return
    wtime0=MPI_WTIME()
    call date_and_time(date=str_d0,time=str_t0)
 
+if (ntime==0) then
    open(fid,file=trim(filenm),status="unknown")
-     write(fid,*) "# seis3d_wave run time log"
+   write(fid,*) "# seis3d_wave run time log"
+else
+   open(fid,file=trim(filenm),status="old",position="append")
+   write(fid,*)
+   write(fid,*) "# seis3d_wave restart from ntime=",ntime
+end if
      write(fid,*)
      write(fid,*) 'the program begins from ',str_d0,  &
                   ',',str_t0(1:2),'/',str_t0(3:4),'/',str_t0(5:10)
@@ -353,10 +366,12 @@ subroutine swmpi_time_init(filenm)
      !write(fid,'(4a10)') 'step','hour','minute','second'
    close(fid)
    wtime1=wtime0
+   wtimen0=ntime
 end subroutine swmpi_time_init
 subroutine swmpi_time_write(ntime,filenm)
-   character (len=*) :: filenm
-   integer fid,ntime
+   character (len=*),intent(in) :: filenm
+   integer,intent(in) :: ntime
+   integer :: fid
    !integer h,m
    real (kind=8) :: s,s0,s1
    if (myid/=0) return
@@ -367,7 +382,7 @@ subroutine swmpi_time_write(ntime,filenm)
    !m=int((s-h*3600)/60)
    !s=s-h*3600-m*60
    s0=(wtime2-wtime0)/3600.0
-   s1=s0/ntime*nt
+   s1=s0/(ntime-wtimen0)*(nt-wtimen0)
    open(fid,file=trim(filenm),status="old",position="append")
      write(fid,'(i6,a10,g12.5,a4,g12.5,a17,g12.5,a11)') &
              ntime,'step uses',s,'s,  ',                &
@@ -378,7 +393,7 @@ subroutine swmpi_time_write(ntime,filenm)
    wtime1=wtime2
 end subroutine swmpi_time_write
 subroutine swmpi_time_end(filenm)
-   character (len=*) :: filenm
+   character (len=*),intent(in) :: filenm
    integer fid
    integer d,h,m
    real (kind=8) :: s
@@ -401,7 +416,7 @@ subroutine swmpi_time_end(filenm)
    close(fid)
 end subroutine swmpi_time_end
 function set_mpi_prefix(i,j,k) result(filenm)
-    integer i,j,k
+    integer,intent(in) :: i,j,k
     character (len=SEIS_STRLEN) :: filenm
     character (len=SEIS_STRLEN) :: str1,str2,str3
     write(str1,"(i2.2)") i
@@ -413,7 +428,7 @@ function set_mpi_prefix(i,j,k) result(filenm)
                     //'_'
 end function set_mpi_prefix
 function set_mpi_subfix(i,j,k) result(filenm)
-    integer i,j,k
+    integer,intent(in) :: i,j,k
     character (len=SEIS_STRLEN) :: filenm
     character (len=SEIS_STRLEN) :: str1,str2,str3
     write(str1,"(i2.2)") i
@@ -424,7 +439,7 @@ function set_mpi_subfix(i,j,k) result(filenm)
                     //trim(adjustl(str3))
 end function set_mpi_subfix
 subroutine swmpi_change_fnm(i,j,k)
-  integer i,j,k
+  integer,intent(in) :: i,j,k
   character (len=SEIS_STRLEN) :: str1,str2,str3
   write(str1,"(i2.2)") i
   write(str2,"(i2.2)") j
@@ -450,36 +465,42 @@ function swmpi_rename_fnm(pnm_input,fnm_in) result(fnm_out)
 end function swmpi_rename_fnm
 
 function swmpi_globi(i,n_i) result(gi)
-integer i,n_i,gi
+integer,intent(in) :: i,n_i
+integer :: gi
 gi=(i-ni1+1)+n_i*ni+(ni1-1) ! term of (ni1-1) is for clarity
 end function swmpi_globi
 function swmpi_globj(j,n_j) result(gj)
-integer j,n_j,gj
+integer,intent(in) :: j,n_j
+integer :: gj
 gj=(j-nj1+1)+n_j*nj+(nj1-1)
 end function swmpi_globj
 function swmpi_globk(k,n_k) result(gk)
-integer k,n_k,gk
+integer,intent(in) :: k,n_k
+integer :: gk
 gk=(k-nk1+1)+n_k*nk+(nk1-1)
 end function swmpi_globk
 
 function swmpi_locli(gi,n_i) result(i)
-integer gi,n_i,i
+integer,intent(in) :: gi,n_i
+integer :: i
 !i=mod(gi-(ni1-nx1),ni)+(ni1-nx1)
 i=gi-n_i*ni
 end function swmpi_locli
 function swmpi_loclj(gj,n_j) result(j)
-integer gj,n_j,j
+integer,intent(in) :: gj,n_j
+integer :: j
 !j=mod(gj-(nj1-ny1),nj)+(nj1-ny1)
 j=gj-n_j*nj
 end function swmpi_loclj
 function swmpi_loclk(gk,n_k) result(k)
-integer gk,n_k,k
+integer,intent(in) :: gk,n_k
+integer :: k
 !k=mod(gk-(nk1-nz1),nk)+(nk1-nz1)
 k=gk-n_k*nk
 end function swmpi_loclk
 
 function point_in_thisnode(i,j,k) result(iflag)
-integer i,j,k
+integer,intent(in) :: i,j,k
 logical iflag
 integer glob_i1,glob_i2,glob_j1,glob_j2,glob_k1,glob_k2
 glob_i1=swmpi_globi(ni1,thisid(1)); glob_i2=swmpi_globi(ni2,thisid(1))
@@ -493,4 +514,13 @@ if (      i>=glob_i1 .and. i<=glob_i2  &
 end if
 end function point_in_thisnode
 
+subroutine swmpi_except(msg)
+    character (len=*),intent(in) :: msg
+    integer :: ierr
+    print *, trim(msg)
+    call MPI_ABORT(SWMPI_COMM,1,ierr)
+end subroutine swmpi_except
+
 end module mpi_mod
+
+! vim:ft=fortran:ts=4:sw=4:nu:et:ai:
