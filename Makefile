@@ -1,5 +1,5 @@
 #******************************************************************************#
-#*  Makefile for FD3DTOPO-macdrp-spher program                                *#
+#*  Makefile for FD3Dspher program                                            *#
 #*                                                                            *#
 #*  Author: Wei ZHANG     Email: zhangw.pku@gmail.com                         *#
 #*  Copyright (C) Wei ZHANG, 2007. All Rights Reserved.                       *#
@@ -36,9 +36,6 @@ STATIC := ON
 #DataTypeDouble := ON
 
 #SrcSmooth :=ON
-#SrcTensorMomentum := ON
-SrcTensorHook := ON
-SrcForce := ON
 
 #CondFreeCharac := ON
 CondFreeTIMG := ON
@@ -46,7 +43,7 @@ CondFreeTIMG := ON
 DFLAG_LIST := DEBUG STATIC GETARG VERBOSE \
 			  MPITOPO1D USEOMP MPIBARRIER \
               WITHQS WithoutVHOC DataTypeDouble \
-			  SrcSmooth SrcTensorMomentum SrcTensorHook SrcForce \
+			  SrcSmooth  \
 			  CondFreeCharac CondFreeTIMG
 
 DFLAGS := $(foreach flag,$(DFLAG_LIST),$(if $($(flag)),-D$(flag),)) $(DFLAGS)
@@ -55,7 +52,7 @@ DFLAGS := $(strip $(DFLAGS))
 #######################################################################
 #     list source files and the target names                          #
 #######################################################################
-skeldirs := OBJ bin export input output postproc rest src
+skeldirs := OBJ bin checkpoint export input output postproc src
 OBJDIR := ./OBJ
 BINDIR := ./bin
 SRCDIR := ./src
@@ -78,10 +75,13 @@ EXE_STATION := seis3d_station
 EXE_WAVE    := seis3d_wave
 
 SRC_EXPTSNAP   := tool_expt_snap.f90
-SRC_EXPTSEISMO := tool_expt_seismo.f90
 EXE_EXPTSNAP   := tool_expt_snap
+
+SRC_EXPTSEISMO := tool_expt_seismo.f90
 EXE_EXPTSEISMO := tool_expt_seismo
 
+SRC_KERNEL    := tomo_kernel.f90
+EXE_KERNEL    := tomo_kernel
 
 OBJ_MOD     := $(foreach file,$(SRC_MOD),$(OBJDIR)/$(file:.f90=.o))
 OBJ_GRID    := $(foreach file,$(SRC_GRID),$(OBJDIR)/$(file:.f90=.o))
@@ -91,6 +91,7 @@ OBJ_STATION := $(foreach file,$(SRC_STATION),$(OBJDIR)/$(file:.f90=.o))
 OBJ_WAVE    := $(foreach file,$(SRC_WAVE),$(OBJDIR)/$(file:.f90=.o))
 OBJ_EXPTSNAP   :=  $(foreach file,$(SRC_EXPTSNAP),$(OBJDIR)/$(file:.f90=.o))
 OBJ_EXPTSEISMO :=  $(foreach file,$(SRC_EXPTSEISMO),$(OBJDIR)/$(file:.f90=.o))
+OBJ_KERNEL     := $(foreach file,$(SRC_KERNEL),$(OBJDIR)/$(file:.f90=.o))
 
 vpath %.F90 $(FPPDIR)
 
@@ -109,17 +110,14 @@ include Makefile.$(WHEREAMI)
 
 all: skel preprocess solver postprocess kernel
 
--include Makefile.kernel
-
-preprocess:  $(BINDIR)/$(EXE_GRID) $(BINDIR)/$(EXE_GRID_MPI)  \
-     $(BINDIR)/$(EXE_MEDIA) $(BINDIR)/$(EXE_MEDIA_MPI) \
+preprocess:  $(BINDIR)/$(EXE_GRID) $(BINDIR)/$(EXE_MEDIA) \
      $(BINDIR)/$(EXE_SOURCE) $(BINDIR)/$(EXE_STATION)
 solver:  $(BINDIR)/$(EXE_WAVE)
 postprocess: $(BINDIR)/$(EXE_EXPTSNAP) $(BINDIR)/$(EXE_EXPTSEISMO)
 kernel: $(BINDIR)/$(EXE_KERNEL)
 skel:
 	@mkdir -p $(skeldirs)
-	@echo 0 > rest_point.dat
+	@echo "0 0 0 # checkpoint, syncpoint, new nt" > checkpoint.dat
 
 $(BINDIR)/$(EXE_WAVE): $(OBJ_MOD)  $(OBJ_WAVE)
 	$(FC) -o $@ $(OBJ_MOD) $(OBJ_WAVE) $(LDFLAGS)
@@ -135,6 +133,8 @@ $(BINDIR)/$(EXE_EXPTSNAP): $(OBJ_MOD) $(OBJ_EXPTSNAP)
 	$(FC) -o $@ $(OBJ_MOD) $(OBJ_EXPTSNAP) $(LDFLAGS)
 $(BINDIR)/$(EXE_EXPTSEISMO): $(OBJ_MOD) $(OBJ_EXPTSEISMO)
 	$(FC) -o $@ $(OBJ_MOD) $(OBJ_EXPTSEISMO) $(LDFLAGS)
+$(BINDIR)/$(EXE_KERNEL): $(OBJ_MOD) $(OBJ_KERNEL)
+	$(FC) -o $@ $(OBJ_MOD) $(OBJ_KERNEL) $(LDFLAGS)
 
 RM := rm
 cleanexe:
@@ -147,8 +147,8 @@ cleaninput:
 	$(RM) -rf ./input/
 	mkdir -p input
 cleanoutput:
-	$(RM) -rf ./output ./rest/
-	mkdir -p output rest
+	$(RM) -rf ./output ./checkpoint
+	mkdir -p output checkpoint
 cleanall: cleanexe cleanobj cleanf90
 distclean: cleanexe cleanobj cleanf90 cleaninput cleanoutput
 
@@ -164,3 +164,5 @@ distclean: cleanexe cleanobj cleanf90 cleaninput cleanoutput
 
 $(OBJDIR)/%.o : %.f90
 	$(FC) $(FFLAGS) $(SRCDIR)/$(<F) -o $@
+
+# vim:ft=make:ts=4:sw=4:nu:et:ai:

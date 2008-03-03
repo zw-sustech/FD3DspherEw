@@ -1,0 +1,57 @@
+#******************************************************************************#
+#*  Compiler setting on nw8440 for FD3Dtopo-macdrp program                    *#
+#*  Intel Core Duo T7200, 2.0G, Ubuntu 7.04, x86_64                           *#
+#*                                                                            *#
+#*  Author: Wei ZHANG     Email: zhangw.pku@gmail.com                         *#
+#*  Copyright (C) Wei ZHANG, 2006. All Rights Reserved.                       *#
+#******************************************************************************#
+
+# $Date$
+# $Revision$
+# $LastChangedBy$
+
+#COMPILER := Intel
+COMPILER := PGI
+
+#######################################################################
+#                          PGI compiler                               #
+#######################################################################
+ifeq "$(COMPILER)" "PGI"
+FC := /home/zhangw/usr/mpich-1.2.7-p1-pgi/bin/mpif90
+NETCDF := /home/zhangw/usr/netcdf-3.6.2-pgi
+
+LDFLAGS := -L$(NETCDF)/lib -lnetcdf $(if $(STATIC),-Bstatic,) 
+FFLAGS := -c -Mextend -module $(OBJDIR) -module $(NETCDF)/include \
+  $(if $(WithOMP),-mp=align,)
+FFLAGSMP := -Mnounroll -Mnovect $(FFLAGS)
+
+ifeq "$(DEBUG)" "ON"
+  FFLAGS   := -g $(FFLAGS)
+  FFLAGSMP := -g $(FFLAGSMP)
+else
+FFLAGSMP := -O3 $(FFLAGSMP)
+#FFLAGS   := -O3 -Mdaz -Munroll=c:1 -Mlre -Mnoframe -Mipa=fast -Minline $(FFLAGS)
+FFLAGS   := -O3 -Mdaz -Munroll=c:1 -Mlre -Mnoframe $(FFLAGS)
+
+#FFLAGS   := -O3 -Mdaz -Munroll=c:1 -Mlre -Mnoframe -Mipa=fast $(FFLAGS)
+#LDFLAGS  := -Mipa=fast $(LDFLAGS)
+
+#FFLAGS := -Mvect=prefetch,sse -Mscalarsse -Mcache_align -Mflushz $(FFLAGS)
+FFLAGS := -Mvect=sse -Mscalarsse -Mcache_align -Mflushz $(FFLAGS)
+
+#FFLAGS := -flags -### -dryrun $(FFLAGS)
+#FFLAGS := -Minfo -Mneginfo -time $(FFLAGS)
+#FFLAGS := -Ktrap=fp -Mbounds -C -Mchkstk -Mpfi -Mpfo -Mprof=func -pg $(FFLAGS)
+#LDFLAGS := -Mpfi -pg $(LDFLAGS)
+#FFLAGS := -Mlarge_arrays -Mlfs $(FFLAGS)
+endif #DEBUG
+
+endif #PGI
+#######################################################################
+#                        Intel compiler                               #
+#######################################################################
+ifeq "$(COMPILER)" "Intel"
+$(error "Please set FC and NETCDF for $(COMPILER) in Makefile.$(WHEREAMI)")
+endif
+
+# vim:ft=make:ts=4:sw=4:nu:et:ai:

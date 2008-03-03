@@ -1,0 +1,97 @@
+#******************************************************************************#
+#*                                                                            *#
+#*                                   FD3Dspher                                *#
+#*                           =========================                        *#
+#*                                                                            *#
+#*                        The Fortran90 Program Package                       *#
+#*            for Non-Staggered Finite-Difference Seismic Wave Modeling       *#
+#*                   in 3D Complex Media in Spherical Coordinate              *#
+#*                                                                            *#
+#*                                                                            *#
+#*                        Wei ZHANG  and  Yang Shen                           *#
+#*               email: wzhang@gso.uri.edu, yshen@gso.uri.edu                 *#
+#*   Graduate School of Oceanography, University of Rhode Island, USA, 2008   *#
+#*                                                                            *#
+#*     A signed non-commercial agreement is required to use this program.     *#
+#*             Free for non-commercial academic research ONLY.                *#
+#*       This program is distributed WITHOUT ANY WARRANTY whatsoever.         *#
+#*       Do not redistribute this program without written permission.         *#
+#*                                                                            *#
+#******************************************************************************#
+
+1 Introduction
+
+  This program simulates seismic wave propagation in 3D complex media in
+  spherical coordinate by using non-staggered finite difference method.
+  We use the non-staggered FD scheme, DRP/opt MacCormack scheme
+  (Hixon,1997), to update the stress-velocity wave equations.
+  The traction free surface boundary condition is implemented through
+  stress image method conjunction with compact scheme for velocity difference.
+  In the codes, we use x as zenith(angle from south to r),
+                       y as azimuth
+                       z as r
+
+2 Direcotry layout
+
+  2.1) before compiling:
+  mfiles/
+     matlab scriptes to show the result
+     #need snctools: http://mexcdf.sourceforge.net/
+  srcF/
+     the source files
+  util/
+     hostslist: used when running program without job control system
+     pbs_wave_mpi.sh: the shell scripte to submit job in torque/pbs
+     sge_wave_mpi.sh: the shell scripte to submit job in SGE
+     Makefile.*: included Makefile for some places
+  Makefile, Makefile.uri
+     makefile for this package and compiler configuration for seawolf.gso.uri.edu
+  README
+     this file
+  SeisFD3D.conf
+     the main input file
+  SeisGrid.conf
+     the input file for non-uniform grid
+  SeisMedia.conf
+     the input file for model parameters
+  SeisSource.conf
+     the input file for seismic source
+  TomoKernel.conf
+     the input file for finite-frequency kernel
+
+  2.2) after compiling, following directories will be created:
+  bin/
+     executable programs stored here
+  checkpoint/
+     checkpoint/restart files
+  input/
+     geometric, media and source nc files
+  OBJ/
+     object files
+  export/
+     used for bin/tool_expt*
+  output/
+     stored output nc files from threads
+  src/
+     the source files after preprocessing
+
+3 Usage
+  
+  1) type 
+       make
+     to compile the programs
+     # setting FC, LIB_NETCDF, MOD_NETCDF according to your system first
+  2) set proper parameters in *.conf
+  3) run ./bin/seis3d_grid
+  4) run ./bin/seis3d_media
+  5) run ./bin/seis3d_source
+  6) run ./bin/seis3d_station
+  7) moved sge_wave_mpi.sh or pbs_wave_mpi.sh or hostlist from util/ to ./
+     use sge_wave_mpi.sh to submit job if using sge job control system,
+     # set -pe mich to the total threads number
+     # set -v MPI_HOME to your mpich root directory
+     or pbs_wave_mpi.sh to submit job in torque/pbs system,
+     or edit hostnames in file of "hostlist", then type
+        nohup mpirun -np NNN -nolocal -machinefile hostlist bin/seis3d_wave &
+
+# vim:ft=conf:ts=4:sw=4:nu:et:ai:
