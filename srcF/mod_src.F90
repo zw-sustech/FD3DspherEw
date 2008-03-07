@@ -170,8 +170,8 @@ if (num_moment>0) then
   call nfseis_varget(filenm,'moment_indx',moment_indx,(/1,1/),(/SEIS_GEO,num_moment/),(/1,1/))
   call nfseis_varget(filenm,'moment_axis',moment_axis,(/1,1/),(/SEIS_GEO,num_moment/),(/1,1/))
   call nfseis_varget(filenm,'moment_start_time',moment_t0,(/1/),(/num_moment/),(/1/))
-  call nfseis_varget(filenm,'moment_sft_time',momstf_time,(/1/),(/ntwin_moment/),(/1/))
-  call nfseis_varget(filenm,'moment_sft_freq',momstf_freq,(/1/),(/ntwin_moment/),(/1/))
+  call nfseis_varget(filenm,'moment_stf_time',momstf_time,(/1/),(/ntwin_moment/),(/1/))
+  call nfseis_varget(filenm,'moment_stf_freq',momstf_freq,(/1/),(/ntwin_moment/),(/1/))
   !att
   call nfseis_attget(filenm,'moment_stf_id',momstf_id)
   !correct
