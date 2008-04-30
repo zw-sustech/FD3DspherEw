@@ -107,7 +107,7 @@ do n_k=0,dims(3)-1
    call swmpi_set_gindx(n_i,n_j,n_k)
 
    !output grid
-   filenm=swmpi_rename_fnm(pnm_grid,fnm_grid)
+   filenm=grid_fnm_get(n_i,n_j,n_k)
    call grid_skel(filenm,nx,ny,nz)
    call nfseis_varput(filenm,'x',gx(ngx1:ngx2),(/1/),(/nx/),(/1/))
    call nfseis_varput(filenm,'y',gy(ngy1:ngy2),(/1/),(/ny/),(/1/))
