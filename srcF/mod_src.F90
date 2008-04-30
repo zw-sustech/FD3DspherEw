@@ -32,7 +32,7 @@ public ::           &
   src_alloc_force,  &
   src_destroy,      &
   src_import,       &
-  get_fnm_srcnode,  &
+  src_fnm_get,      &
   src_stress,       &
   src_force
 public ::        &
@@ -52,11 +52,8 @@ integer,parameter,public ::  &
      SIG_STF_RICKER   =200,  &
      SIG_STF_BSHIFT   =210,  &
      SIG_STF_GAUSS    =220,  &
-     SIG_STF_BELL     =230
-integer,parameter,public ::  &
-     SIG_MECH_FORCE     =10, &
-     SIG_MECH_DOUBLE    =20, &
-     SIG_MECH_EXPLOSIVE =30
+     SIG_STF_BELL     =230,  &
+     SIG_STF_STEP     =240
 
 integer,public :: num_force,num_moment,ntwin_force,ntwin_moment
 integer,allocatable,public :: force_indx(:,:),moment_indx(:,:)
@@ -140,24 +137,19 @@ open(fid,file=trim(filenm),status="old")
   call string_conf(fid,1,'SOURCE_ROOT',2,pnm_src)
 close(fid)
 end subroutine src_fnm_init
-function get_fnm_srcnode(n_i,n_j,n_k) result(filenm)
-  use io_mod, only : io_out_pattern
+function src_fnm_get(n_i,n_j,n_k) result(filenm)
   integer,intent(in) :: n_i,n_j,n_k
   character (len=SEIS_STRLEN) :: filenm
-  filenm=trim(pnm_src)                          &
-       //'/'//'src'                             &
-       //'_'//trim(set_mpi_subfix(n_i,n_j,n_k)) &
-       //'.nc'
-end function get_fnm_srcnode
+  filenm=trim(pnm_src)//'/'//'source'//'_'//set_mpi_subfix(n_i,n_j,n_k)//'.nc'
+end function src_fnm_get
 
-subroutine src_import
+subroutine src_import(n_i,n_j,n_k)
+  integer,intent(in) :: n_i,n_j,n_k
   integer n,i,j,k
   character (len=SEIS_STRLEN) :: filenm
-  filenm=get_fnm_srcnode(thisid(1),thisid(2),thisid(3))
+  filenm=src_fnm_get(n_i,n_j,n_k)
   call nfseis_attget(filenm,'number_of_moment',num_moment)
   call nfseis_attget(filenm,'number_of_force',num_force)
-  !call nfseis_diminfo(filenm,'moment_point',num_moment)
-  !call nfseis_diminfo(filenm,'force_point',num_force)
 if (num_moment>0) then
   call nfseis_diminfo(filenm,'moment_time_window',ntwin_moment)
   call src_alloc_moment(num_moment,ntwin_moment)
@@ -175,9 +167,9 @@ if (num_moment>0) then
   !att
   call nfseis_attget(filenm,'moment_stf_id',momstf_id)
   !correct
-  do n=1,num_moment
-     moment_indx(:,n)=inn_ijk(moment_indx(:,n))
-  end do
+  !do n=1,num_moment
+  !   moment_indx(:,n)=inn_ijk(moment_indx(:,n))
+  !end do
 end if
 if (num_force>0) then
   call nfseis_diminfo(filenm,'force_time_window',ntwin_force)
@@ -193,9 +185,9 @@ if (num_force>0) then
   !att
   call nfseis_attget(filenm,'force_stf_id',frcstf_id)
   !correct
-  do n=1,num_force
-     force_indx(:,n)=inn_ijk(force_indx(:,n))
-  end do
+  !do n=1,num_force
+  !   force_indx(:,n)=inn_ijk(force_indx(:,n))
+  !end do
 end if
 #ifdef VERBOSE
   fid_out=9010
@@ -220,7 +212,7 @@ real(SP) :: t,rate,Mxx,Mxy,Mxz,Myy,Myz,Mzz,d,V
 #ifdef SrcSmooth
 integer :: Li,Lj,Lk
 real(SP),dimension(-LenFD:LenFD,-LenFD:LenFD,-LenFD:LenFD) :: normd
-real x0,y0,z0
+real(SP) :: x0,y0,z0
 #endif
 
 if ( num_moment<=0 ) return
@@ -231,11 +223,11 @@ do n=1,num_moment
    si=moment_indx(1,n); sj=moment_indx(2,n); sk=moment_indx(3,n)
 #ifdef SrcSmooth
    x0=moment_axis(1,n); y0=moment_axis(2,n); z0=moment_axis(3,n)
-   call cal_norm_delt(normd, x0,y0,z0,                            &
-        x(i-LenFD:i+LenFD),y(j-LenFD:j+LenFD),z(k-LenFD:k+LenFD), &
-        (x(i+1)-x(i-1))/2.0,(y(j+1)-y(j-1))/2.0,(z(k+1)-z(k-1))/2.0 )
-   if (freenode .and. k+LenFD>nk2)  then
-      normd=normd/sum(normd(:,:,-LenFD:nk2-k))
+   call cal_norm_delt(normd, x0,y0,z0,                                  &
+        x(si-LenFD:si+LenFD),y(sj-LenFD:sj+LenFD),z(sk-LenFD:sk+LenFD), &
+        (x(si+1)-x(si-1))/2.0,(y(sj+1)-y(sj-1))/2.0,(z(sk+1)-z(sk-1))/2.0 )
+   if (freenode .and. sk+LenFD>nk2)  then
+      normd=normd/sum(normd(:,:,-LenFD:nk2-sk))
    end if
 #endif
 
@@ -272,7 +264,7 @@ do Li=-LenFD,LenFD
 #ifdef SrcSmooth
 end do
 end do
-end do  ! loop_of_sindx
+end do  ! loop_of Li,Lj,Lk
 #endif
 
 end do ! ntwin
@@ -289,7 +281,7 @@ real(SP) :: t,disp,d,fx0,fy0,fz0,fx,fy,fz,V
 #ifdef SrcSmooth
 integer :: Li,Lj,Lk
 real(SP),dimension(-LenFD:LenFD,-LenFD:LenFD,-LenFD:LenFD) :: normd
-real x0,y0,z0
+real(SP) :: x0,y0,z0
 #endif
 
 if ( num_force<=0 ) return
@@ -301,10 +293,10 @@ do n=1,num_force
 #ifdef SrcSmooth
    x0=force_axis(1,n); y0=force_axis(2,n); z0=force_axis(3,n)
    call cal_norm_delt(normd, x0,y0,z0,                            &
-        x(i-LenFD:i+LenFD),y(j-LenFD:j+LenFD),z(k-LenFD:k+LenFD), &
-        (x(i+1)-x(i-1))/2.0,(y(j+1)-y(j-1))/2.0,(z(k+1)-z(k-1))/2.0 )
-   if (freenode .and. k+LenFD>nk2)  then
-      normd=normd/sum(normd(:,:,-LenFD:nk2-k))
+        x(si-LenFD:si+LenFD),y(sj-LenFD:sj+LenFD),z(sk-LenFD:sk+LenFD), &
+        (x(si+1)-x(si-1))/2.0,(y(sj+1)-y(sj-1))/2.0,(z(sk+1)-z(sk-1))/2.0 )
+   if (freenode .and. sk+LenFD>nk2)  then
+      normd=normd/sum(normd(:,:,-LenFD:nk2-sk))
    end if
 #endif
 
@@ -378,9 +370,9 @@ end subroutine src_charac
 !*                --- source signal generator --                         *
 !*************************************************************************
 subroutine cal_norm_delt(delt,x0,y0,z0,x,y,z,rx0,ry0,rz0)
-  real(SP),dimension(-LenFD:LenFD,-LenFD:LenFD,-LenFD:LenFD) :: delt
-  real(SP),dimension(-LenFD:LenFD) :: x,y,z
-  real(SP) :: x0,y0,z0,rx0,ry0,rz0
+  real(SP),dimension(-LenFD:LenFD,-LenFD:LenFD,-LenFD:LenFD),intent(out) :: delt
+  real(SP),dimension(-LenFD:LenFD),intent(in) :: x,y,z
+  real(SP),intent(in) :: x0,y0,z0,rx0,ry0,rz0
   real(SP) :: D1,D2,D3
   integer i,j,k
   delt=0.0_SP
@@ -394,6 +386,7 @@ subroutine cal_norm_delt(delt,x0,y0,z0,x,y,z,rx0,ry0,rz0)
   end do
   end do
   end do
+  if (sum(delt)<SEIS_ZERO) call swmpi_except('cal_norm_delt is zero')
   delt=delt/sum(delt)
 end subroutine cal_norm_delt
 function src_svf(t,t0,f0,flag_stf_type) result(rate)
@@ -432,6 +425,8 @@ case (SIG_STF_BELL)
    disp= fun_bell(t-t0,f0)
 case (SIG_SVF_BELL)
    disp= fun_bell_int(t-t0,f0)
+case (SIG_STF_STEP)
+   disp=fun_step(t)
 case default
    print *, "Have you told me how to generate the STF of ", flag_stf_type
    stop 1
@@ -551,6 +546,16 @@ function fun_bshift(t,riset,t0) result(v)
        v=0.0
     end if
 end function fun_bshift
+!step
+function fun_step(t) result(v)
+    real(SP),intent(in) :: t
+    real(SP) :: v
+    if (t>0.0 ) then
+       v=1.0
+    else
+       v=0.0
+    end if
+end function fun_step
 
 function stf_name2id(stfname) result(id)
 character (len=*),intent(in) :: stfname
