@@ -61,22 +61,20 @@ interface macdrp_LxB_LyB_LzF
 end interface
 interface macdrp_LxB_LyF_LzF
   module procedure in_LxB_LyF_LzF
-  !module procedure in_LxB_LyB_LzB
 end interface
 interface macdrp_LxF_LyB_LzB
   module procedure in_LxF_LyB_LzB
-  !module procedure in_LxF_LyF_LzF
 end interface
 interface macdrp_LxF_LyB_LzF
   module procedure in_LxF_LyB_LzF
-  !module procedure in_LxB_LyB_LzF
 end interface
 interface macdrp_LxB_LyF_LzB
   module procedure in_LxB_LyF_LzB
-  !module procedure in_LxF_LyF_LzB
 end interface
 
 DEFFDWET
+DEFFDWET24
+DEFFDWET22
 DEFLDDRK4A
 DEFLDDRK4B
 HOCWETL
@@ -386,6 +384,9 @@ subroutine in_LxF_LyF_LzF
 #ifdef CondFreeTIMG
   call free_timg
 #endif
+#ifdef CondFreeVEXT
+  call free_vext
+#endif
   n=SEIS_GEO*2+1
   call MPI_STARTALL(NREQ,reqXF,ierr)
   call MPI_STARTALL(NREQ,reqYF,ierr)
@@ -403,10 +404,8 @@ subroutine in_LxF_LyF_LzF
                     indx(5,n),indx(6,n) )
   end do
 
-#ifdef CondFreeTIMG
-  if ( freenode ) then
+#ifdef CondFreeVHOC
      call LxF_LyF_LzF_VHOC
-  end if
 #endif
 
 end subroutine in_LxF_LyF_LzF
@@ -419,6 +418,9 @@ subroutine in_LxB_LyB_LzB
 
 #ifdef CondFreeTIMG
   call free_timg
+#endif
+#ifdef CondFreeVEXT
+  call free_vext
 #endif
   !Txx=real(myid)
   n=SEIS_GEO*2+1
@@ -442,10 +444,8 @@ subroutine in_LxB_LyB_LzB
                     indx(5,n),indx(6,n) )
   end do
 
-#ifdef CondFreeTIMG
-  if ( freenode ) then
+#ifdef CondFreeVHOC
      call LxB_LyB_LzB_VHOC
-  end if
 #endif
 end subroutine in_LxB_LyB_LzB
 subroutine in_LxB_LyB_LzF
@@ -458,6 +458,9 @@ subroutine in_LxB_LyB_LzF
 #ifdef CondFreeTIMG
   call free_timg
 #endif
+#ifdef CondFreeVEXT
+  call free_vext
+#endif
   n=SEIS_GEO*2+1
   call MPI_STARTALL(NREQ,reqXB,ierr)
   call MPI_STARTALL(NREQ,reqYB,ierr)
@@ -475,10 +478,8 @@ subroutine in_LxB_LyB_LzF
                     indx(5,n),indx(6,n) )
   end do
 
-#ifdef CondFreeTIMG
-  if ( freenode ) then
+#ifdef CondFreeVHOC
      call LxB_LyB_LzF_VHOC
-  end if
 #endif
 end subroutine in_LxB_LyB_LzF
 subroutine in_LxF_LyF_LzB
@@ -491,6 +492,9 @@ subroutine in_LxF_LyF_LzB
 #ifdef CondFreeTIMG
   call free_timg
 #endif
+#ifdef CondFreeVEXT
+  call free_vext
+#endif
   n=SEIS_GEO*2+1
   call MPI_STARTALL(NREQ,reqXF,ierr)
   call MPI_STARTALL(NREQ,reqYF,ierr)
@@ -508,10 +512,8 @@ subroutine in_LxF_LyF_LzB
                     indx(5,n),indx(6,n) )
   end do
 
-#ifdef CondFreeTIMG
-  if ( freenode ) then
+#ifdef CondFreeVHOC
      call LxF_LyF_LzB_VHOC
-  end if
 #endif
 end subroutine in_LxF_LyF_LzB
 subroutine in_LxB_LyF_LzF
@@ -524,6 +526,9 @@ subroutine in_LxB_LyF_LzF
 #ifdef CondFreeTIMG
   call free_timg
 #endif
+#ifdef CondFreeVEXT
+  call free_vext
+#endif
   n=SEIS_GEO*2+1
   call MPI_STARTALL(NREQ,reqXB,ierr)
   call MPI_STARTALL(NREQ,reqYF,ierr)
@@ -541,10 +546,8 @@ subroutine in_LxB_LyF_LzF
                     indx(5,n),indx(6,n) )
   end do
 
-#ifdef CondFreeTIMG
-  if ( freenode ) then
+#ifdef CondFreeVHOC
      call LxB_LyF_LzF_VHOC
-  end if
 #endif
 end subroutine in_LxB_LyF_LzF
 subroutine in_LxF_LyB_LzB
@@ -557,6 +560,9 @@ subroutine in_LxF_LyB_LzB
 #ifdef CondFreeTIMG
   call free_timg
 #endif
+#ifdef CondFreeVEXT
+  call free_vext
+#endif
   n=SEIS_GEO*2+1
   call MPI_STARTALL(NREQ,reqXF,ierr)
   call MPI_STARTALL(NREQ,reqYB,ierr)
@@ -574,10 +580,8 @@ subroutine in_LxF_LyB_LzB
                     indx(5,n),indx(6,n) )
   end do
 
-#ifdef CondFreeTIMG
-  if ( freenode ) then
+#ifdef CondFreeVHOC
      call LxF_LyB_LzB_VHOC
-  end if
 #endif
 end subroutine in_LxF_LyB_LzB
 subroutine in_LxF_LyB_LzF
@@ -589,6 +593,9 @@ subroutine in_LxF_LyB_LzF
   !Txx=real(myid)
 #ifdef CondFreeTIMG
   call free_timg
+#endif
+#ifdef CondFreeVEXT
+  call free_vext
 #endif
   n=SEIS_GEO*2+1
   call MPI_STARTALL(NREQ,reqXF,ierr)
@@ -607,10 +614,8 @@ subroutine in_LxF_LyB_LzF
                     indx(5,n),indx(6,n) )
   end do
 
-#ifdef CondFreeTIMG
-  if ( freenode ) then
+#ifdef CondFreeVHOC
      call LxF_LyB_LzF_VHOC
-  end if
 #endif
 end subroutine in_LxF_LyB_LzF
 subroutine in_LxB_LyF_LzB
@@ -622,6 +627,9 @@ subroutine in_LxB_LyF_LzB
   !Txx=real(myid)
 #ifdef CondFreeTIMG
   call free_timg
+#endif
+#ifdef CondFreeVEXT
+  call free_vext
 #endif
   n=SEIS_GEO*2+1
   call MPI_STARTALL(NREQ,reqXB,ierr)
@@ -640,10 +648,8 @@ subroutine in_LxB_LyF_LzB
                     indx(5,n),indx(6,n) )
   end do
 
-#ifdef CondFreeTIMG
-  if ( freenode ) then
+#ifdef CondFreeVHOC
      call LxB_LyF_LzB_VHOC
-  end if
 #endif
 end subroutine in_LxB_LyF_LzB
 !-- private subroutine --
@@ -717,18 +723,35 @@ do i=I1,I2
      m3d_FDyF2(Vz,i,j,k)  &
      )*eta_y(j)
 
-   DzTzz = (              &
-     m3d_FDzF1(Tzz,i,j,k) &
-     m3d_FDzF2(Tzz,i,j,k) &
+#ifdef CondFreeVLOW
+   if (freenode .and. k==nk2-1) then
+   DzVx = (               &
+     m22_FDzF1(Vx,i,j,k)  &
+     m22_FDzF2(Vx,i,j,k)  &
      )*zeta_z(k)
-   DzTxz = (              &
-     m3d_FDzF1(Txz,i,j,k) &
-     m3d_FDzF2(Txz,i,j,k) &
+   DzVy = (               &
+     m22_FDzF1(Vy,i,j,k)  &
+     m22_FDzF2(Vy,i,j,k)  &
      )*zeta_z(k)
-   DzTyz = (              &
-     m3d_FDzF1(Tyz,i,j,k) &
-     m3d_FDzF2(Tyz,i,j,k) &
+   DzVz = (               &
+     m22_FDzF1(Vz,i,j,k)  &
+     m22_FDzF2(Vz,i,j,k)  &
      )*zeta_z(k)
+   elseif (freenode .and. k==nk2-2) then
+   DzVx = (               &
+     m24_FDzF1(Vx,i,j,k)  &
+     m24_FDzF2(Vx,i,j,k)  &
+     )*zeta_z(k)
+   DzVy = (               &
+     m24_FDzF1(Vy,i,j,k)  &
+     m24_FDzF2(Vy,i,j,k)  &
+     )*zeta_z(k)
+   DzVz = (               &
+     m24_FDzF1(Vz,i,j,k)  &
+     m24_FDzF2(Vz,i,j,k)  &
+     )*zeta_z(k)
+   else
+#endif
    DzVx = (               &
      m3d_FDzF1(Vx,i,j,k)  &
      m3d_FDzF2(Vx,i,j,k)  &
@@ -741,6 +764,21 @@ do i=I1,I2
      m3d_FDzF1(Vz,i,j,k)  &
      m3d_FDzF2(Vz,i,j,k)  &
      )*zeta_z(k)
+#ifdef CondFreeVLOW
+   end if
+#endif
+   DzTzz = (              &
+     m3d_FDzF1(Tzz,i,j,k) &
+     m3d_FDzF2(Tzz,i,j,k) &
+     )*zeta_z(k)
+   DzTxz = (              &
+     m3d_FDzF1(Txz,i,j,k) &
+     m3d_FDzF2(Txz,i,j,k) &
+     )*zeta_z(k)
+   DzTyz = (              &
+     m3d_FDzF1(Tyz,i,j,k) &
+     m3d_FDzF2(Tyz,i,j,k) &
+     )*zeta_z(k)
 
    hVx(i,j,k)= rrho*( DxTxx/z(k)+DyTxy/z(k)/xsin(i)+DzTxz                    &
         +(3.0_SP*Txz(i,j,k)+Txx(i,j,k)*xcot(i)-Tyy(i,j,k)*xcot(i))/z(k) )
@@ -751,10 +789,20 @@ do i=I1,I2
 
    E11=(DxVx+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy/xsin(i)+Vz(i,j,k))/z(k)
-   E33=DzVz
    E12=(DxVy+DyVx/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)/2.0_SP
-   E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))/2.0_SP
-   E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))/2.0_SP
+#ifndef CondFreeCharac
+   if (freenode .and. k==nk2) then
+      E33=-lam/lam2mu*(E11+E22)
+      E13=0.0
+      E23=0.0
+   else
+#endif
+      E33=DzVz
+      E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))/2.0_SP
+      E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))/2.0_SP
+#ifndef CondFreeCharac
+   end if
+#endif
    hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
    hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
    hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
@@ -837,18 +885,35 @@ do i=I1,I2
      m3d_FDyB2(Vz,i,j,k)  &
      )*eta_y(j)
 
-   DzTzz = (              &
-     m3d_FDzB1(Tzz,i,j,k) &
-     m3d_FDzB2(Tzz,i,j,k) &
+#ifdef CondFreeVLOW
+   if (freenode .and. k==nk2-1) then
+   DzVx = (               &
+     m22_FDzB1(Vx,i,j,k)  &
+     m22_FDzB2(Vx,i,j,k)  &
      )*zeta_z(k)
-   DzTxz = (              &
-     m3d_FDzB1(Txz,i,j,k) &
-     m3d_FDzB2(Txz,i,j,k) &
+   DzVy = (               &
+     m22_FDzB1(Vy,i,j,k)  &
+     m22_FDzB2(Vy,i,j,k)  &
      )*zeta_z(k)
-   DzTyz = (              &
-     m3d_FDzB1(Tyz,i,j,k) &
-     m3d_FDzB2(Tyz,i,j,k) &
+   DzVz = (               &
+     m22_FDzB1(Vz,i,j,k)  &
+     m22_FDzB2(Vz,i,j,k)  &
      )*zeta_z(k)
+   elseif (freenode .and. k==nk2-2) then
+   DzVx = (               &
+     m24_FDzB1(Vx,i,j,k)  &
+     m24_FDzB2(Vx,i,j,k)  &
+     )*zeta_z(k)
+   DzVy = (               &
+     m24_FDzB1(Vy,i,j,k)  &
+     m24_FDzB2(Vy,i,j,k)  &
+     )*zeta_z(k)
+   DzVz = (               &
+     m24_FDzB1(Vz,i,j,k)  &
+     m24_FDzB2(Vz,i,j,k)  &
+     )*zeta_z(k)
+   else
+#endif
    DzVx = (               &
      m3d_FDzB1(Vx,i,j,k)  &
      m3d_FDzB2(Vx,i,j,k)  &
@@ -861,6 +926,21 @@ do i=I1,I2
      m3d_FDzB1(Vz,i,j,k)  &
      m3d_FDzB2(Vz,i,j,k)  &
      )*zeta_z(k)
+#ifdef CondFreeVLOW
+   end if
+#endif
+   DzTzz = (              &
+     m3d_FDzB1(Tzz,i,j,k) &
+     m3d_FDzB2(Tzz,i,j,k) &
+     )*zeta_z(k)
+   DzTxz = (              &
+     m3d_FDzB1(Txz,i,j,k) &
+     m3d_FDzB2(Txz,i,j,k) &
+     )*zeta_z(k)
+   DzTyz = (              &
+     m3d_FDzB1(Tyz,i,j,k) &
+     m3d_FDzB2(Tyz,i,j,k) &
+     )*zeta_z(k)
 
    hVx(i,j,k)= rrho*( DxTxx/z(k)+DyTxy/z(k)/xsin(i)+DzTxz                    &
         +(3.0_SP*Txz(i,j,k)+Txx(i,j,k)*xcot(i)-Tyy(i,j,k)*xcot(i))/z(k) )
@@ -871,10 +951,20 @@ do i=I1,I2
 
    E11=(DxVx+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy/xsin(i)+Vz(i,j,k))/z(k)
-   E33=DzVz
    E12=(DxVy+DyVx/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)/2.0_SP
-   E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))/2.0_SP
-   E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))/2.0_SP
+#ifndef CondFreeCharac
+   if (freenode .and. k==nk2) then
+      E33=-lam/lam2mu*(E11+E22)
+      E13=0.0
+      E23=0.0
+   else
+#endif
+      E33=DzVz
+      E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))/2.0_SP
+      E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))/2.0_SP
+#ifndef CondFreeCharac
+   end if
+#endif
    hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
    hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
    hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
@@ -957,18 +1047,35 @@ do i=I1,I2
      m3d_FDyF2(Vz,i,j,k)  &
      )*eta_y(j)
 
-   DzTzz = (              &
-     m3d_FDzB1(Tzz,i,j,k) &
-     m3d_FDzB2(Tzz,i,j,k) &
+#ifdef CondFreeVLOW
+   if (freenode .and. k==nk2-1) then
+   DzVx = (               &
+     m22_FDzB1(Vx,i,j,k)  &
+     m22_FDzB2(Vx,i,j,k)  &
      )*zeta_z(k)
-   DzTxz = (              &
-     m3d_FDzB1(Txz,i,j,k) &
-     m3d_FDzB2(Txz,i,j,k) &
+   DzVy = (               &
+     m22_FDzB1(Vy,i,j,k)  &
+     m22_FDzB2(Vy,i,j,k)  &
      )*zeta_z(k)
-   DzTyz = (              &
-     m3d_FDzB1(Tyz,i,j,k) &
-     m3d_FDzB2(Tyz,i,j,k) &
+   DzVz = (               &
+     m22_FDzB1(Vz,i,j,k)  &
+     m22_FDzB2(Vz,i,j,k)  &
      )*zeta_z(k)
+   elseif (freenode .and. k==nk2-2) then
+   DzVx = (               &
+     m24_FDzB1(Vx,i,j,k)  &
+     m24_FDzB2(Vx,i,j,k)  &
+     )*zeta_z(k)
+   DzVy = (               &
+     m24_FDzB1(Vy,i,j,k)  &
+     m24_FDzB2(Vy,i,j,k)  &
+     )*zeta_z(k)
+   DzVz = (               &
+     m24_FDzB1(Vz,i,j,k)  &
+     m24_FDzB2(Vz,i,j,k)  &
+     )*zeta_z(k)
+   else
+#endif
    DzVx = (               &
      m3d_FDzB1(Vx,i,j,k)  &
      m3d_FDzB2(Vx,i,j,k)  &
@@ -981,6 +1088,21 @@ do i=I1,I2
      m3d_FDzB1(Vz,i,j,k)  &
      m3d_FDzB2(Vz,i,j,k)  &
      )*zeta_z(k)
+#ifdef CondFreeVLOW
+   end if
+#endif
+   DzTzz = (              &
+     m3d_FDzB1(Tzz,i,j,k) &
+     m3d_FDzB2(Tzz,i,j,k) &
+     )*zeta_z(k)
+   DzTxz = (              &
+     m3d_FDzB1(Txz,i,j,k) &
+     m3d_FDzB2(Txz,i,j,k) &
+     )*zeta_z(k)
+   DzTyz = (              &
+     m3d_FDzB1(Tyz,i,j,k) &
+     m3d_FDzB2(Tyz,i,j,k) &
+     )*zeta_z(k)
 
    hVx(i,j,k)= rrho*( DxTxx/z(k)+DyTxy/z(k)/xsin(i)+DzTxz                    &
         +(3.0_SP*Txz(i,j,k)+Txx(i,j,k)*xcot(i)-Tyy(i,j,k)*xcot(i))/z(k) )
@@ -991,10 +1113,20 @@ do i=I1,I2
 
    E11=(DxVx+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy/xsin(i)+Vz(i,j,k))/z(k)
-   E33=DzVz
    E12=(DxVy+DyVx/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)/2.0_SP
-   E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))/2.0_SP
-   E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))/2.0_SP
+#ifndef CondFreeCharac
+   if (freenode .and. k==nk2) then
+      E33=-lam/lam2mu*(E11+E22)
+      E13=0.0
+      E23=0.0
+   else
+#endif
+      E33=DzVz
+      E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))/2.0_SP
+      E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))/2.0_SP
+#ifndef CondFreeCharac
+   end if
+#endif
    hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
    hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
    hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
@@ -1077,18 +1209,35 @@ do i=I1,I2
      m3d_FDyB2(Vz,i,j,k)  &
      )*eta_y(j)
 
-   DzTzz = (              &
-     m3d_FDzF1(Tzz,i,j,k) &
-     m3d_FDzF2(Tzz,i,j,k) &
+#ifdef CondFreeVLOW
+   if (freenode .and. k==nk2-1) then
+   DzVx = (               &
+     m22_FDzF1(Vx,i,j,k)  &
+     m22_FDzF2(Vx,i,j,k)  &
      )*zeta_z(k)
-   DzTxz = (              &
-     m3d_FDzF1(Txz,i,j,k) &
-     m3d_FDzF2(Txz,i,j,k) &
+   DzVy = (               &
+     m22_FDzF1(Vy,i,j,k)  &
+     m22_FDzF2(Vy,i,j,k)  &
      )*zeta_z(k)
-   DzTyz = (              &
-     m3d_FDzF1(Tyz,i,j,k) &
-     m3d_FDzF2(Tyz,i,j,k) &
+   DzVz = (               &
+     m22_FDzF1(Vz,i,j,k)  &
+     m22_FDzF2(Vz,i,j,k)  &
      )*zeta_z(k)
+   elseif (freenode .and. k==nk2-2) then
+   DzVx = (               &
+     m24_FDzF1(Vx,i,j,k)  &
+     m24_FDzF2(Vx,i,j,k)  &
+     )*zeta_z(k)
+   DzVy = (               &
+     m24_FDzF1(Vy,i,j,k)  &
+     m24_FDzF2(Vy,i,j,k)  &
+     )*zeta_z(k)
+   DzVz = (               &
+     m24_FDzF1(Vz,i,j,k)  &
+     m24_FDzF2(Vz,i,j,k)  &
+     )*zeta_z(k)
+   else
+#endif
    DzVx = (               &
      m3d_FDzF1(Vx,i,j,k)  &
      m3d_FDzF2(Vx,i,j,k)  &
@@ -1101,6 +1250,21 @@ do i=I1,I2
      m3d_FDzF1(Vz,i,j,k)  &
      m3d_FDzF2(Vz,i,j,k)  &
      )*zeta_z(k)
+#ifdef CondFreeVLOW
+   end if
+#endif
+   DzTzz = (              &
+     m3d_FDzF1(Tzz,i,j,k) &
+     m3d_FDzF2(Tzz,i,j,k) &
+     )*zeta_z(k)
+   DzTxz = (              &
+     m3d_FDzF1(Txz,i,j,k) &
+     m3d_FDzF2(Txz,i,j,k) &
+     )*zeta_z(k)
+   DzTyz = (              &
+     m3d_FDzF1(Tyz,i,j,k) &
+     m3d_FDzF2(Tyz,i,j,k) &
+     )*zeta_z(k)
 
    hVx(i,j,k)= rrho*( DxTxx/z(k)+DyTxy/z(k)/xsin(i)+DzTxz                    &
         +(3.0_SP*Txz(i,j,k)+Txx(i,j,k)*xcot(i)-Tyy(i,j,k)*xcot(i))/z(k) )
@@ -1111,10 +1275,20 @@ do i=I1,I2
 
    E11=(DxVx+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy/xsin(i)+Vz(i,j,k))/z(k)
-   E33=DzVz
    E12=(DxVy+DyVx/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)/2.0_SP
-   E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))/2.0_SP
-   E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))/2.0_SP
+#ifndef CondFreeCharac
+   if (freenode .and. k==nk2) then
+      E33=-lam/lam2mu*(E11+E22)
+      E13=0.0
+      E23=0.0
+   else
+#endif
+      E33=DzVz
+      E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))/2.0_SP
+      E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))/2.0_SP
+#ifndef CondFreeCharac
+   end if
+#endif
    hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
    hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
    hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
@@ -1197,18 +1371,35 @@ do i=I1,I2
      m3d_FDyF2(Vz,i,j,k)  &
      )*eta_y(j)
 
-   DzTzz = (              &
-     m3d_FDzF1(Tzz,i,j,k) &
-     m3d_FDzF2(Tzz,i,j,k) &
+#ifdef CondFreeVLOW
+   if (freenode .and. k==nk2-1) then
+   DzVx = (               &
+     m22_FDzF1(Vx,i,j,k)  &
+     m22_FDzF2(Vx,i,j,k)  &
      )*zeta_z(k)
-   DzTxz = (              &
-     m3d_FDzF1(Txz,i,j,k) &
-     m3d_FDzF2(Txz,i,j,k) &
+   DzVy = (               &
+     m22_FDzF1(Vy,i,j,k)  &
+     m22_FDzF2(Vy,i,j,k)  &
      )*zeta_z(k)
-   DzTyz = (              &
-     m3d_FDzF1(Tyz,i,j,k) &
-     m3d_FDzF2(Tyz,i,j,k) &
+   DzVz = (               &
+     m22_FDzF1(Vz,i,j,k)  &
+     m22_FDzF2(Vz,i,j,k)  &
      )*zeta_z(k)
+   elseif (freenode .and. k==nk2-2) then
+   DzVx = (               &
+     m24_FDzF1(Vx,i,j,k)  &
+     m24_FDzF2(Vx,i,j,k)  &
+     )*zeta_z(k)
+   DzVy = (               &
+     m24_FDzF1(Vy,i,j,k)  &
+     m24_FDzF2(Vy,i,j,k)  &
+     )*zeta_z(k)
+   DzVz = (               &
+     m24_FDzF1(Vz,i,j,k)  &
+     m24_FDzF2(Vz,i,j,k)  &
+     )*zeta_z(k)
+   else
+#endif
    DzVx = (               &
      m3d_FDzF1(Vx,i,j,k)  &
      m3d_FDzF2(Vx,i,j,k)  &
@@ -1221,6 +1412,21 @@ do i=I1,I2
      m3d_FDzF1(Vz,i,j,k)  &
      m3d_FDzF2(Vz,i,j,k)  &
      )*zeta_z(k)
+#ifdef CondFreeVLOW
+   end if
+#endif
+   DzTzz = (              &
+     m3d_FDzF1(Tzz,i,j,k) &
+     m3d_FDzF2(Tzz,i,j,k) &
+     )*zeta_z(k)
+   DzTxz = (              &
+     m3d_FDzF1(Txz,i,j,k) &
+     m3d_FDzF2(Txz,i,j,k) &
+     )*zeta_z(k)
+   DzTyz = (              &
+     m3d_FDzF1(Tyz,i,j,k) &
+     m3d_FDzF2(Tyz,i,j,k) &
+     )*zeta_z(k)
 
    hVx(i,j,k)= rrho*( DxTxx/z(k)+DyTxy/z(k)/xsin(i)+DzTxz                    &
         +(3.0_SP*Txz(i,j,k)+Txx(i,j,k)*xcot(i)-Tyy(i,j,k)*xcot(i))/z(k) )
@@ -1231,10 +1437,20 @@ do i=I1,I2
 
    E11=(DxVx+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy/xsin(i)+Vz(i,j,k))/z(k)
-   E33=DzVz
    E12=(DxVy+DyVx/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)/2.0_SP
-   E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))/2.0_SP
-   E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))/2.0_SP
+#ifndef CondFreeCharac
+   if (freenode .and. k==nk2) then
+      E33=-lam/lam2mu*(E11+E22)
+      E13=0.0
+      E23=0.0
+   else
+#endif
+      E33=DzVz
+      E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))/2.0_SP
+      E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))/2.0_SP
+#ifndef CondFreeCharac
+   end if
+#endif
    hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
    hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
    hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
@@ -1317,18 +1533,35 @@ do i=I1,I2
      m3d_FDyB2(Vz,i,j,k)  &
      )*eta_y(j)
 
-   DzTzz = (              &
-     m3d_FDzB1(Tzz,i,j,k) &
-     m3d_FDzB2(Tzz,i,j,k) &
+#ifdef CondFreeVLOW
+   if (freenode .and. k==nk2-1) then
+   DzVx = (               &
+     m22_FDzB1(Vx,i,j,k)  &
+     m22_FDzB2(Vx,i,j,k)  &
      )*zeta_z(k)
-   DzTxz = (              &
-     m3d_FDzB1(Txz,i,j,k) &
-     m3d_FDzB2(Txz,i,j,k) &
+   DzVy = (               &
+     m22_FDzB1(Vy,i,j,k)  &
+     m22_FDzB2(Vy,i,j,k)  &
      )*zeta_z(k)
-   DzTyz = (              &
-     m3d_FDzB1(Tyz,i,j,k) &
-     m3d_FDzB2(Tyz,i,j,k) &
+   DzVz = (               &
+     m22_FDzB1(Vz,i,j,k)  &
+     m22_FDzB2(Vz,i,j,k)  &
      )*zeta_z(k)
+   elseif (freenode .and. k==nk2-2) then
+   DzVx = (               &
+     m24_FDzB1(Vx,i,j,k)  &
+     m24_FDzB2(Vx,i,j,k)  &
+     )*zeta_z(k)
+   DzVy = (               &
+     m24_FDzB1(Vy,i,j,k)  &
+     m24_FDzB2(Vy,i,j,k)  &
+     )*zeta_z(k)
+   DzVz = (               &
+     m24_FDzB1(Vz,i,j,k)  &
+     m24_FDzB2(Vz,i,j,k)  &
+     )*zeta_z(k)
+   else
+#endif
    DzVx = (               &
      m3d_FDzB1(Vx,i,j,k)  &
      m3d_FDzB2(Vx,i,j,k)  &
@@ -1341,6 +1574,21 @@ do i=I1,I2
      m3d_FDzB1(Vz,i,j,k)  &
      m3d_FDzB2(Vz,i,j,k)  &
      )*zeta_z(k)
+#ifdef CondFreeVLOW
+   end if
+#endif
+   DzTzz = (              &
+     m3d_FDzB1(Tzz,i,j,k) &
+     m3d_FDzB2(Tzz,i,j,k) &
+     )*zeta_z(k)
+   DzTxz = (              &
+     m3d_FDzB1(Txz,i,j,k) &
+     m3d_FDzB2(Txz,i,j,k) &
+     )*zeta_z(k)
+   DzTyz = (              &
+     m3d_FDzB1(Tyz,i,j,k) &
+     m3d_FDzB2(Tyz,i,j,k) &
+     )*zeta_z(k)
 
    hVx(i,j,k)= rrho*( DxTxx/z(k)+DyTxy/z(k)/xsin(i)+DzTxz                    &
         +(3.0_SP*Txz(i,j,k)+Txx(i,j,k)*xcot(i)-Tyy(i,j,k)*xcot(i))/z(k) )
@@ -1351,10 +1599,20 @@ do i=I1,I2
 
    E11=(DxVx+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy/xsin(i)+Vz(i,j,k))/z(k)
-   E33=DzVz
    E12=(DxVy+DyVx/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)/2.0_SP
-   E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))/2.0_SP
-   E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))/2.0_SP
+#ifndef CondFreeCharac
+   if (freenode .and. k==nk2) then
+      E33=-lam/lam2mu*(E11+E22)
+      E13=0.0
+      E23=0.0
+   else
+#endif
+      E33=DzVz
+      E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))/2.0_SP
+      E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))/2.0_SP
+#ifndef CondFreeCharac
+   end if
+#endif
    hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
    hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
    hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
@@ -1437,18 +1695,35 @@ do i=I1,I2
      m3d_FDyB2(Vz,i,j,k)  &
      )*eta_y(j)
 
-   DzTzz = (              &
-     m3d_FDzF1(Tzz,i,j,k) &
-     m3d_FDzF2(Tzz,i,j,k) &
+#ifdef CondFreeVLOW
+   if (freenode .and. k==nk2-1) then
+   DzVx = (               &
+     m22_FDzF1(Vx,i,j,k)  &
+     m22_FDzF2(Vx,i,j,k)  &
      )*zeta_z(k)
-   DzTxz = (              &
-     m3d_FDzF1(Txz,i,j,k) &
-     m3d_FDzF2(Txz,i,j,k) &
+   DzVy = (               &
+     m22_FDzF1(Vy,i,j,k)  &
+     m22_FDzF2(Vy,i,j,k)  &
      )*zeta_z(k)
-   DzTyz = (              &
-     m3d_FDzF1(Tyz,i,j,k) &
-     m3d_FDzF2(Tyz,i,j,k) &
+   DzVz = (               &
+     m22_FDzF1(Vz,i,j,k)  &
+     m22_FDzF2(Vz,i,j,k)  &
      )*zeta_z(k)
+   elseif (freenode .and. k==nk2-2) then
+   DzVx = (               &
+     m24_FDzF1(Vx,i,j,k)  &
+     m24_FDzF2(Vx,i,j,k)  &
+     )*zeta_z(k)
+   DzVy = (               &
+     m24_FDzF1(Vy,i,j,k)  &
+     m24_FDzF2(Vy,i,j,k)  &
+     )*zeta_z(k)
+   DzVz = (               &
+     m24_FDzF1(Vz,i,j,k)  &
+     m24_FDzF2(Vz,i,j,k)  &
+     )*zeta_z(k)
+   else
+#endif
    DzVx = (               &
      m3d_FDzF1(Vx,i,j,k)  &
      m3d_FDzF2(Vx,i,j,k)  &
@@ -1461,6 +1736,21 @@ do i=I1,I2
      m3d_FDzF1(Vz,i,j,k)  &
      m3d_FDzF2(Vz,i,j,k)  &
      )*zeta_z(k)
+#ifdef CondFreeVLOW
+   end if
+#endif
+   DzTzz = (              &
+     m3d_FDzF1(Tzz,i,j,k) &
+     m3d_FDzF2(Tzz,i,j,k) &
+     )*zeta_z(k)
+   DzTxz = (              &
+     m3d_FDzF1(Txz,i,j,k) &
+     m3d_FDzF2(Txz,i,j,k) &
+     )*zeta_z(k)
+   DzTyz = (              &
+     m3d_FDzF1(Tyz,i,j,k) &
+     m3d_FDzF2(Tyz,i,j,k) &
+     )*zeta_z(k)
 
    hVx(i,j,k)= rrho*( DxTxx/z(k)+DyTxy/z(k)/xsin(i)+DzTxz                    &
         +(3.0_SP*Txz(i,j,k)+Txx(i,j,k)*xcot(i)-Tyy(i,j,k)*xcot(i))/z(k) )
@@ -1471,10 +1761,20 @@ do i=I1,I2
 
    E11=(DxVx+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy/xsin(i)+Vz(i,j,k))/z(k)
-   E33=DzVz
    E12=(DxVy+DyVx/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)/2.0_SP
-   E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))/2.0_SP
-   E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))/2.0_SP
+#ifndef CondFreeCharac
+   if (freenode .and. k==nk2) then
+      E33=-lam/lam2mu*(E11+E22)
+      E13=0.0
+      E23=0.0
+   else
+#endif
+      E33=DzVz
+      E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))/2.0_SP
+      E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))/2.0_SP
+#ifndef CondFreeCharac
+   end if
+#endif
    hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
    hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
    hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
@@ -1557,18 +1857,35 @@ do i=I1,I2
      m3d_FDyF2(Vz,i,j,k)  &
      )*eta_y(j)
 
-   DzTzz = (              &
-     m3d_FDzB1(Tzz,i,j,k) &
-     m3d_FDzB2(Tzz,i,j,k) &
+#ifdef CondFreeVLOW
+   if (freenode .and. k==nk2-1) then
+   DzVx = (               &
+     m22_FDzB1(Vx,i,j,k)  &
+     m22_FDzB2(Vx,i,j,k)  &
      )*zeta_z(k)
-   DzTxz = (              &
-     m3d_FDzB1(Txz,i,j,k) &
-     m3d_FDzB2(Txz,i,j,k) &
+   DzVy = (               &
+     m22_FDzB1(Vy,i,j,k)  &
+     m22_FDzB2(Vy,i,j,k)  &
      )*zeta_z(k)
-   DzTyz = (              &
-     m3d_FDzB1(Tyz,i,j,k) &
-     m3d_FDzB2(Tyz,i,j,k) &
+   DzVz = (               &
+     m22_FDzB1(Vz,i,j,k)  &
+     m22_FDzB2(Vz,i,j,k)  &
      )*zeta_z(k)
+   elseif (freenode .and. k==nk2-2) then
+   DzVx = (               &
+     m24_FDzB1(Vx,i,j,k)  &
+     m24_FDzB2(Vx,i,j,k)  &
+     )*zeta_z(k)
+   DzVy = (               &
+     m24_FDzB1(Vy,i,j,k)  &
+     m24_FDzB2(Vy,i,j,k)  &
+     )*zeta_z(k)
+   DzVz = (               &
+     m24_FDzB1(Vz,i,j,k)  &
+     m24_FDzB2(Vz,i,j,k)  &
+     )*zeta_z(k)
+   else
+#endif
    DzVx = (               &
      m3d_FDzB1(Vx,i,j,k)  &
      m3d_FDzB2(Vx,i,j,k)  &
@@ -1581,6 +1898,21 @@ do i=I1,I2
      m3d_FDzB1(Vz,i,j,k)  &
      m3d_FDzB2(Vz,i,j,k)  &
      )*zeta_z(k)
+#ifdef CondFreeVLOW
+   end if
+#endif
+   DzTzz = (              &
+     m3d_FDzB1(Tzz,i,j,k) &
+     m3d_FDzB2(Tzz,i,j,k) &
+     )*zeta_z(k)
+   DzTxz = (              &
+     m3d_FDzB1(Txz,i,j,k) &
+     m3d_FDzB2(Txz,i,j,k) &
+     )*zeta_z(k)
+   DzTyz = (              &
+     m3d_FDzB1(Tyz,i,j,k) &
+     m3d_FDzB2(Tyz,i,j,k) &
+     )*zeta_z(k)
 
    hVx(i,j,k)= rrho*( DxTxx/z(k)+DyTxy/z(k)/xsin(i)+DzTxz                    &
         +(3.0_SP*Txz(i,j,k)+Txx(i,j,k)*xcot(i)-Tyy(i,j,k)*xcot(i))/z(k) )
@@ -1591,10 +1923,20 @@ do i=I1,I2
 
    E11=(DxVx+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy/xsin(i)+Vz(i,j,k))/z(k)
-   E33=DzVz
    E12=(DxVy+DyVx/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)/2.0_SP
-   E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))/2.0_SP
-   E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))/2.0_SP
+#ifndef CondFreeCharac
+   if (freenode .and. k==nk2) then
+      E33=-lam/lam2mu*(E11+E22)
+      E13=0.0
+      E23=0.0
+   else
+#endif
+      E33=DzVz
+      E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))/2.0_SP
+      E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))/2.0_SP
+#ifndef CondFreeCharac
+   end if
+#endif
    hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
    hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
    hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
@@ -1607,6 +1949,7 @@ end do
 !$OMP END PARALLEL DO
 end subroutine LxB_LyF_LzB
 
+#ifdef CondFreeVHOC
 !*************************************************************************
 !* use Compact MacCormack scheme to calculate velocities fd with         *
 !* respect to eta and assemble the right hand side to update stresses    *
@@ -1620,9 +1963,8 @@ real(SP),dimension(1:LenFD+1) :: DxVx,DxVy,DxVz, &
                              DzVx,DzVy,DzVz
 real(SP) :: E11,E22,E33,E12,E13,E23
 
-#ifdef WithoutVHOC
-   return
-#endif
+if (.not. freenode) return
+
 !-- velocity fd --
 loop_eta: do j=nj1,nj2
 loop_xi:  do i=ni1,ni2
@@ -1754,9 +2096,8 @@ real(SP),dimension(1:LenFD+1) :: DxVx,DxVy,DxVz, &
                              DzVx,DzVy,DzVz
 real(SP) :: E11,E22,E33,E12,E13,E23
 
-#ifdef WithoutVHOC
-   return
-#endif
+if (.not. freenode) return
+
 !-- velocity fd --
 loop_eta: do j=nj1,nj2
 loop_xi:  do i=ni1,ni2
@@ -1904,9 +2245,8 @@ real(SP),dimension(1:LenFD+1) :: DxVx,DxVy,DxVz, &
                              DzVx,DzVy,DzVz
 real(SP) :: E11,E22,E33,E12,E13,E23
 
-#ifdef WithoutVHOC
-   return
-#endif
+if (.not. freenode) return
+
 !-- velocity fd --
 loop_eta: do j=nj1,nj2
 loop_xi:  do i=ni1,ni2
@@ -2053,9 +2393,8 @@ real(SP),dimension(1:LenFD+1) :: DxVx,DxVy,DxVz, &
                              DzVx,DzVy,DzVz
 real(SP) :: E11,E22,E33,E12,E13,E23
 
-#ifdef WithoutVHOC
-   return
-#endif
+if (.not. freenode) return
+
 !-- velocity fd --
 loop_eta: do j=nj1,nj2
 loop_xi:  do i=ni1,ni2
@@ -2188,9 +2527,8 @@ real(SP),dimension(1:LenFD+1) :: DxVx,DxVy,DxVz, &
                              DzVx,DzVy,DzVz
 real(SP) :: E11,E22,E33,E12,E13,E23
 
-#ifdef WithoutVHOC
-   return
-#endif
+if (.not. freenode) return
+
 !-- velocity fd --
 loop_eta: do j=nj1,nj2
 loop_xi:  do i=ni1,ni2
@@ -2322,9 +2660,8 @@ real(SP),dimension(1:LenFD+1) :: DxVx,DxVy,DxVz, &
                              DzVx,DzVy,DzVz
 real(SP) :: E11,E22,E33,E12,E13,E23
 
-#ifdef WithoutVHOC
-   return
-#endif
+if (.not. freenode) return
+
 !-- velocity fd --
 loop_eta: do j=nj1,nj2
 loop_xi:  do i=ni1,ni2
@@ -2472,9 +2809,8 @@ real(SP),dimension(1:LenFD+1) :: DxVx,DxVy,DxVz, &
                              DzVx,DzVy,DzVz
 real(SP) :: E11,E22,E33,E12,E13,E23
 
-#ifdef WithoutVHOC
-   return
-#endif
+if (.not. freenode) return
+
 !-- velocity fd --
 loop_eta: do j=nj1,nj2
 loop_xi:  do i=ni1,ni2
@@ -2606,9 +2942,8 @@ real(SP),dimension(1:LenFD+1) :: DxVx,DxVy,DxVz, &
                              DzVx,DzVy,DzVz
 real(SP) :: E11,E22,E33,E12,E13,E23
 
-#ifdef WithoutVHOC
-   return
-#endif
+if (.not. freenode) return
+
 !-- velocity fd --
 loop_eta: do j=nj1,nj2
 loop_xi:  do i=ni1,ni2
@@ -2746,6 +3081,7 @@ end do
 end do loop_xi
 end do loop_eta
 end subroutine LxB_LyF_LzB_VHOC
+#endif
 
 subroutine free_charac
 integer i,j,k
@@ -2829,6 +3165,21 @@ end do
 end do
 end if
 end subroutine free_timg
+subroutine free_vext
+integer i,j,k
+
+if (freenode) then
+do k=nk2+1,nz2
+do j=nj1,nj2
+do i=ni1,ni2
+   Vx (i,j,k)=4.0*Vx (i,j,k-1)-6.0*Vx (i,j,k-2)+4.0*Vx (i,j,k-3)-Vx (i,j,k-4)
+   Vy (i,j,k)=4.0*Vy (i,j,k-1)-6.0*Vy (i,j,k-2)+4.0*Vy (i,j,k-3)-Vy (i,j,k-4)
+   Vz (i,j,k)=4.0*Vz (i,j,k-1)-6.0*Vz (i,j,k-2)+4.0*Vz (i,j,k-3)-Vz (i,j,k-4)
+end do
+end do
+end do
+end if
+end subroutine free_vext
 
 !--------------------------------------------------------------------}
 subroutine macdrp_mesg_init
