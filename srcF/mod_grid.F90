@@ -15,47 +15,34 @@ module grid_mod
 
 use constants_mod
 use math_mod
-use string_mod, only : &
-    string_conf
+use string_mod
 use para_mod
-use mpi_mod, only :    &
-    swmpi_rename_fnm
-use nfseis_mod, only : &
-    nfseis_varget
+use mpi_mod
+use nfseis_mod
 
 implicit none
 
 private
-public :: grid_fnm_init, &
-          grid_alloc,    &
-          grid_import,   &
-          grid_dealloc
+public ::        &
+  grid_fnm_init, &
+  grid_fnm_get,  &
+  grid_alloc,    &
+  grid_import,   &
+  grid_dealloc
 
 !-----------------------------------------------------------------------------
 real(SP),dimension(:),allocatable,public :: &
      x,y,z,xsin,xcot,                       &
      xi_x,eta_y,zeta_z
 character (len=SEIS_STRLEN),public :: &
-     fnm_grid_conf,                   &
-     pnm_grid,fnm_grid
+     fnm_grid_conf, pnm_grid
 
 !-----------------------------------------------------------------------------
 contains
 !-----------------------------------------------------------------------------
 
-subroutine grid_fnm_init(fnm_conf)
-character (len=*) :: fnm_conf
-integer fid
-fid=1001
-open(fid,file=trim(fnm_conf),status="old")
-  call string_conf(fid,1,'GRID_CONF',2,fnm_grid_conf)
-  call string_conf(fid,1,'GRID_ROOT',2,pnm_grid)
-  fnm_grid='coord.nc'
-close(fid)
-end subroutine grid_fnm_init
-
 !*************************************************************************
-!*                    PART-I  alloc and dealloc                          *
+!*                            alloc and dealloc                          *
 !*************************************************************************
 subroutine grid_alloc
 integer :: ierr
@@ -81,21 +68,38 @@ subroutine grid_dealloc
 end subroutine grid_dealloc
 
 !*************************************************************************
-!*                    PART-II  grid import                        *
+!*                                  grid io                              *
 !*************************************************************************
+subroutine grid_fnm_init(fnm_conf)
+character (len=*) :: fnm_conf
+integer fid
+fid=1001
+open(fid,file=trim(fnm_conf),status="old")
+  call string_conf(fid,1,'GRID_CONF',2,fnm_grid_conf)
+  call string_conf(fid,1,'GRID_ROOT',2,pnm_grid)
+close(fid)
+end subroutine grid_fnm_init
 
-subroutine grid_import
-character (len=SEIS_STRLEN) :: filenm
-filenm=swmpi_rename_fnm(pnm_grid,fnm_grid)
-   call nfseis_varget( filenm, 'x', x, (/1/),(/nx/),(/1/))
-   call nfseis_varget( filenm, 'xsin', xsin, (/1/),(/nx/),(/1/))
-   call nfseis_varget( filenm, 'xcot', xcot, (/1/),(/nx/),(/1/))
-   call nfseis_varget( filenm, 'y', y, (/1/),(/ny/),(/1/))
-   call nfseis_varget( filenm, 'z', z, (/1/),(/nz/),(/1/))
-   call nfseis_varget( filenm, 'xi_x',   xi_x, (/1/),(/nx/),(/1/))
-   call nfseis_varget( filenm, 'eta_y',  eta_y, (/1/),(/ny/),(/1/))
-   call nfseis_varget( filenm, 'zeta_z', zeta_z, (/1/),(/nz/),(/1/))
+subroutine grid_import(n_i,n_j,n_k)
+  integer,intent(in) :: n_i,n_j,n_k
+  character (len=SEIS_STRLEN) :: filenm
+  filenm=grid_fnm_get(n_i,n_j,n_k)
+  call nfseis_varget( filenm, 'x', x, (/1/),(/nx/),(/1/))
+  call nfseis_varget( filenm, 'xsin', xsin, (/1/),(/nx/),(/1/))
+  call nfseis_varget( filenm, 'xcot', xcot, (/1/),(/nx/),(/1/))
+  call nfseis_varget( filenm, 'y', y, (/1/),(/ny/),(/1/))
+  call nfseis_varget( filenm, 'z', z, (/1/),(/nz/),(/1/))
+  call nfseis_varget( filenm, 'xi_x',   xi_x, (/1/),(/nx/),(/1/))
+  call nfseis_varget( filenm, 'eta_y',  eta_y, (/1/),(/ny/),(/1/))
+  call nfseis_varget( filenm, 'zeta_z', zeta_z, (/1/),(/nz/),(/1/))
 end subroutine grid_import
+
+function grid_fnm_get(n_i,n_j,n_k) result(filenm)
+  integer,intent(in) :: n_i,n_j,n_k
+  character (len=SEIS_STRLEN) :: filenm
+  !filenm=trim(pnm_grid)//'/'//'coord'//'_'//set_mpi_subfix(n_i,n_j,n_k)//'.nc'
+  filenm=trim(pnm_grid)//'/'//set_mpi_prefix(n_i,n_j,n_k)//'_coord.nc'
+end function grid_fnm_get
 
 end module grid_mod
 
