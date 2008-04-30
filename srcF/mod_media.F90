@@ -17,45 +17,33 @@ use constants_mod, only : SEIS_STRLEN,SEIS_GEO,SEIS_ZERO,PI
 use string_mod, only : string_conf
 use math_mod
 use para_mod
-use mpi_mod, only :       &
-    swmpi_rename_fnm
-use nfseis_mod, only :    &
-    nfseis_varget
+use mpi_mod
+use nfseis_mod
 
 implicit none
 private
-public :: media_fnm_init, &
-          media_destroy,  &
-          media_alloc,    &
-          media_import
+public ::         &
+  media_fnm_init, &
+  media_fnm_get,  &
+  media_destroy,  &
+  media_alloc,    &
+  media_import
 
 !-----------------------------------------------------------------------------
 
-real(SP),dimension(:,:,:),allocatable,public :: &
-     rho,mu,lambda,Qs
+real(SP),dimension(:,:,:),allocatable,public :: rho,mu,lambda
+real(SP),dimension(:,:,:),allocatable,public :: Qs
+real(SP),public :: Qf0,Qsinf
 character (len=SEIS_STRLEN),public ::       &
-     pnm_media,                             &
-     fnm_media_conf,                        &
-     fnm_media
+     fnm_media_conf, pnm_media
 integer :: ierr
 
 !-----------------------------------------------------------
 contains
 !-----------------------------------------------------------
 
-subroutine media_fnm_init(fnm_conf)
-  character (len=*) :: fnm_conf
-  integer fid
-  fid=1001
-  open(fid,file=trim(fnm_conf),status="old")
-    call string_conf(fid,1,'MEDIA_CONF',2,fnm_media_conf)
-    call string_conf(fid,1,'MEDIA_ROOT',2,pnm_media)
-    fnm_media='media.nc'
-  close(fid)
-end subroutine media_fnm_init
-
 !*************************************************************************
-!*                    PART-I  alloc and dealloc                          *
+!*                            alloc and dealloc                          *
 !*************************************************************************
 subroutine media_alloc
   allocate( mu(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr);  mu=0.0_SP
@@ -73,18 +61,38 @@ subroutine media_destroy
 end subroutine media_destroy
 
 !*************************************************************************
-!*                    PART-II  media                       *
+!*                             media io                                  *
 !*************************************************************************
-subroutine media_import
-character (len=SEIS_STRLEN) :: filenm
-integer,dimension(SEIS_GEO) :: subs,subc,subt
+subroutine media_fnm_init(fnm_conf)
+  character (len=*),intent(in) :: fnm_conf
+  integer fid
+  fid=1001
+  open(fid,file=trim(fnm_conf),status="old")
+    call string_conf(fid,1,'MEDIA_CONF',2,fnm_media_conf)
+    call string_conf(fid,1,'MEDIA_ROOT',2,pnm_media)
+  close(fid)
+end subroutine media_fnm_init
+
+function media_fnm_get(n_i,n_j,n_k) result(filenm)
+  integer,intent(in) :: n_i,n_j,n_k
+  character (len=SEIS_STRLEN) :: filenm
+  !filenm=trim(pnm_media)//'/'//'media'//'_'//set_mpi_subfix(n_i,n_j,n_k)//'.nc'
+  filenm=trim(pnm_media)//'/'//set_mpi_prefix(n_i,n_j,n_k)//'_media.nc'
+end function media_fnm_get
+
+subroutine media_import(n_i,n_j,n_k)
+  integer,intent(in) :: n_i,n_j,n_k
+  character (len=SEIS_STRLEN) :: filenm
+  integer,dimension(SEIS_GEO) :: subs,subc,subt
   subs=(/ nx1,ny1,nz1 /); subc=(/ nx,ny,nz /); subt=(/ 1,1,1 /)
-  filenm=swmpi_rename_fnm(pnm_media,fnm_media)
+  filenm=media_fnm_get(n_i,n_j,n_k)
   call nfseis_varget( filenm, 'lambda', lambda, subs,subc,subt)
   call nfseis_varget( filenm, 'mu', mu, subs,subc,subt)
   call nfseis_varget( filenm, 'rho', rho, subs,subc,subt)
 #ifdef WITHQS
   call nfseis_varget( filenm, 'Qs', Qs, subs,subc,subt)
+  call nfseis_attget( filenm, 'Qf0', Qf0)
+  call nfseis_attget( filenm, 'Qsinf', Qsinf)
 #endif
 end subroutine media_import
   
