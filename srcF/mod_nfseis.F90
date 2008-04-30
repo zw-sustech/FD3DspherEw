@@ -74,146 +74,60 @@ contains
 !-------------------------------------------------------------------------!
 
 !*************************************************************************
-!* save seismogram on receivers                                          *
+!*                    seismogram data file                               *
 !*************************************************************************
-subroutine nfseis_seismoinfo_create( filenm,tinv,title )
-character (len=*),intent(in) :: filenm
-integer,intent(in) :: tinv
-character (len=*),optional,intent(in) :: title
-integer :: ierr,ncid,gdimid,ndimid,oldMode
-integer :: indxid,gindxid,coordid,loctid,idid,twoelemid
-!--
-ierr=nf90_create( path = trim(filenm), cmode= nf90_clobber, ncid = ncid )
-     call nfseis_except(ierr,'seismoinfo_create:'//trim(filenm))
-!--
-ierr=nf90_set_fill(ncid,nf90_nofill,oldMode)
-     call nfseis_except(ierr,'set_fill in seismoinfo_create')
-!-- define dim
-ierr=nf90_def_dim(ncid, "num_pt", nf90_unlimited, ndimid)
-     call nfseis_except(ierr,'num_pt dim in seismoinfo_create')
-ierr=nf90_def_dim(ncid, "geo_dim", SEIS_GEO, gdimid)
-     call nfseis_except(ierr,'geo_dim dim in seismoinfo_create')
-ierr=nf90_def_dim(ncid, "twoelem", 2, twoelemid)
-     call nfseis_except(ierr,'twoelem dim in seismoinfo_create')
-! -- define variable
-ierr=nf90_def_var(ncid, 'indx', nf90_int, (/ gdimid, ndimid /), indxid )
-     call nfseis_except(ierr,'indx var in seismoinfo_create')
-ierr=nf90_def_var(ncid, 'gindx', nf90_int, (/ gdimid, ndimid /), gindxid )
-     call nfseis_except(ierr,'gindx var in seismoinfo_create')
-ierr=nf90_def_var(ncid, 'coord', SEISNC_DATATYPE, (/ gdimid,ndimid /), coordid )
-     call nfseis_except(ierr,'coord var in seismoinfo_create')
-ierr=nf90_def_var(ncid, 'grid', SEISNC_DATATYPE, (/ gdimid,ndimid /), loctid )
-     call nfseis_except(ierr,'grid var in seismoinfo_create')
-ierr=nf90_def_var(ncid, 'id', nf90_int, (/ twoelemid,ndimid /), idid )
-     call nfseis_except(ierr,'id var in seismoinfo_create')
-!-- define global attribute
-ierr=nf90_put_att(ncid,NF90_GLOBAL,"tinv",tinv )
-     call nfseis_except(ierr,'tinv att in seismoinfo_create')
-if (present(title) ) then
-   ierr=nf90_put_att(ncid,NF90_GLOBAL,"title",title )
-     call nfseis_except(ierr,'title att in seismoinfo_create')
-end if
-!--
-ierr=nf90_enddef(ncid)
-     call nfseis_except(ierr,'enddef in seismoinfo_create')
-!-- 
-ierr=nf90_close(ncid)
-     call nfseis_except(ierr,'file close in seismoinfo_create')
-end subroutine nfseis_seismoinfo_create
-
-subroutine nfseis_seismo_init(filenm,      &
-           num_pt,ncid,tid,vxid,vyid,vzid, &
-           xid,yid,zid,                    &
-           title)  ! input att
+subroutine nfseis_seismo_def(filenm,num_pt,ncid,tid,title)
 character (len=*),intent(in) :: filenm
 integer,intent(in) :: num_pt
-integer,intent(out) :: ncid,tid,vxid,vyid,vzid
-integer,intent(out),optional :: xid,yid,zid
+integer,intent(out) :: ncid,tid
 character (len=*),intent(in),optional :: title
-integer ierr,ndimid,tdimid,oldMode
+integer :: ierr,ndimid,tdimid,oldMode
 !--
 ierr=nf90_create( path = trim(filenm), cmode= nf90_clobber, ncid = ncid )
-     call nfseis_except(ierr,'seismo_init:'//trim(filenm))
+     call nfseis_except(ierr,'seismo_def:'//trim(filenm))
 !--
 ierr=nf90_set_fill(ncid,nf90_nofill,oldMode)
-     call nfseis_except(ierr,'set_fill in seismo_init')
+     call nfseis_except(ierr,'set_fill in seismo_def')
 !-- define dim
 ierr=nf90_def_dim(ncid, "num_pt", num_pt, ndimid)
-     call nfseis_except(ierr,'num_pt dim in seismo_init')
+     call nfseis_except(ierr,'num_pt dim in seismo_def')
 ierr=nf90_def_dim(ncid, "time", nf90_unlimited, tdimid)
-     call nfseis_except(ierr,'time dim in seismo_init')
+     call nfseis_except(ierr,'time dim in seismo_def')
 ! -- define variable
 ierr=nf90_def_var(ncid, 'time', SEISNC_DATATYPE, (/ tdimid /), tid )
-     call nfseis_except(ierr,'time var in seismo_init')
-ierr=nf90_def_var(ncid, 'Vx', SEISNC_DATATYPE, (/ ndimid, tdimid /), vxid )
-     call nfseis_except(ierr,'Vx var in seismo_init')
-ierr=nf90_def_var(ncid, 'Vy', SEISNC_DATATYPE, (/ ndimid, tdimid /), vyid )
-     call nfseis_except(ierr,'Vy var in seismo_init')
-ierr=nf90_def_var(ncid, 'Vz', SEISNC_DATATYPE, (/ ndimid, tdimid /), vzid )
-     call nfseis_except(ierr,'Vz var in seismo_init')
-if (present(xid)) then
-ierr=nf90_def_var(ncid, 'x', SEISNC_DATATYPE, (/ ndimid /), xid )
-     call nfseis_except(ierr,'x var in seismo_init')
-end if
-if (present(yid)) then
-ierr=nf90_def_var(ncid, 'y', SEISNC_DATATYPE, (/ ndimid /), yid )
-     call nfseis_except(ierr,'y var in seismo_init')
-end if
-if (present(zid)) then
-ierr=nf90_def_var(ncid, 'z', SEISNC_DATATYPE, (/ ndimid /), zid )
-     call nfseis_except(ierr,'z var in seismo_init')
-end if
+     call nfseis_except(ierr,'time var in seismo_def')
 !-- define global attribute
 if (present(title) ) then
    ierr=nf90_put_att(ncid,NF90_GLOBAL,"title",title )
-     call nfseis_except(ierr,'title att in seismo_init')
+     call nfseis_except(ierr,'title att in seismo_def')
 end if
+end subroutine nfseis_seismo_def
+subroutine nfseis_seismo_defvar(ncid,varnm,vid)
+integer,intent(in) :: ncid
+character (len=*),intent(in) :: varnm
+integer,intent(out) :: vid
+integer :: ierr,ndimid,tdimid
 !--
-ierr=nf90_enddef(ncid)
-     call nfseis_except(ierr,'enddef in seismo_init')
-!-- put data --
-end subroutine nfseis_seismo_init
-subroutine nfseis_seismo_reinit(filenm, &! file name
-           ncid,tid,vxid,vyid,vzid,     &! output ids
-           xid,yid,zid)  ! input att
-character (len=*),intent(in) :: filenm
-integer,intent(out),optional :: ncid,tid,vxid,vyid,vzid
-integer,intent(out),optional :: xid,yid,zid
+ierr=nf90_inq_dimid(ncid,'time',tdimid)
+     call nfseis_except(ierr,'time dim in seismo_addvar')
+ierr=nf90_inq_dimid(ncid,'num_pt',ndimid)
+     call nfseis_except(ierr,'num_pt dim in seismo_addvar')
+ierr=nf90_def_var(ncid,varnm,SEISNC_DATATYPE, &
+     (/ ndimid,tdimid /), vid )
+     call nfseis_except(ierr,'add var in sesimo_addvar')
+end subroutine nfseis_seismo_defvar
+subroutine nfseis_seismo_enddef(ncid)
+integer ncid
 integer ierr
-!--
-ierr=nf90_open(trim(filenm),NF90_WRITE,ncid)
-     call nfseis_except(ierr,'seismo_reinit:'//trim(filenm))
-! -- inquire variable
-ierr=nf90_inq_varid(ncid, 'time',  tid )
-     call nfseis_except(ierr,'time var in seismo_reinit')
-ierr=nf90_inq_varid(ncid, 'Vx', vxid )
-     call nfseis_except(ierr,'Vx var in seismo_reinit')
-ierr=nf90_inq_varid(ncid, 'Vy', vyid )
-     call nfseis_except(ierr,'Vy var in seismo_reinit')
-ierr=nf90_inq_varid(ncid, 'Vz', vzid )
-     call nfseis_except(ierr,'Vz var in seismo_reinit')
-if (present(xid)) then
-ierr=nf90_inq_varid(ncid, 'x', xid )
-     call nfseis_except(ierr,'x var in seismo_reinit')
-end if
-if (present(yid)) then
-ierr=nf90_inq_varid(ncid, 'y', yid )
-     call nfseis_except(ierr,'y var in seismo_reinit')
-end if
-if (present(zid)) then
-ierr=nf90_inq_varid(ncid, 'z', zid )
-     call nfseis_except(ierr,'z var in seismo_reinit')
-end if
-!--
-end subroutine nfseis_seismo_reinit
+ierr=nf90_enddef(ncid)
+     call nfseis_except(ierr,'enddef in seismo_enddef')
+end subroutine nfseis_seismo_enddef
 
 !*************************************************************************
-!* save wave field in 3d grid points                                     *
+!*                     3D snap wave field file                           *
 !*************************************************************************
-subroutine nfseis_snap_header(filenm,     &
-           ncid,tid, &
-           stept,                       &
-           gsubs,gsubc,gsubt,gsube,     &
+subroutine nfseis_snap_def(filenm,ncid,tid,stept, &
+           gsubs,gsubc,gsubt,gsube,               &
            subs,subc,subt,sube,title)
 character (len=*),intent(in) :: filenm
 integer,intent(out) :: ncid,tid
@@ -258,8 +172,8 @@ ierr=nf90_put_att(ncid,NF90_GLOBAL,"stept",stept )
 !--
 !ierr=nf90_enddef(ncid)
 !     call nfseis_except(ierr,'enddef in wave_init')
-end subroutine nfseis_snap_header
-subroutine nfseis_snap_addvar(ncid,varnm,vid)
+end subroutine nfseis_snap_def
+subroutine nfseis_snap_defvar(ncid,varnm,vid)
 character (len=*),intent(in) :: varnm
 integer,intent(out) :: ncid,vid
 integer ierr,tdimid,xdimid,ydimid,zdimid
@@ -274,7 +188,7 @@ ierr=nf90_inq_dimid(ncid,'K',zdimid)
 ierr=nf90_def_var(ncid,varnm,SEISNC_DATATYPE, &
      (/ xdimid, ydimid, zdimid,tdimid /), vid )
      call nfseis_except(ierr,'add var in snap_addvar')
-end subroutine nfseis_snap_addvar
+end subroutine nfseis_snap_defvar
 subroutine nfseis_snap_enddef(ncid)
 integer ncid
 integer ierr
@@ -282,72 +196,118 @@ ierr=nf90_enddef(ncid)
      call nfseis_except(ierr,'enddef in snap_enddef')
 end subroutine nfseis_snap_enddef
 
-!----------------------------------------------------------------
+!*************************************************************************
+!*                    3D grid point value file                           *
+!*************************************************************************
+subroutine nfseis_grid3d_def(filenm,nx,ny,nz,ncid,title)
+character (len=*),intent(in) :: filenm
+integer,intent(in) :: nx,ny,nz
+character (len=*),intent(in),optional :: title
+integer :: ncid
 
-subroutine nfseis_data_create(filenm, &
-                       nx,ny,nz,      &
-                       title)
+integer :: ierr,oldMode
+integer :: Iid,Jid,Kid
+
+ierr=nf90_create( path=trim(filenm), cmode= nf90_clobber, ncid = ncid )
+     call nfseis_except(ierr,'grid3d_def:'//trim(filenm))
+ierr=nf90_set_fill(ncid,nf90_nofill,oldMode)
+     call nfseis_except(ierr,'set_fill in grid3d_def')
+! -- define dim
+ierr=nf90_def_dim(ncid, 'I', nx, Iid)
+     call nfseis_except(ierr,'I dim in grid3d_def')
+ierr=nf90_def_dim(ncid, 'J', ny, Jid)
+     call nfseis_except(ierr,'J dim in grid3d_def')
+ierr=nf90_def_dim(ncid, 'K', nz, Kid)
+     call nfseis_except(ierr,'K dim in grid3d_def')
+!-- define global attribute
+if (present(title) ) then
+   ierr=nf90_put_att(ncid,NF90_GLOBAL,"title",title )
+     call nfseis_except(ierr,'title att in grid3d_def')
+end if
+end subroutine nfseis_grid3d_def
+subroutine nfseis_grid3d_defvar(ncid,varnm,vid)
+integer,intent(in) :: ncid
+character (len=*),intent(in) :: varnm
+integer,intent(out) :: vid
+integer :: ierr,Iid,Jid,Kid
+!--
+ierr=nf90_inq_dimid(ncid,'I',Iid)
+     call nfseis_except(ierr,'I dim in grid3d_addvar')
+ierr=nf90_inq_dimid(ncid,'J',Jid)
+     call nfseis_except(ierr,'J dim in grid3d_addvar')
+ierr=nf90_inq_dimid(ncid,'K',Kid)
+     call nfseis_except(ierr,'K dim in grid3d_addvar')
+ierr=nf90_def_var(ncid,varnm,SEISNC_DATATYPE, &
+     (/ Iid,Jid,Kid /), vid )
+     call nfseis_except(ierr,'add var in grid3d_addvar')
+end subroutine nfseis_grid3d_defvar
+subroutine nfseis_grid3d_enddef(ncid)
+integer ncid
+integer ierr
+ierr=nf90_enddef(ncid)
+     call nfseis_except(ierr,'enddef in grid3d_enddef')
+end subroutine nfseis_grid3d_enddef
+
+subroutine nfseis_grid3d_skel(filenm,nx,ny,nz,title)
 character (len=*),intent(in) :: filenm
 integer,intent(in) :: nx,ny,nz
 character (len=*),intent(in),optional :: title
 
-integer ncid,ierr,oldMode
-integer nxid,nyid,nzid
+integer :: ncid,ierr,oldMode
+integer :: Iid,Jid,Kid
 
 ierr=nf90_create( path=trim(filenm), cmode= nf90_clobber, ncid = ncid )
-     call nfseis_except(ierr,'data_create:'//trim(filenm))
+     call nfseis_except(ierr,'grid3d_header:'//trim(filenm))
 ierr=nf90_set_fill(ncid,nf90_nofill,oldMode)
-     call nfseis_except(ierr,'set_fill in data_create')
+     call nfseis_except(ierr,'set_fill in grid3d_header')
 ! -- define dim
-ierr=nf90_def_dim(ncid, 'I', nx, nxid)
-     call nfseis_except(ierr,'I dim in data_create')
-ierr=nf90_def_dim(ncid, 'J', ny, nyid)
-     call nfseis_except(ierr,'J dim in data_create')
-ierr=nf90_def_dim(ncid, 'K', nz, nzid)
-     call nfseis_except(ierr,'K dim in data_create')
+ierr=nf90_def_dim(ncid, 'I', nx, Iid)
+     call nfseis_except(ierr,'I dim in grid3d_header')
+ierr=nf90_def_dim(ncid, 'J', ny, Jid)
+     call nfseis_except(ierr,'J dim in grid3d_header')
+ierr=nf90_def_dim(ncid, 'K', nz, Kid)
+     call nfseis_except(ierr,'K dim in grid3d_header')
 !-- define global attribute
 if (present(title) ) then
    ierr=nf90_put_att(ncid,NF90_GLOBAL,"title",title )
-     call nfseis_except(ierr,'title att in data_create')
+     call nfseis_except(ierr,'title att in grid3d_header')
 end if
 ierr=nf90_enddef(ncid)
-     call nfseis_except(ierr,'endedf in data_create')
+     call nfseis_except(ierr,'endedf in grid3d_header')
 ierr=nf90_close(ncid)
-     call nfseis_except(ierr,'file close in data_create')
-end subroutine nfseis_data_create
+     call nfseis_except(ierr,'file close in grid3d_header')
+end subroutine nfseis_grid3d_skel
 
-subroutine nfseis_data_addvar(filenm,aVarNm)
+subroutine nfseis_grid3d_addvar(filenm,aVarNm)
 character (len=*),intent(in) :: aVarNm,filenm
 
 integer ncid,ierr,oldMode
-integer xdimid,ydimid,zdimid
+integer Iid,Jid,Kid
 integer varid
 
 ierr=nf90_open( trim(filenm), NF90_WRITE, ncid )
-     call nfseis_except(ierr,'data_addvar:'//trim(filenm))
+     call nfseis_except(ierr,'grid3d_addvar:'//trim(filenm))
 ierr=nf90_redef( ncid)
-     call nfseis_except(ierr,'redef in data_addvar')
+     call nfseis_except(ierr,'redef in grid3d_addvar')
 ierr=nf90_set_fill(ncid,nf90_nofill,oldMode)
-     call nfseis_except(ierr,'set_fill in data_addvar')
+     call nfseis_except(ierr,'set_fill in grid3d_addvar')
 ! -- req dim
-ierr=nf90_inq_dimid(ncid,'I',xdimid)
-     call nfseis_except(ierr,'I dim in data_addvar')
-ierr=nf90_inq_dimid(ncid,'J',ydimid)
-     call nfseis_except(ierr,'J dim in data_addvar')
-ierr=nf90_inq_dimid(ncid,'K',zdimid)
-     call nfseis_except(ierr,'K dim in data_addvar')
+ierr=nf90_inq_dimid(ncid,'I',Iid)
+     call nfseis_except(ierr,'I dim in grid3d_addvar')
+ierr=nf90_inq_dimid(ncid,'J',Jid)
+     call nfseis_except(ierr,'J dim in grid3d_addvar')
+ierr=nf90_inq_dimid(ncid,'K',Kid)
+     call nfseis_except(ierr,'K dim in grid3d_addvar')
 ! -- define variable
-ierr=nf90_def_var(ncid, trim(aVarNm), SEISNC_DATATYPE, &
-                 (/ xdimid, ydimid, zdimid /),         &
-                 varid )
-     call nfseis_except(ierr,'var def in data_addvar')
+ierr=nf90_def_var(ncid, trim(aVarNm), SEISNC_DATATYPE,(/ Iid,Jid,Kid /),varid)
+     call nfseis_except(ierr,'var def in grid3d_addvar')
 ierr=nf90_enddef(ncid)
-     call nfseis_except(ierr,'enddef in data_addvar')
+     call nfseis_except(ierr,'enddef in grid3d_addvar')
 ierr=nf90_close(ncid)
-     call nfseis_except(ierr,'file close in data_addvar')
-end subroutine nfseis_data_addvar
+     call nfseis_except(ierr,'file close in grid3d_addvar')
+end subroutine nfseis_grid3d_addvar
 
-subroutine nfseis_data_attput(filenm,         &
+subroutine nfseis_grid3d_attput(filenm,         &
            subs,subc,subt,                    &
            ni1,ni2,nj1,nj2,nk1,nk2,ni,nj,nk,  &
            nx1,nx2,ny1,ny2,nz1,nz2,nx,ny,nz,  &
@@ -406,7 +366,7 @@ ierr=nf90_put_att(ncid,NF90_GLOBAL,"stride",subt)
 ierr=nf90_enddef(ncid)
 !--
 ierr=nf90_close(ncid)
-end subroutine nfseis_data_attput
+end subroutine nfseis_grid3d_attput
 
 !----------------------------------------------------------------
 
@@ -1039,6 +999,8 @@ ierr=nf90_enddef(ncid)
 ierr=nf90_close(ncid)
 end subroutine nfseis_attput_real1d
 
+!----------------------------------------------------------------
+
 subroutine nfseis_open(filenm,ncid)
 character (len=*),intent(in) :: filenm
 integer,intent(out) :: ncid
@@ -1056,6 +1018,7 @@ ierr=nf90_inq_varid(ncid, vnm, vid )
      if (ierr /= nf90_noerr) &
      call nfseis_except(ierr,'nfseis_inq_varid:'//trim(vnm))
 end subroutine nfseis_inq_varid
+
 subroutine nfseis_close(ncid)
     integer,intent(in) :: ncid
     integer ierr
