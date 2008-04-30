@@ -18,14 +18,9 @@ module mpi_mod
 
 use mpi
 
-!{ -- declare module used --
 use constants_mod
-!use para_mod, only :           &
-!    nx,ny,nz
 use para_mod
-use string_mod, only :                         &
-    string_conf
-!} -- end declare module used ---
+use string_mod
 
 implicit none
 
@@ -43,6 +38,7 @@ public :: swmpi_init,                          &
           swmpi_time_init,                     &
           swmpi_time_write,                    &
           swmpi_time_end,                      &
+          set_mpi_prefix,                      &
           set_mpi_subfix,                      &
           swmpi_except
 
@@ -77,9 +73,8 @@ integer :: wtimen0
 contains
 !-----------------------------------------------------------------------!
 
-!{--------  message subroutine ---------
 subroutine swmpi_init(fnm_conf)
-character (len=*) :: fnm_conf
+character (len=*),intent(in) :: fnm_conf
 integer fid,n
 fid=1001
 open(fid,file=trim(fnm_conf),status="old")
@@ -248,13 +243,16 @@ subroutine swmpi_reinit_para
    if (thisid(2)==dims(2)-1) point_in_this(4)=ngy2
    if (thisid(3)==0)        point_in_this(5)=ngz1
    if (thisid(3)==dims(3)-1) point_in_this(6)=ngz2
-   !nck1=nk1;nck2=nk2
-   !nvk1=1;nvk2=0
-   !ndk1=1;ndk2=0
+
+   NTPI=ni*dims(1); NTPJ=nj*dims(2); NTPK=nk*dims(3)
+   NTPX=nx*dims(1); NTPY=ny*dims(2); NTPZ=nz*dims(3)
+   npi1=thisid(1)*ni+1; npi2=(thisid(1)+1)*ni
+   npj1=thisid(2)*nj+1; npj2=(thisid(2)+1)*nj
+   npk1=thisid(3)*nk+1; npk2=(thisid(3)+1)*nk
 end subroutine swmpi_reinit_para
 
 subroutine swmpi_set_gindx(n_i,n_j,n_k)
-   integer n_i,n_j,n_k
+   integer,intent(in) :: n_i,n_j,n_k
    ! init ngi1 etc
    ngi1=swmpi_globi(ni1,n_i)
    ngi2=swmpi_globi(ni2,n_i)
@@ -269,26 +267,18 @@ subroutine swmpi_set_gindx(n_i,n_j,n_k)
    ngz1=swmpi_globk(nz1,n_k)
    ngz2=swmpi_globk(nz2,n_k)
    point_in_this=(/ ngi1,ngi2,ngj1,ngj2,ngk1,ngk2 /)
-   if (n_i==0)        point_in_this(1)=ngx1
+   if (n_i==0)         point_in_this(1)=ngx1
    if (n_i==dims(1)-1) point_in_this(2)=ngx2
-   if (n_j==0)        point_in_this(3)=ngy1
+   if (n_j==0)         point_in_this(3)=ngy1
    if (n_j==dims(2)-1) point_in_this(4)=ngy2
-   if (n_k==0)        point_in_this(5)=ngz1
+   if (n_k==0)         point_in_this(5)=ngz1
    if (n_k==dims(3)-1) point_in_this(6)=ngz2
+   NTPI=ni*dims(1); NTPJ=nj*dims(2); NTPK=nk*dims(3)
+   NTPX=nx*dims(1); NTPY=ny*dims(2); NTPZ=nz*dims(3)
+   npi1=n_i*ni+1; npi2=(n_i+1)*ni
+   npj1=n_j*nj+1; npj2=(n_j+1)*nj
+   npk1=n_k*nk+1; npk2=(n_k+1)*nk
 end subroutine swmpi_set_gindx
-
-!subroutine swmpi_para_init(fnm_gmethod,nx1,nx2,ny1,ny2,nz1,nz2,ni,nj,nk)
-!character (len=*) :: fnm_gmethod
-!integer nx1,nx2,ny1,ny2,nz1,nz2,ni,nj,nk
-!call nfseis_data_import(trim(fnm_gmethod), &
-!                        nx1=nx1,nx2=nx2, &
-!                        ny1=ny1,ny2=ny2, &
-!                        nz1=nz1,nz2=nz2, &
-!                        ni=ni,nj=nj,nk=nk )
-!if (absnode(1,1)) then 
-!    nx1=numLayer; ni1=ni1+numLayer; ni=ni+numLayer; nx=nx2-nx1+1
-!end if
-!end subroutine swmpi_para_init
 
 !*************************************************************************
 !* nx,ny,nz, et al, should be inited before this subroutine              *
@@ -339,8 +329,6 @@ subroutine swmpi_datatype
    call MPI_TYPE_COMMIT(DTypeZL,ierr)
 end subroutine swmpi_datatype
 
-!---------------------------------------}
-
 subroutine swmpi_time_init(filenm,ntime)
    character (len=*),intent(in) :: filenm
    integer,intent(in) :: ntime
@@ -390,6 +378,7 @@ subroutine swmpi_time_write(ntime,filenm)
    !  write(fid,'(i6,a10,i5,a1,i4,a1,f7.3,a1)')   &
    !          ntime,'time is',h,'h',m,'m',s,'s'
    close(fid)
+
    wtime1=wtime2
 end subroutine swmpi_time_write
 subroutine swmpi_time_end(filenm)
@@ -409,7 +398,7 @@ subroutine swmpi_time_end(filenm)
      write(fid,*) 'the program'
      write(fid,*) '  begins from ',str_d0,  &
                      ',',str_t0(1:2),'/',str_t0(3:4),'/',str_t0(5:10)
-     write(fid,*) '  finish at ',str_d1,    &
+     write(fid,*) '  finish at ',str_d1,  &
                      ',',str_t1(1:2),'/',str_t1(3:4),'/',str_t1(5:10)
      write(fid, * )  'the totle run time is'
      write(fid,'(3(i10,a10))') d,'day',h,'hour',m,'minute'
@@ -417,26 +406,21 @@ subroutine swmpi_time_end(filenm)
 end subroutine swmpi_time_end
 function set_mpi_prefix(i,j,k) result(filenm)
     integer,intent(in) :: i,j,k
-    character (len=SEIS_STRLEN) :: filenm
-    character (len=SEIS_STRLEN) :: str1,str2,str3
+    character (len=11) :: filenm
+    character (len=2) :: str1,str2,str3
     write(str1,"(i2.2)") i
     write(str2,"(i2.2)") j
     write(str3,"(i2.2)") k
-    filenm  ='swmpi'//trim(adjustl(str1))  &
-                    //trim(adjustl(str2))  &
-                    //trim(adjustl(str3))  &
-                    //'_'
+    filenm  ='swmpi'//str1//str2//str3
 end function set_mpi_prefix
 function set_mpi_subfix(i,j,k) result(filenm)
     integer,intent(in) :: i,j,k
-    character (len=SEIS_STRLEN) :: filenm
-    character (len=SEIS_STRLEN) :: str1,str2,str3
+    character (len=9) :: filenm
+    character (len=2) :: str1,str2,str3
     write(str1,"(i2.2)") i
     write(str2,"(i2.2)") j
     write(str3,"(i2.2)") k
-    filenm  ='mpi'//trim(adjustl(str1))    &
-                    //trim(adjustl(str2))  &
-                    //trim(adjustl(str3))
+    filenm  ='mpi'//str1//str2//str3
 end function set_mpi_subfix
 subroutine swmpi_change_fnm(i,j,k)
   integer,intent(in) :: i,j,k
