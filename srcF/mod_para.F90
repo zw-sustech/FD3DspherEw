@@ -27,15 +27,19 @@ public :: para_init,get_conf_name,      &
 
 !-----------------------------------------------------------------------------
 integer,public ::                     &
+    NTPI,NTPJ,NTPK,NTPX,NTPY,NTPZ
+integer,public ::                     &
     ni1,ni2,nj1,nj2,nk1,nk2,ni,nj,nk, &! without additional stencil points
     nx1,nx2,ny1,ny2,nz1,nz2,nx,ny,nz, &! include boundary stencil points
     ngi1,ngi2,ngj1,ngj2,ngk1,ngk2,    &! global index without ghost points
-    ngx1,ngx2,ngy1,ngy2,ngz1,ngz2 ! same as above with ghost
+    ngx1,ngx2,ngy1,ngy2,ngz1,ngz2,    & ! same as above with ghost
+    npi1,npi2,npj1,npj2,npk1,npk2
 integer,dimension(SEIS_GEO*2),public :: &
     point_in_this
 integer,public :: nt
 real(SP),public :: stept
-real(SP),public :: cur_time, cur_nt
+real(SP),public :: cur_time
+integer,public :: cur_nt
 character (len=SEIS_STRLEN),public :: fnm_conf
 
 !-----------------------------------------------------------------------------
@@ -64,8 +68,8 @@ end subroutine get_conf_name
 !---------------------------------------------------------------------------
 
 subroutine para_init(fnm_conf)
-character (len=*) :: fnm_conf
-integer fid,n
+character (len=*),intent(in) :: fnm_conf
+integer fid
 fid=1001
 open(fid,file=trim(fnm_conf),status="old")
   call string_conf(fid,1,'ni',2,ni)
@@ -166,3 +170,5 @@ function loct_ijk(ijk) result(indx)
 end function loct_ijk
 
 end module para_mod
+
+! vim:ft=fortran:ts=4:sw=4:nu:et:ai:
