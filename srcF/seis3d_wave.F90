@@ -13,7 +13,8 @@
 program seis3d_wave
 !-----------------------------------------------------------------------------
 
-#define PMLNT 700
+!#define PML
+#define PMLNT 1
 
 !{ -- declare module used --
 use mpi
@@ -45,19 +46,19 @@ call swmpi_reinit_para
 
 call grid_fnm_init(fnm_conf)
 call grid_alloc
-call grid_import
+call grid_import(thisid(1),thisid(2),thisid(3))
 
 call media_fnm_init(fnm_conf)
 call media_alloc
-call media_import
+call media_import(thisid(1),thisid(2),thisid(3))
 
 call src_fnm_init(fnm_conf)
-call src_import
+call src_import(thisid(1),thisid(2),thisid(3))
 !call src_choose
 
 call io_init(fnm_conf)
 call io_snap_read(fnm_conf)
-call io_snap_locate
+call io_snap_locate(thisid(1),thisid(2),thisid(3))
 call io_pt_import
 call io_seismo_init
 
@@ -144,7 +145,7 @@ call abs_RK_fin(firRKb(4))
 ! save result
      ntime=ntime+1
 call macdrp_check(ntime)
-call io_seismo_put(Vx,Vy,Vz,ntime)
+call io_seismo_put(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime)
 call io_wave_export(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,stept)
 ! ========================================================================== }
 
@@ -193,7 +194,7 @@ call abs_RK_fin(firRKb(4))
 ! save result
      ntime=ntime+1
 call macdrp_check(ntime)
-call io_seismo_put(Vx,Vy,Vz,ntime)
+call io_seismo_put(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime)
 call io_wave_export(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,stept)
 call io_rest_export(Txx,Tyy,Tzz,Txy,Txz,Tyz,Vx,Vy,Vz,ntime)
 ! ========================================================================== }
@@ -243,7 +244,7 @@ call abs_RK_fin(firRKb(4))
 ! save result
      ntime=ntime+1
 call macdrp_check(ntime)
-call io_seismo_put(Vx,Vy,Vz,ntime)
+call io_seismo_put(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime)
 call io_wave_export(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,stept)
 ! ========================================================================== }
 
@@ -292,7 +293,7 @@ call abs_RK_fin(firRKb(4))
 ! save result
      ntime=ntime+1
 call macdrp_check(ntime)
-call io_seismo_put(Vx,Vy,Vz,ntime)
+call io_seismo_put(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime)
 call io_wave_export(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,stept)
 call io_rest_export(Txx,Tyy,Tzz,Txy,Txz,Tyz,Vx,Vy,Vz,ntime)
 ! ========================================================================== }
@@ -346,7 +347,7 @@ call abs_RK_fin(firRKb(4))
 ! save result
      ntime=ntime+1
 call macdrp_check(ntime)
-call io_seismo_put(Vx,Vy,Vz,ntime)
+call io_seismo_put(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime)
 call io_wave_export(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,stept)
 ! ========================================================================== }
 
@@ -395,7 +396,7 @@ call abs_RK_fin(firRKb(4))
 ! save result
      ntime=ntime+1
 call macdrp_check(ntime)
-call io_seismo_put(Vx,Vy,Vz,ntime)
+call io_seismo_put(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime)
 call io_wave_export(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,stept)
 ! ========================================================================== }
 
@@ -444,7 +445,7 @@ call abs_RK_fin(firRKb(4))
 ! save result
      ntime=ntime+1
 call macdrp_check(ntime)
-call io_seismo_put(Vx,Vy,Vz,ntime)
+call io_seismo_put(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime)
 call io_wave_export(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,stept)
 ! ========================================================================== }
 
@@ -493,7 +494,7 @@ call abs_RK_fin(firRKb(4))
 ! save result
      ntime=ntime+1
 call macdrp_check(ntime)
-call io_seismo_put(Vx,Vy,Vz,ntime)
+call io_seismo_put(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime)
 call io_wave_export(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,stept)
 ! ========================================================================== }
 
