@@ -21,13 +21,14 @@ use mpi_mod
 implicit none
 
 private
-public :: io_init,io_pt_read,io_pt_import,io_snap_read,io_snap_locate
+public :: io_init
+public :: io_pt_read,io_pt_import,io_snap_read,io_snap_locate
 public :: io_rest_export,io_rest_import
 public :: io_seismo_init,io_seismo_put,io_seismo_close
 public :: io_wave_export,io_wave_close
 public :: io_enum,io_out_pattern
 public :: io_delete
-public :: get_fnm_seismo,get_fnm_seismoinfo,       &
+public :: get_fnm_seismo,get_fnm_station,   &
           get_fnm_snapnode,get_fnm_snapnode_n
 public :: seismo_on_this,retrieve_recvline
 public :: retrieve_snap_seis,retrieve_snap_time
@@ -45,7 +46,7 @@ integer,allocatable,public :: &
      pt_indx(:,:),            &
      pt_id  (:,:),            &
      num_line_pt(:)
-real(SP),allocatable,public ::    &
+real(SP),allocatable,public :: &
      pt_xyz(:,:)
 real(SP),public :: topo_hyper_height
 
@@ -73,11 +74,11 @@ logical,allocatable,public :: &
      vel_out(:)
 
 character (len=SEIS_STRLEN),public :: &
-    pnm_out,pnm_seismoinfo,           &
+    pnm_out,pnm_station,           &
     pnm_rest, fnm_rest, fnm_rest_point
 
 !---------------------------------------------
-integer pt_ncid,pt_tid,pt_vxid,pt_vyid,pt_vzid
+integer pt_ncid,pt_tid,pt_vid(3),pt_sid(6)
 integer rest_tinv,run_from_rest
 integer :: nt_dyn_rest, nt_dyn_sync, nt_dyn_new
 
@@ -86,13 +87,13 @@ contains
 !---------------------------------------------------------------------------
 subroutine io_init(fnm_input)
 character (len=*),intent(in) :: fnm_input
-integer fid
+integer :: fid
 
 fid=1001
 open(fid,file=trim(fnm_input),status="old")
 
 call string_conf(fid,1,'OUTPUT_ROOT',2,pnm_out)
-call string_conf(fid,1,'SEISMOINFO_ROOT',2,pnm_seismoinfo)
+call string_conf(fid,1,'STATION_ROOT',2,pnm_station)
 !-- log file --
 call string_conf(fid,1,'fnm_log',2,fnm_log)
 
@@ -100,7 +101,7 @@ call string_conf(fid,1,'fnm_log',2,fnm_log)
 call string_conf(fid,1,'CHECKPOINT_ROOT',2,pnm_rest)
 call string_conf(fid,1,'checkpoint_tinv',2,rest_tinv)
 call string_conf(fid,1,'run_from_checkpoint',2,run_from_rest)
-call string_conf(fid,1,'sudden_checkpoint',2,fnm_rest_point)
+call string_conf(fid,1,'urgent_checkpoint',2,fnm_rest_point)
 nt_dyn_rest=0; nt_dyn_sync=0;
 
 close(fid)
@@ -111,7 +112,7 @@ end subroutine io_init
 subroutine io_pt_read(fnm_input)
 character (len=*),intent(in) :: fnm_input
 real(SP),dimension(SEIS_GEO) :: xyz0,dxyz
-integer fid,n,m,npt
+integer :: fid,n,m,npt
 
 fid=1001
 open(fid,file=trim(fnm_input),status="old")
@@ -151,26 +152,26 @@ pt_xyz(1:2,:)=pt_xyz(1:2,:)*PI/180.0_SP
 end subroutine io_pt_read
 subroutine alloc_pt(npt,nline)
  integer,intent(in) :: npt,nline
- allocate(pt_xyz(SEIS_GEO,npt))
- allocate(pt_id (       2,npt))
- allocate(num_line_pt(nline))
+ allocate(pt_xyz(SEIS_GEO,npt)); pt_xyz=0.0
+ allocate(pt_id (       2,npt)); pt_id =0
+ allocate(num_line_pt(nline));   num_line_pt=0
 end subroutine alloc_pt
 
 subroutine io_pt_import
-integer n
+integer :: n
 character (len=SEIS_STRLEN) :: filenm
-filenm= get_fnm_seismoinfo(pnm_seismoinfo,thisid(1),thisid(2),thisid(3))
+filenm= get_fnm_station(pnm_station,thisid(1),thisid(2),thisid(3))
 call nfseis_diminfo(trim(filenm),'num_pt',num_pt)
 call nfseis_attget(trim(filenm),'tinv',pt_tinv)
 if (num_pt>0) then
    allocate(pt_indx(SEIS_GEO,num_pt))
    call nfseis_varget(trim(filenm),'indx', pt_indx, &
         (/1,1/),(/SEIS_GEO,num_pt/),(/1,1/))
-do n=1,num_pt
-   pt_indx(1,n)=inn_i(pt_indx(1,n))
-   pt_indx(2,n)=inn_j(pt_indx(2,n))
-   pt_indx(3,n)=inn_k(pt_indx(3,n))
-end do
+!do n=1,num_pt
+!   pt_indx(1,n)=inn_i(pt_indx(1,n))
+!   pt_indx(2,n)=inn_j(pt_indx(2,n))
+!   pt_indx(3,n)=inn_k(pt_indx(3,n))
+!end do
 end if
 end subroutine io_pt_import
 
@@ -179,7 +180,7 @@ end subroutine io_pt_import
 subroutine io_snap_read(fnm_input)
 character (len=*),intent(in) :: fnm_input
 character (len=2) :: varnm
-integer fid,n,m
+integer :: fid,n,m
 
 fid=1001
 open(fid,file=trim(fnm_input),status="old")
@@ -204,7 +205,7 @@ close(fid)
 end subroutine io_snap_read
 
 subroutine alloc_snap(nsnap)
-  integer nsnap
+  integer,intent(in) :: nsnap
   allocate(snap_gsubs(SEIS_GEO,nsnap))
   allocate(snap_gsube(SEIS_GEO,nsnap))
   allocate(snap_gsubt(SEIS_GEO,nsnap))
@@ -227,7 +228,8 @@ subroutine alloc_snap(nsnap)
   allocate(sgt_out(nsnap)); sgt_out=.false.
 end subroutine alloc_snap
 
-subroutine io_snap_locate
+subroutine io_snap_locate(n_i,n_j,n_k)
+integer,intent(in) :: n_i,n_j,n_K
 integer,dimension(SEIS_GEO) :: subs,subc,subt,sube
 integer,dimension(SEIS_GEO) :: gsubs,gsube
 integer n
@@ -246,12 +248,12 @@ if (      subs(1)<=ngi2 .and. sube(1)>=ngi1 &
    snap_gsubs(:,n)=gsubs
    snap_gsube(:,n)=gsube
    snap_gsubc(:,n)=subc
-   snap_subs(1,n)=swmpi_locli(subs(1),thisid(1))
-   snap_subs(2,n)=swmpi_loclj(subs(2),thisid(2))
-   snap_subs(3,n)=swmpi_loclk(subs(3),thisid(3))
-   snap_sube(1,n)=swmpi_locli(sube(1),thisid(1))
-   snap_sube(2,n)=swmpi_loclj(sube(2),thisid(2))
-   snap_sube(3,n)=swmpi_loclk(sube(3),thisid(3))
+   snap_subs(1,n)=swmpi_locli(subs(1),n_i)
+   snap_subs(2,n)=swmpi_loclj(subs(2),n_j)
+   snap_subs(3,n)=swmpi_loclk(subs(3),n_k)
+   snap_sube(1,n)=swmpi_locli(sube(1),n_i)
+   snap_sube(2,n)=swmpi_loclj(sube(2),n_j)
+   snap_sube(3,n)=swmpi_loclk(sube(3),n_k)
    snap_subc(:,n)=subc
 end if
 end do
@@ -343,7 +345,7 @@ integer,intent(in) :: ntime
 real(SP),dimension(:,:,:),intent(in) :: Txx,Tyy,Tzz,Txy,Txz,Tyz,Vx,Vy,Vz
 integer,dimension(SEIS_GEO) :: subs,subc,subt
 character (len=SEIS_STRLEN) :: filenm
-integer ierr,fid,n
+integer :: fid,n,ierr,ncid,vid(3),sid(6)
   fid=5001
 if (mod(ntime,10)==0) then
 if (masternode) then
@@ -352,12 +354,11 @@ if (masternode) then
     call swmpi_except("io_rest_export: error when open "//trim(fnm_rest_point))
   read(fid,*) nt_dyn_rest, nt_dyn_sync,nt_dyn_new
   close(fid)
-  close(fid)
 end if
   call MPI_BCAST(nt_dyn_rest,1,MPI_INTEGER,0,SWMPI_COMM,ierr)
   call MPI_BCAST(nt_dyn_sync,1,MPI_INTEGER,0,SWMPI_COMM,ierr)
   call MPI_BCAST(nt_dyn_new ,1,MPI_INTEGER,0,SWMPI_COMM,ierr)
-  if (nt_dyn_new>nt) call reset_nt(nt_dyn_new)
+  if (nt_dyn_new>ntime) call reset_nt(nt_dyn_new)
 end if
 
 if (ntime==nt_dyn_rest .or. ntime==nt_dyn_sync) then
@@ -373,32 +374,32 @@ end if
 if (ntime/=nt_dyn_rest .and. mod(ntime,rest_tinv)/=0) return
 
   subs=(/ nx1,ny1,nz1 /); subc=(/ nx,ny,nz /); subt=(/ 1,1,1 /)
-  fnm_rest='rest_t'//trim(io_out_pattern(ntime,5))//'.nc'
-  filenm=swmpi_rename_fnm(pnm_rest,fnm_rest)
-  call nfseis_data_create( filenm,nx,ny,nz, &
+  filenm=get_fnm_rest(pnm_rest,ntime,thisid(1),thisid(2),thisid(3))
+  call nfseis_grid3d_def(filenm,nx,ny,nz,ncid, &
        "Restart file generated by seis3d_wave" )
-  call nfseis_data_addvar(filenm,'Vx')
-  call nfseis_data_addvar(filenm,'Vy')
-  call nfseis_data_addvar(filenm,'Vz')
-  call nfseis_data_addvar(filenm,'Txx')
-  call nfseis_data_addvar(filenm,'Tyy')
-  call nfseis_data_addvar(filenm,'Tzz')
-  call nfseis_data_addvar(filenm,'Txy')
-  call nfseis_data_addvar(filenm,'Txz')
-  call nfseis_data_addvar(filenm,'Tyz')
-  call nfseis_varput( filenm,'Vx', Vx, subs,subc,subt)
-  call nfseis_varput( filenm,'Vy', Vy, subs,subc,subt)
-  call nfseis_varput( filenm,'Vz', Vz, subs,subc,subt)
-  call nfseis_varput( filenm,'Txx',Txx,subs,subc,subt)
-  call nfseis_varput( filenm,'Tyy',Tyy,subs,subc,subt)
-  call nfseis_varput( filenm,'Tzz',Tzz,subs,subc,subt)
-  call nfseis_varput( filenm,'Txy',Txy,subs,subc,subt)
-  call nfseis_varput( filenm,'Txz',Txz,subs,subc,subt)
-  call nfseis_varput( filenm,'Tyz',Tyz,subs,subc,subt)
+  call nfseis_grid3d_defvar(ncid,'Vx' ,vid(1))
+  call nfseis_grid3d_defvar(ncid,'Vy' ,vid(2))
+  call nfseis_grid3d_defvar(ncid,'Vz' ,vid(3))
+  call nfseis_grid3d_defvar(ncid,'Txx',sid(1))
+  call nfseis_grid3d_defvar(ncid,'Tyy',sid(2))
+  call nfseis_grid3d_defvar(ncid,'Tzz',sid(3))
+  call nfseis_grid3d_defvar(ncid,'Txy',sid(4))
+  call nfseis_grid3d_defvar(ncid,'Txz',sid(5))
+  call nfseis_grid3d_defvar(ncid,'Tyz',sid(6))
+  call nfseis_grid3d_enddef(ncid)
+  call nfseis_put(ncid,vid(1),Vx, subs,subc,subt)
+  call nfseis_put(ncid,vid(2),Vy, subs,subc,subt)
+  call nfseis_put(ncid,vid(3),Vz, subs,subc,subt)
+  call nfseis_put(ncid,sid(1),Txx,subs,subc,subt)
+  call nfseis_put(ncid,sid(2),Tyy,subs,subc,subt)
+  call nfseis_put(ncid,sid(3),Tzz,subs,subc,subt)
+  call nfseis_put(ncid,sid(4),Txy,subs,subc,subt)
+  call nfseis_put(ncid,sid(5),Txz,subs,subc,subt)
+  call nfseis_put(ncid,sid(6),Tyz,subs,subc,subt)
+  call nfseis_close(ncid)
 
   if (ntime-rest_tinv>0) then
-     fnm_rest='rest_t'//trim(io_out_pattern(ntime-rest_tinv,5))//'.nc'
-     filenm=swmpi_rename_fnm(pnm_rest,fnm_rest)
+     filenm=get_fnm_rest(pnm_rest,ntime-rest_tinv,thisid(1),thisid(2),thisid(3))
      call io_delete(filenm)
   end if
 end subroutine io_rest_export
@@ -412,8 +413,7 @@ if (run_from_rest==0) then
 else
   ntime=run_from_rest
   subs=(/ nx1,ny1,nz1 /); subc=(/ nx,ny,nz /); subt=(/ 1,1,1 /)
-  fnm_rest='rest_t'//trim(io_out_pattern(run_from_rest,5))//'.nc'
-  filenm=swmpi_rename_fnm(pnm_rest,fnm_rest)
+  filenm=get_fnm_rest(pnm_rest,ntime,thisid(1),thisid(2),thisid(3))
   call nfseis_varget( filenm,'Vx', Vx, subs,subc,subt)
   call nfseis_varget( filenm,'Vy', Vy, subs,subc,subt)
   call nfseis_varget( filenm,'Vz', Vz, subs,subc,subt)
@@ -428,21 +428,39 @@ end subroutine io_rest_import
 !---------------------------------------------------------------------------
 
 subroutine io_seismo_init
+character (len=SEIS_STRLEN) :: filenm
 if (num_pt<=0) return
+filenm=get_fnm_seismo(pnm_out,thisid(1),thisid(2),thisid(3))
 if (run_from_rest==0) then
-   call nfseis_seismo_init(                                             &
-        get_fnm_seismo(pnm_out,thisid(1),thisid(2),thisid(3)),          &
-        num_pt=num_pt,                                                  &
-        ncid=pt_ncid,tid=pt_tid,vxid=pt_vxid,vyid=pt_vyid,vzid=pt_vzid)
+   call nfseis_seismo_def(filenm,num_pt,pt_ncid,pt_tid,title="seismograms")
+   call nfseis_seismo_defvar(pt_ncid,'Vx',pt_vid(1))
+   call nfseis_seismo_defvar(pt_ncid,'Vy',pt_vid(2))
+   call nfseis_seismo_defvar(pt_ncid,'Vz',pt_vid(3))
+   call nfseis_seismo_defvar(pt_ncid,'Txx',pt_sid(1))
+   call nfseis_seismo_defvar(pt_ncid,'Tyy',pt_sid(2))
+   call nfseis_seismo_defvar(pt_ncid,'Tzz',pt_sid(3))
+   call nfseis_seismo_defvar(pt_ncid,'Txy',pt_sid(4))
+   call nfseis_seismo_defvar(pt_ncid,'Txz',pt_sid(5))
+   call nfseis_seismo_defvar(pt_ncid,'Tyz',pt_sid(6))
+   call nfseis_seismo_enddef(pt_ncid)
 else
-   call nfseis_seismo_reinit(                                           &
-        get_fnm_seismo(pnm_out,thisid(1),thisid(2),thisid(3)),          &
-        ncid=pt_ncid,tid=pt_tid,vxid=pt_vxid,vyid=pt_vyid,vzid=pt_vzid)
+   call nfseis_open(filenm,pt_ncid)
+   call nfseis_inq_varid(pt_ncid,'time',pt_tid)
+   call nfseis_inq_varid(pt_ncid,'Vx',pt_vid(1))
+   call nfseis_inq_varid(pt_ncid,'Vy',pt_vid(2))
+   call nfseis_inq_varid(pt_ncid,'Vz',pt_vid(3))
+   call nfseis_inq_varid(pt_ncid,'Txx',pt_sid(1))
+   call nfseis_inq_varid(pt_ncid,'Tyy',pt_sid(2))
+   call nfseis_inq_varid(pt_ncid,'Tzz',pt_sid(3))
+   call nfseis_inq_varid(pt_ncid,'Txy',pt_sid(4))
+   call nfseis_inq_varid(pt_ncid,'Txz',pt_sid(5))
+   call nfseis_inq_varid(pt_ncid,'Tyz',pt_sid(6))
 end if
 end subroutine io_seismo_init
 
-subroutine io_seismo_put(Vx,Vy,Vz,ntime)
+subroutine io_seismo_put(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime)
 real(SP),dimension(:,:,:),intent(in) :: Vx,Vy,Vz
+real(SP),dimension(:,:,:),intent(in) :: Txx,Tyy,Tzz,Txy,Txz,Tyz
 integer,intent(in) :: ntime
 real(SP) :: t
 integer i,j,k,n,m,ierr
@@ -455,15 +473,26 @@ m=ntime/pt_tinv
 do n=1,num_pt
    i=pt_indx(1,n);j=pt_indx(2,n);k=pt_indx(3,n)
    call nfseis_put(pt_ncid,pt_tid,t,(/m/),(/1/),(/1/))
-   call nfseis_put(pt_ncid,pt_vxid,Vx(i,j,k), &
+   call nfseis_put(pt_ncid,pt_vid(1),Vx(i,j,k), &
         (/n,m/),(/1,1/),(/1,1/))
-   call nfseis_put(pt_ncid,pt_vyid,Vy(i,j,k), &
+   call nfseis_put(pt_ncid,pt_vid(2),Vy(i,j,k), &
         (/n,m/),(/1,1/),(/1,1/))
-   call nfseis_put(pt_ncid,pt_vzid,Vz(i,j,k), &
+   call nfseis_put(pt_ncid,pt_vid(3),Vz(i,j,k), &
+        (/n,m/),(/1,1/),(/1,1/))
+   call nfseis_put(pt_ncid,pt_sid(1),Txx(i,j,k), &
+        (/n,m/),(/1,1/),(/1,1/))
+   call nfseis_put(pt_ncid,pt_sid(2),Tyy(i,j,k), &
+        (/n,m/),(/1,1/),(/1,1/))
+   call nfseis_put(pt_ncid,pt_sid(3),Tzz(i,j,k), &
+        (/n,m/),(/1,1/),(/1,1/))
+   call nfseis_put(pt_ncid,pt_sid(4),Txy(i,j,k), &
+        (/n,m/),(/1,1/),(/1,1/))
+   call nfseis_put(pt_ncid,pt_sid(5),Txz(i,j,k), &
+        (/n,m/),(/1,1/),(/1,1/))
+   call nfseis_put(pt_ncid,pt_sid(6),Tyz(i,j,k), &
         (/n,m/),(/1,1/),(/1,1/))
 end do
 end if
-
 if (mod(ntime,pt_tinv*100)==0) ierr=nf90_sync(pt_ncid)
 end subroutine io_seismo_put
 
@@ -484,7 +513,7 @@ integer,dimension(SEIS_GEO) :: isubs,isube
 integer,dimension(SEIS_GEO+1) :: startput,countput,strideput
 character (len=SEIS_STRLEN) :: filenm
 real(SP) :: t
-integer n,n1
+integer :: n,n1
 t=ntime*stept
 do n=1,num_snap
    if (.not. snap_ishere(n)) cycle
@@ -499,28 +528,28 @@ do n=1,num_snap
 if ( n1==0 ) then
    if (vel_out(n)) then
    filenm=get_fnm_snapnode(pnm_out,'vel_',n,ntime,thisid(1),thisid(2),thisid(3))
-   call nfseis_snap_header(filenm,vel_ncid(n),vel_tid(n),stept*snap_tinv(n),  &
+   call nfseis_snap_def(filenm,vel_ncid(n),vel_tid(n),stept*snap_tinv(n),     &
           snap_gsubs(:,n), snap_gsubc(:,n), snap_gsubt(:,n), snap_gsube(:,n), &
           isubs, subc, subt, isube,                                           &
           "snap of velocity feilds")
-   call nfseis_snap_addvar(vel_ncid(n),'Vx',vel_vid(1,n))
-   call nfseis_snap_addvar(vel_ncid(n),'Vy',vel_vid(2,n))
-   call nfseis_snap_addvar(vel_ncid(n),'Vz',vel_vid(3,n))
+   call nfseis_snap_defvar(vel_ncid(n),'Vx',vel_vid(1,n))
+   call nfseis_snap_defvar(vel_ncid(n),'Vy',vel_vid(2,n))
+   call nfseis_snap_defvar(vel_ncid(n),'Vz',vel_vid(3,n))
    call nfseis_snap_enddef(vel_ncid(n))
    snap_oflag(n)=.true.
    end if
    if (sgt_out(n)) then
    filenm=get_fnm_snapnode(pnm_out,'sgt_',n,ntime,thisid(1),thisid(2),thisid(3))
-   call nfseis_snap_header(filenm,sgt_ncid(n),sgt_tid(n),stept*snap_tinv(n),  &
+   call nfseis_snap_def(filenm,sgt_ncid(n),sgt_tid(n),stept*snap_tinv(n),     &
           snap_gsubs(:,n), snap_gsubc(:,n), snap_gsubt(:,n), snap_gsube(:,n), &
           isubs, subc, subt, isube,                                           &
           "snap of stress feilds")
-   call nfseis_snap_addvar(sgt_ncid(n),'Txx',sgt_vid(1,n))
-   call nfseis_snap_addvar(sgt_ncid(n),'Tyy',sgt_vid(2,n))
-   call nfseis_snap_addvar(sgt_ncid(n),'Tzz',sgt_vid(3,n))
-   call nfseis_snap_addvar(sgt_ncid(n),'Txy',sgt_vid(4,n))
-   call nfseis_snap_addvar(sgt_ncid(n),'Txz',sgt_vid(5,n))
-   call nfseis_snap_addvar(sgt_ncid(n),'Tyz',sgt_vid(6,n))
+   call nfseis_snap_defvar(sgt_ncid(n),'Txx',sgt_vid(1,n))
+   call nfseis_snap_defvar(sgt_ncid(n),'Tyy',sgt_vid(2,n))
+   call nfseis_snap_defvar(sgt_ncid(n),'Tzz',sgt_vid(3,n))
+   call nfseis_snap_defvar(sgt_ncid(n),'Txy',sgt_vid(4,n))
+   call nfseis_snap_defvar(sgt_ncid(n),'Txz',sgt_vid(5,n))
+   call nfseis_snap_defvar(sgt_ncid(n),'Tyz',sgt_vid(6,n))
    call nfseis_snap_enddef(sgt_ncid(n))
    snap_oflag(n)=.true.
    end if
@@ -677,8 +706,8 @@ end do !read
 close(fid)
 end subroutine read_nc_list
 
-function seismo_on_this(pnm_info,id,indx,n_i,n_j,n_k,npt) result(isIn)
-character (len=*) :: pnm_info
+function seismo_on_this(pnm_sta,id,indx,n_i,n_j,n_k,npt) result(isIn)
+character (len=*) :: pnm_sta
 integer id,indx,n_i,n_j,n_k,npt
 logical isIn
 
@@ -687,7 +716,7 @@ character (len=SEIS_STRLEN) :: filenm
 integer,allocatable :: ids(:,:)
 
 isIn=.false.
-filenm= get_fnm_seismoinfo(pnm_info,n_i,n_j,n_k)
+filenm= get_fnm_station(pnm_sta,n_i,n_j,n_k)
 call nfseis_diminfo(trim(filenm),'num_pt',num_pt)
 if (num_pt>0) then
    allocate(ids(2,num_pt))
@@ -773,15 +802,15 @@ end do
 end subroutine retrieve_snap_time
 
 !---------------------------------------------------------------------------
-function get_fnm_seismoinfo(pnm_info,n_i,n_j,n_k) result(filenm)
-  character (len=*),intent(in) :: pnm_info
+function get_fnm_station(pnm_sta,n_i,n_j,n_k) result(filenm)
+  character (len=*),intent(in) :: pnm_sta
   integer,intent(in) :: n_i,n_j,n_k
   character (len=SEIS_STRLEN) :: filenm
-  filenm=trim(pnm_info)                         &
-       //'/'//'seismoinfo'                      &
-       //'_'//trim(set_mpi_subfix(n_i,n_j,n_k)) &
+  filenm=trim(pnm_sta)                    &
+       //'/'//'station'                   &
+       //'_'//set_mpi_subfix(n_i,n_j,n_k) &
        //'.nc'
-end function get_fnm_seismoinfo
+end function get_fnm_station
 function get_fnm_seismo(pnm,n_i,n_j,n_k) result(filenm)
   character (len=*),intent(in) :: pnm
   integer,intent(in) :: n_i,n_j,n_k
@@ -813,6 +842,15 @@ function get_fnm_snapnode_n(pnm,prefix,id,n0,n_i,n_j,n_k) result(filenm)
        //'_n'//trim(io_out_pattern(n0,5))       &
        //'.nc'
 end function get_fnm_snapnode_n
+function get_fnm_rest(pnm,ntime,n_i,n_j,n_k) result(filenm)
+  integer,intent(in) :: ntime,n_i,n_j,n_k
+  character (len=*),intent(in) :: pnm
+  character (len=SEIS_STRLEN) :: filenm
+  filenm=trim(pnm)                               &
+       //'rest_t'//trim(io_out_pattern(ntime,5)) &
+       //'_'//trim(set_mpi_subfix(n_i,n_j,n_k))  &
+       //'.nc'
+end function get_fnm_rest
 
 !function set_mpi_subfix(i,j,k) result(filenm)
 !    integer i,j,k
