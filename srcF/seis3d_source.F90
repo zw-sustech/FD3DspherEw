@@ -27,11 +27,15 @@ use mpi_mod
 implicit none
 
 real(SP) :: src_hyper_height
+logical,allocatable :: force_flag(:),moment_flag(:)
+
 character (len=SEIS_STRLEN) :: filenm
-real,allocatable :: gx(:),gy(:),gz(:)
-integer :: nloc(1)
-integer :: n_i,n_j,n_k,n1,n2,n3
-integer :: n,m,nfrc,nmom,gi,gj,gk
+integer :: p(1)
+real(SP) :: xmin,xmax,ymin,ymax,zmin,zmax
+real(SP) :: x0,y0,z0
+integer :: i,j,k,n_i,n_j,n_k
+integer :: n,m,npt,nfrc,nmom,gi,gj,gk,si,sj,sk
+logical :: iflag
 integer :: ncid,indxid,axisid,t0id,stftid,stffid
 integer :: fxid,fyid,fzid,mxxid,myyid,mzzid,mxyid,mxzid,myzid
 
@@ -47,77 +51,101 @@ call src_fnm_init(fnm_conf)
 ! load grid
 call grid_alloc
 
-n1=swmpi_globi(nx2,dims(1)-1)
-n2=swmpi_globj(ny2,dims(2)-1)
-n3=swmpi_globk(nz2,dims(3)-1)
-allocate(gx(nx1:n1)); gx=0.0
-allocate(gy(ny1:n2)); gy=0.0
-allocate(gz(nz1:n3)); gz=0.0
-
-do n_i=0,dims(1)-1
-   n_j=0; n_k=0
-   call swmpi_change_fnm(n_i,n_j,n_k)
-   call swmpi_set_gindx(n_i,n_j,n_k)
-   call grid_import
-   gx(ngx1:ngx2)=x
-end do
-
-do n_j=0,dims(2)-1
-   n_i=0; n_k=0
-   call swmpi_change_fnm(n_i,n_j,n_k)
-   call swmpi_set_gindx(n_i,n_j,n_k)
-   call grid_import
-   gy(ngy1:ngy2)=y
-end do
-
-do n_k=0,dims(3)-1
-   n_i=0; n_j=0
-   call swmpi_change_fnm(n_i,n_j,n_k)
-   call swmpi_set_gindx(n_i,n_j,n_k)
-   call grid_import
-   gz(ngz1:ngz2)=z
-end do
-
 ! source
 call read_src_para(fnm_src_conf)
 
 ! find src index
+do n_i=0,dims(1)-1
+do n_j=0,dims(2)-1
+do n_k=0,dims(3)-1
+   write(*,"(i10,2(i2),a,3(i2))") n_i,n_j,n_k, ' of ',dims
+   call swmpi_change_fnm(n_i,n_j,n_k)
+   call swmpi_set_gindx(n_i,n_j,n_k)
+   call grid_import(n_i,n_j,n_k)
+
+   xmin=minval(x); xmax=maxval(x)
+   ymin=minval(y); ymax=maxval(y)
+   zmin=minval(z); zmax=maxval(z)
+   print *, 'xmin=',xmin/pi*180,'xmax=',xmax/pi*180
+   print *, 'ymin=',ymin/pi*180,'ymax=',ymax/pi*180
+   print *, 'zmin=',zmin,'zmax=',zmax
+
 !force
-do n=1,num_force
-   nloc=minloc(abs(force_axis(1,n)-gx)); force_indx(1,n)=loct_i(nloc(1))
-   nloc=minloc(abs(force_axis(2,n)-gy)); force_indx(2,n)=loct_j(nloc(1))
-   nloc=minloc(abs(force_axis(3,n)-gz)); force_indx(3,n)=loct_k(nloc(1))
-   if (force_axis(3,n)>src_hyper_height) force_indx(3,n)=n3-LenFD
-   gi=force_indx(1,n);gj=force_indx(2,n); gk=force_indx(3,n)
-   if (     gi<ni1 .or. gi>n1-LenFD  &
-       .or. gj<nj1 .or. gj>n2-LenFD  &
-       .or. gk<nk1 .or. gk>n3-LenFD ) then
-      print *, 'force source out the model'
-      print *, 'source point is ',force_axis(:,n)
-      print *, 'x scale of model:',gx(ni1),gx(n1-LenFD)
-      print *, 'y scale of model:',gy(nj1),gy(n2-LenFD)
-      print *, 'z scale of model:',gz(nk1),gz(n3-LenFD)
-      stop 1
+do npt=1,num_force
+   if (force_flag(npt)) cycle
+
+   x0=force_axis(1,npt);y0=force_axis(2,npt);z0=force_axis(3,npt)
+   if (x0<xmin .or. x0>xmax .or. y0<ymin .or. y0>ymax) cycle
+
+   p=minloc(abs(x-x0)); i=loct_i(p(1))
+   p=minloc(abs(y-y0)); j=loct_j(p(1))
+
+   if( z0 >=zmin .and. z0 <=zmax ) then
+      p=minloc(abs(z-z0)); k=loct_k(p(1))
+   elseif (z0>src_hyper_height .and. n_k==dims(3)-1) then
+      k=nk2; z0=z(k)
+   else
+      cycle
    end if
-end do
+
+   if ( i<ni1 .or. i>ni2 .or. j<nj1 .or. j>nj2 .or. k<nk1 .or. k>nk2 ) cycle
+
+   write(*,"(i10,a,i10,2(i2),a,3(i2))") npt, ' in', n_i,n_j,n_k, ' of ',dims
+   force_flag(npt)=.true.
+   gi=swmpi_globi(i,n_i); gj=swmpi_globj(j,n_j); gk=swmpi_globk(k,n_k)
+   force_indx(:,npt)=(/ gi,gj,gk /)
+   force_axis(3,npt)=z0
+end do !n
+
 !moment
-do n=1,num_moment
-   nloc=minloc(abs(moment_axis(1,n)-gx)); moment_indx(1,n)=loct_i(nloc(1))
-   nloc=minloc(abs(moment_axis(2,n)-gy)); moment_indx(2,n)=loct_j(nloc(1))
-   nloc=minloc(abs(moment_axis(3,n)-gz)); moment_indx(3,n)=loct_k(nloc(1))
-   if (moment_axis(3,n)>src_hyper_height) moment_indx(3,n)=n3-LenFD
-   gi=moment_indx(1,n);gj=moment_indx(2,n); gk=moment_indx(3,n)
-   if (     gi<ni1 .or. gi>n1-LenFD  &
-       .or. gj<nj1 .or. gj>n2-LenFD  &
-       .or. gk<nk1 .or. gk>n3-LenFD ) then
-      print *, 'moment source out the model'
-      print *, 'source point is ',moment_axis(:,n)
-      print *, 'x scale of model:',gx(ni1),gx(n1-LenFD)
-      print *, 'y scale of model:',gy(nj1),gy(n2-LenFD)
-      print *, 'z scale of model:',gz(nk1),gz(n3-LenFD)
-      stop 1
+do npt=1,num_moment
+   if (moment_flag(npt)) cycle
+
+   x0=moment_axis(1,npt);y0=moment_axis(2,npt);z0=moment_axis(3,npt)
+   if (x0<xmin .or. x0>xmax .or. y0<ymin .or. y0>ymax) cycle
+
+   p=minloc(abs(x-x0)); i=loct_i(p(1))
+   p=minloc(abs(y-y0)); j=loct_j(p(1))
+
+   if( z0 >=zmin .and. z0 <=zmax ) then
+      p=minloc(abs(z-z0)); k=loct_k(p(1))
+   elseif (z0>src_hyper_height .and. n_k==dims(3)-1) then
+      k=nk2; z0=z(k)
+   else
+      cycle
+   end if
+
+   if ( i<ni1 .or. i>ni2 .or. j<nj1 .or. j>nj2 .or. k<nk1 .or. k>nk2 ) cycle
+
+   write(*,"(i10,a,i10,2(i2),a,3(i2))") npt, ' in', n_i,n_j,n_k, ' of ',dims
+   moment_flag(npt)=.true.
+   gi=swmpi_globi(i,n_i); gj=swmpi_globj(j,n_j); gk=swmpi_globk(k,n_k)
+   moment_indx(:,npt)=(/ gi,gj,gk /)
+   moment_axis(3,npt)=z0
+end do !n
+
+end do !n_k
+end do !n_j
+end do !n_i
+
+! check
+iflag=.false.
+do n=1,num_force
+   if ( .not. force_flag(n)) then
+      iflag=.true.
+      print *, 'n=',n,'loct=',force_axis(:,n),'indx=',force_indx(:,n)
    end if
 end do
+do n=1,num_moment
+   if ( .not. moment_flag(n)) then
+      iflag=.true.
+      print *, 'n=',n,'loct=',moment_axis(:,n),'indx=',moment_indx(:,n)
+   end if
+end do
+if (iflag) then
+   print *, 'there are some source points out of the computational domain'
+   stop 1
+end if
 
 ! distribute to thread
 do n_i=0,dims(1)-1
@@ -142,7 +170,7 @@ do n_k=0,dims(3)-1
           .and. gk>=ngz1 .and. gk<=ngz2 ) nmom=nmom+1
    end do
 
-   filenm=get_fnm_srcnode(n_i,n_j,n_k)
+   filenm=src_fnm_get(n_i,n_j,n_k)
    call srcnode_skel(filenm,nfrc,ntwin_force,nmom,ntwin_moment)
    call nfseis_open(filenm,ncid)
   
@@ -170,10 +198,10 @@ do n_k=0,dims(3)-1
             call nfseis_put(ncid,fzid,ForceZ(:,n),(/1,m/),(/ntwin_force,1/),(/1,1/))
             call nfseis_put(ncid,axisid,force_axis(:,n),(/1,m/),(/SEIS_GEO,1/),(/1,1/))
             call nfseis_put(ncid,t0id,force_t0(n),(/m/),(/1/),(/1/))
-            call nfseis_put(ncid,indxid,           &
-                 (/ out_i(swmpi_locli(gi,n_i)),    &
-                    out_j(swmpi_loclj(gj,n_j)),    &
-                    out_k(swmpi_loclk(gk,n_k)) /), &
+            call nfseis_put(ncid,indxid,         &
+                 (/ swmpi_locli(gi,n_i),         &
+                    swmpi_loclj(gj,n_j),         &
+                    swmpi_loclk(gk,n_k) /),      &
                  (/1,m/),(/SEIS_GEO,1/),(/1,1/))
          end if
       end do
@@ -208,10 +236,10 @@ do n_k=0,dims(3)-1
             call nfseis_put(ncid,myzid,MomTyz(:,n),(/1,m/),(/ntwin_moment,1/),(/1,1/))
             call nfseis_put(ncid,axisid,moment_axis(:,n),(/1,m/),(/SEIS_GEO,1/),(/1,1/))
             call nfseis_put(ncid,t0id,moment_t0(n),(/m/),(/1/),(/1/))
-            call nfseis_put(ncid,indxid,           &
-                 (/ out_i(swmpi_locli(gi,n_i)),    &
-                    out_j(swmpi_loclj(gj,n_j)),    &
-                    out_k(swmpi_loclk(gk,n_k)) /), &
+            call nfseis_put(ncid,indxid,         &
+                 (/ swmpi_locli(gi,n_i),         &
+                    swmpi_loclj(gj,n_j),         &
+                    swmpi_loclk(gk,n_k) /),      &
                  (/1,m/),(/SEIS_GEO,1/),(/1,1/))
          end if
       end do
@@ -221,14 +249,34 @@ end do
 end do
 end do
 
-deallocate(gx)
-deallocate(gy)
-deallocate(gz)
 call src_destroy
+call dealloc_local
 
 !----------------------------------------------------------------------!
 contains
 !----------------------------------------------------------------------!
+
+!*************************************************************************
+!*                 PART-I  src alloc and dealloc                         *
+!*************************************************************************
+
+subroutine alloc_force(npt)
+  integer,intent(in) :: npt
+  allocate(force_flag(npt)); force_flag=.false.
+end subroutine alloc_force
+subroutine alloc_moment(npt)
+  integer,intent(in) :: npt
+  allocate(moment_flag(npt)); moment_flag=.false.
+end subroutine alloc_moment
+
+subroutine dealloc_local
+  if (allocated(force_flag)) deallocate(force_flag)
+  if (allocated(moment_flag)) deallocate(moment_flag)
+end subroutine dealloc_local
+
+!*************************************************************************
+!*                    PART-II  src init and distrib                      *
+!*************************************************************************
 
 subroutine read_src_para(fnm_conf)
 character (len=*),intent(in) :: fnm_conf
@@ -251,11 +299,12 @@ if (num_force>=1) then
    call string_conf(fid,1,"force_stf_type",2,stf_type)
    frcstf_id=stf_name2id(trim(stf_type))
    call src_alloc_force(num_force,ntwin_force)
+   call alloc_force(num_force)
    do m=1,ntwin_force
       call string_conf(fid,1,"force_stf_timefactor",m+1,frcstf_time(m))
       call string_conf(fid,1,"force_stf_freqfactor",m+1,frcstf_freq(m))
    end do
-   call string_conf(fid,1,"<Force",2,str)
+   call string_conf(fid,1,"<anchor_force>",1,str)
    do n=1,num_force
    do m=1,ntwin_force
       read(fid,*) force_axis(:,n),force_t0(n), &
@@ -275,12 +324,13 @@ if (num_moment>=1) then
    call string_conf(fid,1,"moment_stf_type",2,stf_type)
    momstf_id=stf_name2id(trim(stf_type))
    call src_alloc_moment(num_moment,ntwin_moment)
+   call alloc_moment(num_moment)
    do m=1,ntwin_moment
       call string_conf(fid,1,"moment_stf_timefactor",m+1,momstf_time(m))
       call string_conf(fid,1,"moment_stf_freqfactor",m+1,momstf_freq(m))
    end do
    call string_conf(fid,1,"moment_mech_input",2,mommech)
-   call string_conf(fid,1,"<Moment",2,str)
+   call string_conf(fid,1,"<anchor_moment>",1,str)
    if (trim(mommech)=='moment') then
       do n=1,num_moment
       do m=1,ntwin_moment
@@ -334,7 +384,7 @@ M23=-(cos(dip_pi)*cos(rake_pi)*sin(strike_pi)       &
          -cos(2.0_DP*dip_pi)*sin(rake_pi)*cos(strike_pi))
 !to spherical
 Mxx= M11; Myy=M22; Mzz=M33
-Mxy=-M12; Mxz=M13; Myz=-M23
+Mxy= -M12; Mxz=M13; Myz=-M23
 end subroutine angle2moment
 
 !----------------------------------------------------------------
