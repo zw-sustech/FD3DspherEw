@@ -253,6 +253,7 @@ call media_destroy
 call grid_dealloc
 
 #ifdef MediaMPI
+call MPI_BARRIER(SWMPI_COMM,ierr)
 call MPI_FINALIZE(ierr)
 #endif
 
