@@ -375,7 +375,7 @@ M11=-(sin(dip_pi)*cos(rake_pi)*sin(2.0_DP*strike_pi)   &
 M22=sin(dip_pi)*cos(rake_pi)*sin(2.0_DP*strike_pi)     &
          -sin(2.0_DP*dip_pi)*sin(rake_pi)*cos(strike_pi)**2
 !Mzz=sin(2.0*dip_pi)*sin(rake_pi)
-M33=-(Mxx+Myy)
+M33=-(M11+M22)
 M12=sin(dip_pi)*cos(rake_pi)*cos(2.0_DP*strike_pi)     &
          +0.5_DP*sin(2.0_DP*dip_pi)*sin(rake_pi)*sin(2.0_DP*strike_pi)
 M13=-(cos(dip_pi)*cos(rake_pi)*cos(strike_pi)       &
