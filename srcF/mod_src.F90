@@ -58,8 +58,8 @@ integer,parameter,public ::  &
 integer,public :: num_force,num_moment,ntwin_force,ntwin_moment
 integer,allocatable,public :: force_indx(:,:),moment_indx(:,:)
 real(SP),allocatable,public ::                        &
-    force_axis(:,:), force_t0(:), frcstf_time(:),frcstf_freq(:),   &
-    moment_axis(:,:),moment_t0(:),momstf_time(:),momstf_freq(:)
+    force_shift(:,:), force_t0(:), frcstf_time(:),frcstf_freq(:),   &
+    moment_shift(:,:),moment_t0(:),momstf_time(:),momstf_freq(:)
 real(SP),dimension(:,:),allocatable,public ::  &
     MomTxx,MomTyy,MomTzz,MomTxy,MomTxz,MomTyz, &
     ForceX,ForceY,ForceZ
@@ -79,7 +79,7 @@ contains
 subroutine src_alloc_moment(npt,ntw)
   integer,intent(in) :: npt,ntw
   allocate(moment_indx(SEIS_GEO,npt)); moment_indx=0
-  allocate(moment_axis(SEIS_GEO,npt)); moment_axis=0.0_SP
+  allocate(moment_shift(SEIS_GEO,npt)); moment_shift=0.0_SP
   allocate(moment_t0(npt)); moment_t0=0.0_SP
   allocate(MomTxx(ntw,npt)); MomTxx=0.0_SP
   allocate(MomTyy(ntw,npt)); MomTyy=0.0_SP
@@ -93,7 +93,7 @@ end subroutine src_alloc_moment
 subroutine src_alloc_force(npt,ntw)
   integer,intent(in) :: npt,ntw
   allocate(force_indx(SEIS_GEO,npt)); force_indx=0
-  allocate(force_axis(SEIS_GEO,npt)); force_axis=0.0_SP
+  allocate(force_shift(SEIS_GEO,npt)); force_shift=0.0_SP
   allocate(force_t0(npt)); force_t0=0.0_SP
   allocate(ForceX(ntw,npt)); ForceX=0.0_SP
   allocate(ForceY(ntw,npt)); ForceY=0.0_SP
@@ -104,7 +104,7 @@ end subroutine src_alloc_force
 
 subroutine src_destroy
   if (allocated(moment_indx)) deallocate(moment_indx)
-  if (allocated(moment_axis)) deallocate(moment_axis)
+  if (allocated(moment_shift)) deallocate(moment_shift)
   if (allocated(momstf_time)) deallocate(momstf_time)
   if (allocated(momstf_freq)) deallocate(momstf_freq)
   if (allocated(MomTxx)) deallocate(MomTxx)
@@ -114,7 +114,7 @@ subroutine src_destroy
   if (allocated(MomTxz)) deallocate(MomTxz)
   if (allocated(MomTyz)) deallocate(MomTyz)
   if (allocated( force_indx)) deallocate( force_indx)
-  if (allocated( force_axis)) deallocate( force_axis)
+  if (allocated( force_shift)) deallocate( force_shift)
   if (allocated(frcstf_time)) deallocate(frcstf_time)
   if (allocated(frcstf_freq)) deallocate(frcstf_freq)
   if (allocated(ForceX)) deallocate(ForceX)
@@ -160,7 +160,7 @@ if (num_moment>0) then
   call nfseis_varget(filenm,'Mxz',MomTxz,(/1,1/),(/ntwin_moment,num_moment/),(/1,1/))
   call nfseis_varget(filenm,'Myz',MomTyz,(/1,1/),(/ntwin_moment,num_moment/),(/1,1/))
   call nfseis_varget(filenm,'moment_indx',moment_indx,(/1,1/),(/SEIS_GEO,num_moment/),(/1,1/))
-  call nfseis_varget(filenm,'moment_axis',moment_axis,(/1,1/),(/SEIS_GEO,num_moment/),(/1,1/))
+  call nfseis_varget(filenm,'moment_shift',moment_shift,(/1,1/),(/SEIS_GEO,num_moment/),(/1,1/))
   call nfseis_varget(filenm,'moment_start_time',moment_t0,(/1/),(/num_moment/),(/1/))
   call nfseis_varget(filenm,'moment_stf_time',momstf_time,(/1/),(/ntwin_moment/),(/1/))
   call nfseis_varget(filenm,'moment_stf_freq',momstf_freq,(/1/),(/ntwin_moment/),(/1/))
@@ -178,7 +178,7 @@ if (num_force>0) then
   call nfseis_varget(filenm,'Fy',ForceY,(/1,1/),(/ntwin_force,num_force/),(/1,1/))
   call nfseis_varget(filenm,'Fz',ForceZ,(/1,1/),(/ntwin_force,num_force/),(/1,1/))
   call nfseis_varget(filenm,'force_indx',force_indx,(/1,1/),(/SEIS_GEO,num_force/),(/1,1/))
-  call nfseis_varget(filenm,'force_axis',force_axis,(/1,1/),(/SEIS_GEO,num_force/),(/1,1/))
+  call nfseis_varget(filenm,'force_shift',force_shift,(/1,1/),(/SEIS_GEO,num_force/),(/1,1/))
   call nfseis_varget(filenm,'force_start_time',force_t0,(/1/),(/num_force/),(/1/))
   call nfseis_varget(filenm,'force_stf_time',frcstf_time,(/1/),(/ntwin_force/),(/1/))
   call nfseis_varget(filenm,'force_stf_freq',frcstf_freq,(/1/),(/ntwin_force/),(/1/))
@@ -222,10 +222,9 @@ t=(ntime+tinc)*stept
 do n=1,num_moment
    si=moment_indx(1,n); sj=moment_indx(2,n); sk=moment_indx(3,n)
 #ifdef SrcSmooth
-   x0=moment_axis(1,n); y0=moment_axis(2,n); z0=moment_axis(3,n)
+   x0=moment_shift(1,n); y0=moment_shift(2,n); z0=moment_shift(3,n)
    call cal_norm_delt(normd, x0,y0,z0,                                  &
-        x(si-LenFD:si+LenFD),y(sj-LenFD:sj+LenFD),z(sk-LenFD:sk+LenFD), &
-        (x(si+1)-x(si-1))/2.0,(y(sj+1)-y(sj-1))/2.0,(z(sk+1)-z(sk-1))/2.0 )
+        real(LenFD/2.0,SP), real(LenFD/2.0,SP), real(LenFD/2.0,SP) )
    if (freenode .and. sk+LenFD>nk2)  then
       normd=normd/sum(normd(:,:,-LenFD:nk2-sk))
    end if
@@ -291,10 +290,9 @@ t=(ntime+tinc)*stept
 do n=1,num_force
    si=force_indx(1,n); sj=force_indx(2,n); sk=force_indx(3,n)
 #ifdef SrcSmooth
-   x0=force_axis(1,n); y0=force_axis(2,n); z0=force_axis(3,n)
+   x0=force_shift(1,n); y0=force_shift(2,n); z0=force_shift(3,n)
    call cal_norm_delt(normd, x0,y0,z0,                            &
-        x(si-LenFD:si+LenFD),y(sj-LenFD:sj+LenFD),z(sk-LenFD:sk+LenFD), &
-        (x(si+1)-x(si-1))/2.0,(y(sj+1)-y(sj-1))/2.0,(z(sk+1)-z(sk-1))/2.0 )
+        real(LenFD/2.0,SP), real(LenFD/2.0,SP), real(LenFD/2.0,SP) )
    if (freenode .and. sk+LenFD>nk2)  then
       normd=normd/sum(normd(:,:,-LenFD:nk2-sk))
    end if
@@ -369,9 +367,8 @@ end subroutine src_charac
 !*************************************************************************
 !*                --- source signal generator --                         *
 !*************************************************************************
-subroutine cal_norm_delt(delt,x0,y0,z0,x,y,z,rx0,ry0,rz0)
+subroutine cal_norm_delt(delt,x0,y0,z0,rx0,ry0,rz0)
   real(SP),dimension(-LenFD:LenFD,-LenFD:LenFD,-LenFD:LenFD),intent(out) :: delt
-  real(SP),dimension(-LenFD:LenFD),intent(in) :: x,y,z
   real(SP),intent(in) :: x0,y0,z0,rx0,ry0,rz0
   real(SP) :: D1,D2,D3
   integer i,j,k
@@ -379,9 +376,9 @@ subroutine cal_norm_delt(delt,x0,y0,z0,x,y,z,rx0,ry0,rz0)
   do k=-LenFD,LenFD
   do j=-LenFD,LenFD
   do i=-LenFD,LenFD
-     D1=fun_gauss(x(i)-x0,rx0,0.0_SP)
-     D2=fun_gauss(y(j)-y0,ry0,0.0_SP)
-     D3=fun_gauss(z(k)-z0,rz0,0.0_SP)
+     D1=fun_gauss(i-x0,rx0,0.0_SP)
+     D2=fun_gauss(j-y0,ry0,0.0_SP)
+     D3=fun_gauss(k-z0,rz0,0.0_SP)
      delt(i,j,k)=D1*D2*D3
   end do
   end do

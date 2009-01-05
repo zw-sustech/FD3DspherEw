@@ -28,6 +28,7 @@ implicit none
 
 real(SP) :: src_hyper_height
 logical,allocatable :: force_flag(:),moment_flag(:)
+real(SP),allocatable :: force_axis(:,:), moment_axis(:,:)
 
 character (len=SEIS_STRLEN) :: filenm
 integer :: p(1)
@@ -36,7 +37,7 @@ real(SP) :: x0,y0,z0
 integer :: i,j,k,n_i,n_j,n_k
 integer :: n,m,npt,nfrc,nmom,gi,gj,gk,si,sj,sk
 logical :: iflag
-integer :: ncid,indxid,axisid,t0id,stftid,stffid
+integer :: ncid,indxid,axisid,siftid,t0id,stftid,stffid
 integer :: fxid,fyid,fzid,mxxid,myyid,mzzid,mxyid,mxzid,myzid
 
 !----------------------------------------------------------------------!
@@ -95,6 +96,24 @@ do npt=1,num_force
    gi=swmpi_globi(i,n_i); gj=swmpi_globj(j,n_j); gk=swmpi_globk(k,n_k)
    force_indx(:,npt)=(/ gi,gj,gk /)
    force_axis(3,npt)=z0
+
+   ! calculate shift
+   force_shift(:,npt)=0.0_SP
+   if (x0>x(i)) then
+      force_shift(1,npt)=(x0-x(i))/(x(i+1)-x(i))
+   else
+      force_shift(1,npt)=(x0-x(i))/(x(i)-x(i-1))
+   end if
+   if (y0>y(j)) then
+      force_shift(2,npt)=(y0-y(j))/(y(j+1)-y(j))
+   else
+      force_shift(2,npt)=(y0-y(j))/(y(j)-y(j-1))
+   end if
+   if (z0>z(k)) then
+      force_shift(3,npt)=(z0-z(k))/(z(k+1)-z(k))
+   else
+      force_shift(3,npt)=(z0-z(k))/(z(k)-z(k-1))
+   end if
 end do !n
 
 !moment
@@ -122,6 +141,24 @@ do npt=1,num_moment
    gi=swmpi_globi(i,n_i); gj=swmpi_globj(j,n_j); gk=swmpi_globk(k,n_k)
    moment_indx(:,npt)=(/ gi,gj,gk /)
    moment_axis(3,npt)=z0
+
+   ! calculate shift
+   moment_shift(:,npt)=0.0_SP
+   if (x0>x(i)) then
+      moment_shift(1,npt)=(x0-x(i))/(x(i+1)-x(i))
+   else
+      moment_shift(1,npt)=(x0-x(i))/(x(i)-x(i-1))
+   end if
+   if (y0>y(j)) then
+      moment_shift(2,npt)=(y0-y(j))/(y(j+1)-y(j))
+   else
+      moment_shift(2,npt)=(y0-y(j))/(y(j)-y(j-1))
+   end if
+   if (z0>z(k)) then
+      moment_shift(3,npt)=(z0-z(k))/(z(k+1)-z(k))
+   else
+      moment_shift(3,npt)=(z0-z(k))/(z(k)-z(k-1))
+   end if
 end do !n
 
 end do !n_k
@@ -178,6 +215,7 @@ do n_k=0,dims(3)-1
    if (nfrc>0) then
       call nfseis_inq_varid(ncid,'force_indx',indxid)
       call nfseis_inq_varid(ncid,'force_axis',axisid)
+      call nfseis_inq_varid(ncid,'force_shift',siftid)
       call nfseis_inq_varid(ncid,'force_start_time',t0id)
       call nfseis_inq_varid(ncid,'force_stf_time',stftid)
       call nfseis_inq_varid(ncid,'force_stf_freq',stffid)
@@ -197,6 +235,7 @@ do n_k=0,dims(3)-1
             call nfseis_put(ncid,fyid,ForceY(:,n),(/1,m/),(/ntwin_force,1/),(/1,1/))
             call nfseis_put(ncid,fzid,ForceZ(:,n),(/1,m/),(/ntwin_force,1/),(/1,1/))
             call nfseis_put(ncid,axisid,force_axis(:,n),(/1,m/),(/SEIS_GEO,1/),(/1,1/))
+            call nfseis_put(ncid,siftid,force_shift(:,n),(/1,m/),(/SEIS_GEO,1/),(/1,1/))
             call nfseis_put(ncid,t0id,force_t0(n),(/m/),(/1/),(/1/))
             call nfseis_put(ncid,indxid,         &
                  (/ swmpi_locli(gi,n_i),         &
@@ -210,6 +249,7 @@ do n_k=0,dims(3)-1
    if (nmom>0) then
       call nfseis_inq_varid(ncid,'moment_indx',indxid)
       call nfseis_inq_varid(ncid,'moment_axis',axisid)
+      call nfseis_inq_varid(ncid,'moment_shift',siftid)
       call nfseis_inq_varid(ncid,'moment_start_time',t0id)
       call nfseis_inq_varid(ncid,'moment_stf_time',stftid)
       call nfseis_inq_varid(ncid,'moment_stf_freq',stffid)
@@ -235,6 +275,7 @@ do n_k=0,dims(3)-1
             call nfseis_put(ncid,mxzid,MomTxz(:,n),(/1,m/),(/ntwin_moment,1/),(/1,1/))
             call nfseis_put(ncid,myzid,MomTyz(:,n),(/1,m/),(/ntwin_moment,1/),(/1,1/))
             call nfseis_put(ncid,axisid,moment_axis(:,n),(/1,m/),(/SEIS_GEO,1/),(/1,1/))
+            call nfseis_put(ncid,siftid,moment_shift(:,n),(/1,m/),(/SEIS_GEO,1/),(/1,1/))
             call nfseis_put(ncid,t0id,moment_t0(n),(/m/),(/1/),(/1/))
             call nfseis_put(ncid,indxid,         &
                  (/ swmpi_locli(gi,n_i),         &
@@ -263,10 +304,12 @@ contains
 subroutine alloc_force(npt)
   integer,intent(in) :: npt
   allocate(force_flag(npt)); force_flag=.false.
+  allocate(force_axis(SEIS_GEO,npt)); force_axis=0.0_SP
 end subroutine alloc_force
 subroutine alloc_moment(npt)
   integer,intent(in) :: npt
   allocate(moment_flag(npt)); moment_flag=.false.
+  allocate(moment_axis(SEIS_GEO,npt)); moment_axis=0.0_SP
 end subroutine alloc_moment
 
 subroutine dealloc_local
@@ -417,6 +460,7 @@ ierr=nf90_def_var(ncid,'Fy', SEISNC_DATATYPE,(/ ntwfrcid, nfrcid /),vid )
 ierr=nf90_def_var(ncid,'Fz', SEISNC_DATATYPE,(/ ntwfrcid, nfrcid /),vid )
 ierr=nf90_def_var(ncid,'force_indx', nf90_int,(/ geoid, nfrcid /),vid )
 ierr=nf90_def_var(ncid,'force_axis', SEISNC_DATATYPE,(/ geoid, nfrcid /),vid )
+ierr=nf90_def_var(ncid,'force_shift', SEISNC_DATATYPE,(/ geoid, nfrcid /),vid )
 ierr=nf90_def_var(ncid,'force_start_time', SEISNC_DATATYPE,(/ nfrcid /),vid )
 ierr=nf90_def_var(ncid,'force_stf_time', SEISNC_DATATYPE,(/ ntwfrcid /),vid )
 ierr=nf90_def_var(ncid,'force_stf_freq', SEISNC_DATATYPE,(/ ntwfrcid /),vid )
@@ -439,6 +483,7 @@ ierr=nf90_def_var(ncid,'Mxz',SEISNC_DATATYPE,(/ntwmomid,nmomid/),vid)
 ierr=nf90_def_var(ncid,'Myz',SEISNC_DATATYPE,(/ntwmomid,nmomid/),vid)
 ierr=nf90_def_var(ncid,'moment_indx', nf90_int,(/ geoid, nmomid /),vid )
 ierr=nf90_def_var(ncid,'moment_axis', SEISNC_DATATYPE,(/ geoid, nmomid /),vid )
+ierr=nf90_def_var(ncid,'moment_shift', SEISNC_DATATYPE,(/ geoid, nmomid /),vid )
 ierr=nf90_def_var(ncid,'moment_start_time', SEISNC_DATATYPE,(/ nmomid /),vid )
 ierr=nf90_def_var(ncid,'moment_stf_time', SEISNC_DATATYPE,(/ ntwmomid /),vid )
 ierr=nf90_def_var(ncid,'moment_stf_freq', SEISNC_DATATYPE,(/ ntwmomid /),vid )
