@@ -361,7 +361,7 @@ end if
   if (nt_dyn_new>ntime) call reset_nt(nt_dyn_new)
 end if
 
-if (ntime==nt_dyn_rest .or. ntime==nt_dyn_sync) then
+if (ntime==nt_dyn_rest .or. ntime==nt_dyn_sync .or. mod(ntime,rest_tinv)==0) then
   if (num_pt>0) ierr=nf90_sync(pt_ncid)
   do n=1,num_snap
      if (snap_oflag(n)) then
@@ -846,7 +846,7 @@ function get_fnm_rest(pnm,ntime,n_i,n_j,n_k) result(filenm)
   integer,intent(in) :: ntime,n_i,n_j,n_k
   character (len=*),intent(in) :: pnm
   character (len=SEIS_STRLEN) :: filenm
-  filenm=trim(pnm)                               &
+  filenm=trim(pnm)//'/'                          &
        //'rest_t'//trim(io_out_pattern(ntime,5)) &
        //'_'//trim(set_mpi_subfix(n_i,n_j,n_k))  &
        //'.nc'
