@@ -30,21 +30,28 @@ STATIC := ON
 #MPITOPO1D :=ON
 #MPIBARRIER := ON
 #USEOMP :=ON
+MediaMPI  := ON
+KernelMPI := ON
+#KernelInfoMPI := ON
+#KernelAssmMPI := ON
 
 #WITHQS := ON
-#WithoutVHOC := ON
 #DataTypeDouble := ON
 
-#SrcSmooth :=ON
+SrcSmooth :=ON
 
 #CondFreeCharac := ON
 CondFreeTIMG := ON
+#CondFreeVHOC := ON
+CondFreeVLOW := ON
+#CondFreeVEXT := ON
 
 DFLAG_LIST := DEBUG STATIC GETARG VERBOSE \
-			  MPITOPO1D USEOMP MPIBARRIER \
-              WITHQS WithoutVHOC DataTypeDouble \
-			  SrcSmooth  \
-			  CondFreeCharac CondFreeTIMG
+			  MPITOPO1D USEOMP MPIBARRIER DataTypeDouble \
+              WITHQS SrcSmooth  \
+			  CondFreeCharac CondFreeTIMG \
+              CondFreeVHOC CondFreeVEXT CondFreeVLOW \
+              MediaMPI KernelMPI KernelInfoMPI KernelAssmMPI
 
 DFLAGS := $(foreach flag,$(DFLAG_LIST),$(if $($(flag)),-D$(flag),)) $(DFLAGS)
 DFLAGS := $(strip $(DFLAGS))
@@ -82,6 +89,14 @@ EXE_EXPTSEISMO := tool_expt_seismo
 
 SRC_KERNEL    := tomo_kernel.f90
 EXE_KERNEL    := tomo_kernel
+SRC_KERNEL_STA := tomo_kernel_sta.f90
+EXE_KERNEL_STA := tomo_kernel_sta
+SRC_KERNEL_STA_STRIDE := tomo_kernel_sta_stride.f90
+EXE_KERNEL_STA_STRIDE := tomo_kernel_sta_stride
+SRC_KERNEL_INFO := tomo_kernel_info.f90
+EXE_KERNEL_INFO := tomo_kernel_info
+SRC_KERNEL_ASSM := tomo_kernel_assm.f90
+EXE_KERNEL_ASSM := tomo_kernel_assm
 
 OBJ_MOD     := $(foreach file,$(SRC_MOD),$(OBJDIR)/$(file:.f90=.o))
 OBJ_GRID    := $(foreach file,$(SRC_GRID),$(OBJDIR)/$(file:.f90=.o))
@@ -92,6 +107,10 @@ OBJ_WAVE    := $(foreach file,$(SRC_WAVE),$(OBJDIR)/$(file:.f90=.o))
 OBJ_EXPTSNAP   :=  $(foreach file,$(SRC_EXPTSNAP),$(OBJDIR)/$(file:.f90=.o))
 OBJ_EXPTSEISMO :=  $(foreach file,$(SRC_EXPTSEISMO),$(OBJDIR)/$(file:.f90=.o))
 OBJ_KERNEL     := $(foreach file,$(SRC_KERNEL),$(OBJDIR)/$(file:.f90=.o))
+OBJ_KERNEL_STA := $(foreach file,$(SRC_KERNEL_STA),$(OBJDIR)/$(file:.f90=.o))
+OBJ_KERNEL_STA_STRIDE := $(foreach file,$(SRC_KERNEL_STA_STRIDE),$(OBJDIR)/$(file:.f90=.o))
+OBJ_KERNEL_INFO := $(foreach file,$(SRC_KERNEL_INFO),$(OBJDIR)/$(file:.f90=.o))
+OBJ_KERNEL_ASSM := $(foreach file,$(SRC_KERNEL_ASSM),$(OBJDIR)/$(file:.f90=.o))
 
 vpath %.F90 $(FPPDIR)
 
@@ -108,13 +127,15 @@ include Makefile.$(WHEREAMI)
 #######################################################################
 .PHONY: skel all preprocess solver postprocess kernel
 
-all: skel preprocess solver postprocess kernel
+#all: skel preprocess solver postprocess kernel
+all: skel preprocess solver kernel
 
 preprocess:  $(BINDIR)/$(EXE_GRID) $(BINDIR)/$(EXE_MEDIA) \
      $(BINDIR)/$(EXE_SOURCE) $(BINDIR)/$(EXE_STATION)
 solver:  $(BINDIR)/$(EXE_WAVE)
 postprocess: $(BINDIR)/$(EXE_EXPTSNAP) $(BINDIR)/$(EXE_EXPTSEISMO)
-kernel: $(BINDIR)/$(EXE_KERNEL)
+kernel: $(BINDIR)/$(EXE_KERNEL) $(BINDIR)/$(EXE_KERNEL_STA) $(BINDIR)/$(EXE_KERNEL_STA_STRIDE) \
+     $(BINDIR)/$(EXE_KERNEL_INFO) $(BINDIR)/$(EXE_KERNEL_ASSM)
 skel:
 	@mkdir -p $(skeldirs)
 	@echo "0 0 0 # checkpoint, syncpoint, new nt" > checkpoint.dat
@@ -135,6 +156,14 @@ $(BINDIR)/$(EXE_EXPTSEISMO): $(OBJ_MOD) $(OBJ_EXPTSEISMO)
 	$(FC) -o $@ $(OBJ_MOD) $(OBJ_EXPTSEISMO) $(LDFLAGS)
 $(BINDIR)/$(EXE_KERNEL): $(OBJ_MOD) $(OBJ_KERNEL)
 	$(FC) -o $@ $(OBJ_MOD) $(OBJ_KERNEL) $(LDFLAGS)
+$(BINDIR)/$(EXE_KERNEL_STA): $(OBJ_MOD) $(OBJ_KERNEL_STA)
+	$(FC) -o $@ $(OBJ_MOD) $(OBJ_KERNEL_STA) $(LDFLAGS)
+$(BINDIR)/$(EXE_KERNEL_STA_STRIDE): $(OBJ_MOD) $(OBJ_KERNEL_STA_STRIDE)
+	$(FC) -o $@ $(OBJ_MOD) $(OBJ_KERNEL_STA_STRIDE) $(LDFLAGS)
+$(BINDIR)/$(EXE_KERNEL_INFO): $(OBJ_MOD) $(OBJ_KERNEL_INFO)
+	$(FC) -o $@ $(OBJ_MOD) $(OBJ_KERNEL_INFO) $(LDFLAGS)
+$(BINDIR)/$(EXE_KERNEL_ASSM): $(OBJ_MOD) $(OBJ_KERNEL_ASSM)
+	$(FC) -o $@ $(OBJ_MOD) $(OBJ_KERNEL_ASSM) $(LDFLAGS)
 
 RM := rm
 cleanexe:
