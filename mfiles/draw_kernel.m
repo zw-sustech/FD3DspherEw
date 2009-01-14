@@ -40,12 +40,13 @@ var_list{end+1}='Kbqz'; scl_caxis_list{end+1}=[-2e-11,1e-21];
 %-- get coord data
 [X,Y,Z]=gather_coord(snapinfo,'metricdir',pnm_metric);
 nx=size(X,1);ny=size(X,2);nz=size(X,3);
-X=permute(X,[2,1,3]); Y=permute(Y,[2,1,3]); Z=permute(Z,[2,1,3]);
-[x,y,z]=sph2cart(X,Y,Z);
+%X=permute(X,[2,1,3]); Y=permute(Y,[2,1,3]); Z=permute(Z,[2,1,3]);
+%[x,y,z]=sph2cart(X,Y,Z);
+[x,y,z]=sph2cart(Y,X-pi/2,Z);
 
 str_unit='m';
 if flag_km
-   x=x/1e3;y=y/1e3;z=z/1e3;str_unit='km';
+   x=x/1e3;y=y/1e3;z=z/1e3;Z=Z/1e3; str_unit='km';
 end
 
 % ----------------------- plot kernel -----------------------------------
@@ -54,7 +55,7 @@ nvar=length(var_list);
 for n=1:nvar
 
 [V,varnm]=gather_dist(snapinfo,id,var_list{n},'outdir',pnm_out);
-v=permute(V,[2,1,3]);
+%v=permute(V,[2,1,3]);
 
 if flag_overlap==1
    hold on
@@ -72,16 +73,19 @@ if flag_surf==1
    %View = [-37.5 70];
 else
    if nx==1
-      hid=pcolor(squeeze(y),squeeze(z),squeeze(v));
+      %hid=pcolor(squeeze(y),squeeze(z),squeeze(v));
+      hid=pcolor(squeeze(Y/pi*180),squeeze(Z),squeeze(v));
    elseif ny==1
-      hid=pcolor(squeeze(x),squeeze(z),squeeze(v));
+      %hid=pcolor(squeeze(x),squeeze(z),squeeze(v));
+      hid=pcolor(squeeze(X/pi*180-90),squeeze(Z),squeeze(v));
    else
-      hid=pcolor(squeeze(x),squeeze(y),squeeze(v));
+      %hid=pcolor(squeeze(x),squeeze(y),squeeze(v));
+      hid=pcolor(squeeze(Y/pi*180),squeeze(X/pi*180-90),squeeze(v));
    end
-   view(-90,90)
+   %view(-90,90)
 end % flag_surf
 
-axis image
+%axis image
 shading flat;
 if flag_jetwr==1
    colormap('jetwr');

@@ -26,18 +26,20 @@ end
 [snapinfo]=locate_snap(fnm_conf,id,'start',subs,'count',subc,'stride',subt);
 [X,Y,Z]=gather_coord(snapinfo,'metricdir',pnm_metric);
 nx=size(X,1);ny=size(X,2);nz=size(X,3);
-X=permute(X,[2,1,3]); Y=permute(Y,[2,1,3]); Z=permute(Z,[2,1,3]);
-[x,y,z]=sph2cart(X,Y,Z);
+%X=permute(X,[2,1,3]); Y=permute(Y,[2,1,3]); Z=permute(Z,[2,1,3]);
+%[x,y,z]=sph2cart(X,Y,Z);
+[x,y,z]=sph2cart(Y,X-pi/2,Z);
 x=squeeze(x);y=squeeze(y);z=squeeze(z);
 
 [V,t,varnm]=retrieve_seismo_snap(snapinfo,id,'Vx','outdir',pnm_out);
-Vx=squeeze(permute(V,[4 2 1 3]));
+%Vx=squeeze(permute(V,[4 2 1 3]));
+Vx=squeeze(permute(V,[4 1 2 3]));
 [V,t,varnm]=retrieve_seismo_snap(snapinfo,id,'Vy','outdir',pnm_out);
-Vy=squeeze(permute(V,[4 2 1 3]));
+Vy=squeeze(permute(V,[4 1 2 3]));
 [V,t,varnm]=retrieve_seismo_snap(snapinfo,id,'Vz','outdir',pnm_out);
-Vz=squeeze(permute(V,[4 2 1 3]));
+Vz=squeeze(permute(V,[4 1 2 3]));
 
-theta=x/pi*180; phi=y/pi*180; r=z;
+theta=X/pi*180-90; phi=Y/pi*180; r=Z;
 Lx=max(max(theta))-min(min(theta));
 Ly=max(max(phi))-min(min(phi));
 Lz=max(max(r))-min(min(r));

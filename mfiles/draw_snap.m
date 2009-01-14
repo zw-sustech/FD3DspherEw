@@ -19,10 +19,14 @@ OUTPUT_ROOT='../';
 fnm_conf=[OUTPUT_ROOT 'SeisFD3D.conf'];
 pnm_metric=[OUTPUT_ROOT 'input/'];pnm_out=[OUTPUT_ROOT 'output/'];
 
-id=2; varnm='Vy'; taut=2.5; %scl_caxis=[-0.1 0.1]
-subs=[1,1,1];subc=[1,-1,-1];subt=[1,1,1];
-n1=1; n2=5000; dn=1;
-%n1=11; n2=n1; dn=1;
+id=1; varnm='Tyy'; taut=1.5; scl_caxis=[-1e4 1e4];
+%subs=[186,1,1];subc=[1,-1,-1];subt=[1,1,1];
+subs=[1,201,1];subc=[-1,1,-1];subt=[1,1,1];
+%subs=[1,1,100];subc=[-1,-1,1];subt=[1,1,1];
+%subs=[1,1,230];subc=[-1,-1,1];subt=[1,1,1];
+%n1=50; n2=5000; dn=50;
+%n1=250; n2=n1; dn=1;
+n1=100; n2=n1; dn=1;
 end
 
 % --------------- if using gather_snap_show ---------------
@@ -38,12 +42,13 @@ end
 %-- get coord data
 [X,Y,Z]=gather_coord(snapinfo,'metricdir',pnm_metric);
 nx=size(X,1);ny=size(X,2);nz=size(X,3);
-X=permute(X,[2,1,3]); Y=permute(Y,[2,1,3]); Z=permute(Z,[2,1,3]);
-[x,y,z]=sph2cart(X,Y,Z);
+%X=permute(X,[2,1,3]); Y=permute(Y,[2,1,3]); Z=permute(Z,[2,1,3]);
+%[x,y,z]=sph2cart(X,Y,Z);
+[x,y,z]=sph2cart(Y,X-pi/2,Z);
 
 str_unit='m';
 if flag_km
-   x=x/1e3;y=y/1e3;z=z/1e3; str_unit='km';
+   x=x/1e3;y=y/1e3;z=z/1e3;Z=Z/1e3; str_unit='km';
 end
 
 % ----------------------- plot figure -----------------------------------
@@ -56,6 +61,8 @@ set(hid,'renderer','zbuffer');
 set(gcf, 'PaperPositionMode', 'manual');
 set(gcf,'PaperUnits','points')
 set(gcf,'PaperPosition',[0 0 1024 768])
+else
+hold on
 end
 
 if flag_avi
@@ -67,7 +74,8 @@ end
 for nlayer=n1:dn:n2
 
 [V,t,varnm]=gather_snap(snapinfo,id,nlayer,varnm,'outdir',pnm_out);
-v=permute(V,[2,1,3]);
+%v=permute(V,[2,1,3]);
+v=V;
 
 disp([ '  draw ' num2str(nlayer) 'th layer(t=' num2str(t) ')']);
 
@@ -75,23 +83,28 @@ if flag_surf==1
    sid=surf(squeeze(x),squeeze(y),squeeze(z),squeeze(v));
 else
    if nx==1
-      hid=pcolor(squeeze(y),squeeze(z),squeeze(v));
+      %[x,y,z]=sph2cart(Y-0.5*(max(max(max(Y)))+min(min(min(Y)))),zeros(size(X)),Z);
+      %hid=pcolor(squeeze(y),squeeze(x),squeeze(v));
+      hid=pcolor(squeeze(Y/pi*180),squeeze(Z),squeeze(v));
    elseif ny==1
-      hid=pcolor(squeeze(x),squeeze(z),squeeze(v));
+      %[x,y,z]=sph2cart(zeros(size(Y)),X-pi/2,Z);
+      %hid=pcolor(squeeze(x),squeeze(z),squeeze(v));
+      hid=pcolor(squeeze(X/pi*180-90),squeeze(Z),squeeze(v));
    else
-      hid=pcolor(squeeze(x),squeeze(y),squeeze(v));
+      %hid=pcolor(squeeze(y),squeeze(z),squeeze(v));
+      hid=pcolor(squeeze(Y/pi*180),squeeze(X/pi*180-90),squeeze(v));
    end
-   view(-90,90)
+   %view(-90,90)
 end
 
 %rotate(hid,[0 0 1],90)
-axis image
+%axis image
 %shading interp;
 shading flat;
 if exist('scl_caxis'); caxis(scl_caxis); end
 if exist('scl_daspect'); daspect(scl_daspect); end
 if flag_surf==1
-   View = [-37.5 70]; camlight
+   %View = [-37.5 70]; camlight
 end
 colorbar('vert')
 

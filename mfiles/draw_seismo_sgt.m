@@ -7,27 +7,71 @@ clear all
 % ----------------------- parameter -----------------------
 flag_vel = 0; flag_dis = 0;
 
-%M=[ 1 0 0; 0 1 0; 0 0 1 ];
+%M=[ 0 0 0; 0 0 0; 0 1 0 ]; %000
+%M=[ 1 0 0; 0 1 0; 0 0 1 ]; %000
 %M=src_mech(0,90,0); %001
 %M=src_mech(0,90,90); %002
 %M=src_mech(0,90,180); %003
 %M=src_mech(0,90,270); %004
 %M=src_mech(0,90,45); %005
-%M=src_mech(45,45,45); %010
-M=src_mech(45,45,90); %011
+%M=src_mech(0,90,135); %006
+%M=src_mech(0,90,225); %007
+%M=src_mech(0,90,315); %008
+%M=src_mech(0,45,45); %009
+M=src_mech(45,45,45); %010
+%M=src_mech(45,45,90); %011
+% 8km
+%M=[ 1 0 0; 0 1 0; 0 0 1 ]; %012
+%M=src_mech(45,45,90); %013
+%M=src_mech(0,90,0); %014
+%M=src_mech(0,90,45); %015
+%M=src_mech(0,45,45); %016
+%M=src_mech(45,45,45); %017
+%M=src_mech(45,45,90); %018
 
-if 1
-MODEL_ROOT='../'; pnm_metric=[MODEL_ROOT 'prem.model/']; pnm_media=[MODEL_ROOT 'prem.model/'];
+% -----------------------------------------------------
+if 0
+MODEL_ROOT='/net/fs01/data/wzhang/spher/d30-670/'; pnm_metric=[MODEL_ROOT 'prem.model/']; pnm_media=[MODEL_ROOT 'prem.model/'];
 
-OUTPUT_ROOT='../';
-fnm_conf=[OUTPUT_ROOT 'fy-abs/SeisFD3D.conf'];
-pnm_outx=[OUTPUT_ROOT 'fx-abs/output/'];pnm_outy=[OUTPUT_ROOT 'fy-abs/output/'];pnm_outz=[OUTPUT_ROOT 'fz-abs/output/'];
+OUTPUT_ROOT='/net/fs01/data/wzhang/spher/d30-670/';
+fnm_conf=[OUTPUT_ROOT 'fy/SeisFD3D.conf'];
+%pnm_outx=[OUTPUT_ROOT 'fy/output.noabs/'];pnm_outy=[OUTPUT_ROOT 'fy/output.noabs/'];pnm_outz=[OUTPUT_ROOT 'fy/output.noabs/'];
+pnm_outx=[OUTPUT_ROOT 'fx/output/'];pnm_outy=[OUTPUT_ROOT 'fy/output/'];pnm_outz=[OUTPUT_ROOT 'fz/output/'];
 %id=2;subs=[125,43,200,1];subc=[1,1,1,10000];subt=[1,1,1,1];  % 20
 id=1;
-%subs=[1,126,10,1];subc=[1,1,1,10000];subt=[1,1,1,1];  % 20
-subs=[1,251,10,1],subc=[1,1,1,10000];subt=[1,1,1,1];  % 15
-%subs=[1,376,10,1];subc=[1,1,1,10000];subt=[1,1,1,1];  % 10
+%subs=[1,601,10,1];subc=[1,1,1,10000];subt=[1,1,1,1];  % 1
+%subs=[1,576,10,1];subc=[1,1,1,10000];subt=[1,1,1,1];  % 2
+%subs=[1,551,10,1];subc=[1,1,1,10000];subt=[1,1,1,1];  % 3
 %subs=[1,501,10,1];subc=[1,1,1,10000];subt=[1,1,1,1];  % 5
+%subs=[1,376,10,1];subc=[1,1,1,10000];subt=[1,1,1,1];  % 10
+subs=[1,251,10,1],subc=[1,1,1,10000];subt=[1,1,1,1];  % 15
+%subs=[1,126,10,1];subc=[1,1,1,10000];subt=[1,1,1,1];  % 20
+
+%subs=[1,551,2,1];subc=[1,1,1,10000];subt=[1,1,1,1];  % 3
+%subs=[1,126,2,1];subc=[1,1,1,10000];subt=[1,1,1,1];  % 20
+spec_line='r'; enlarger=24;
+end
+
+% -----------------------------------------------------
+if 1
+MODEL_ROOT='/net/fs01/data/wzhang/spher/d30-670-cart1d/'; pnm_metric=[MODEL_ROOT 'prem.model/']; pnm_media=[MODEL_ROOT 'prem.model/'];
+
+OUTPUT_ROOT='/net/fs01/data/wzhang/spher/d30-670-cart1d/';
+fnm_conf=[OUTPUT_ROOT 'fy/SeisFD3D.conf'];
+%pnm_outx=[OUTPUT_ROOT 'fy/output.noabs/'];pnm_outy=[OUTPUT_ROOT 'fy/output.noabs/'];pnm_outz=[OUTPUT_ROOT 'fy/output.noabs/'];
+pnm_outx=[OUTPUT_ROOT 'fy/output/'];pnm_outy=[OUTPUT_ROOT 'fy/output/'];pnm_outz=[OUTPUT_ROOT 'fy/output/'];
+%id=2;subs=[125,43,200,1];subc=[1,1,1,10000];subt=[1,1,1,1];  % 20
+id=1;
+%subs=[1,601,10,1];subc=[1,1,1,10000];subt=[1,1,1,1];  % 1
+%subs=[1,576,10,1];subc=[1,1,1,10000];subt=[1,1,1,1];  % 2
+%subs=[1,551,10,1];subc=[1,1,1,10000];subt=[1,1,1,1];  % 3
+%subs=[1,501,10,1];subc=[1,1,1,10000];subt=[1,1,1,1];  % 5
+%subs=[1,376,10,1];subc=[1,1,1,10000];subt=[1,1,1,1];  % 10
+%subs=[1,251,10,1],subc=[1,1,1,10000];subt=[1,1,1,1];  % 15
+subs=[1,126,10,1];subc=[1,1,1,10000];subt=[1,1,1,1];  % 20
+
+%subs=[1,551,2,1];subc=[1,1,1,10000];subt=[1,1,1,1];  % 3
+%subs=[1,126,2,1];subc=[1,1,1,10000];subt=[1,1,1,1];  % 20
 spec_line='r'; enlarger=24;
 end
 
@@ -61,15 +105,16 @@ nx=size(Ux0,2);ny=size(Ux0,3);nz=size(Ux0,4);nt=size(Ux0,1);
 dt=t(2)-t(1);
 %stffc=0.05; stft0=30;
 stffc=0.025; stft0=20;
-S=stf_ricker(t,stffc,stft0);
+%S=stf_ricker(t,stffc,stft0);
+S1=stf_ricker(t,0.05,30);D1=stf_rickerderiv(t,0.05,30);
 
 if 0
 for k=1:nz
 for j=1:ny
 for i=1:nx
-    Ux(:,i,j,k)=convolv_trapz(S,Ux0(:,i,j,k),dt,1,nt);
-    Uy(:,i,j,k)=convolv_trapz(S,Uy0(:,i,j,k),dt,1,nt);
-    Uz(:,i,j,k)=convolv_trapz(S,Uz0(:,i,j,k),dt,1,nt);
+    Ux(:,i,j,k)=convolv_trapz(D1,Ux0(:,i,j,k),dt,1,nt);
+    Uy(:,i,j,k)=convolv_trapz(D1,Uy0(:,i,j,k),dt,1,nt);
+    Uz(:,i,j,k)=convolv_trapz(D1,Uz0(:,i,j,k),dt,1,nt);
 end
 end
 end
@@ -167,11 +212,12 @@ title('Uz');
 end
 
 % -------------------- plot figures ------------------------
-if 1
+if 0
 %figure
 %U0=max(max(abs([Ux,Uy,Uz]))); Ux0=U0;Uy0=U0;Uz0=U0;
 %Ux0=max(max(abs(Ux]))); Uy0=max(max(abs(Uy]))); Uz0=max(max(abs(Uz])));
 %Ux0=1;Uy0=1;Uz0=1;
+%Ux0=1/100;Uy0=1/100;Uz0=1/100; %exp, 0km
 Ux0=1/20;Uy0=1/20;Uz0=1/20;
 n=1;
 subplot(3,1,1)
@@ -183,5 +229,22 @@ plot(t,Uy(:,n)/Uy0,spec_line);
 subplot(3,1,3)
 hold on
 plot(t,Uz(:,n)/Uz0,spec_line);
+
+subplot(3,1,1)
+%legend('normal mode','fdm')
+end
+
+if 1
+%figure
+%U0=max(max(abs([Ux,Uy,Uz]))); Ux0=U0;Uy0=U0;Uz0=U0;
+Ux0=max(max(abs(Ux))); Uy0=max(max(abs(Uy))); Uz0=max(max(abs(Uz)));
+%Ux0=1;Uy0=1;Uz0=1;
+Ux0=1/20;Uy0=1/20;Uz0=1/20;
+%Ux0=1/40;Uy0=1/40;Uz0=1/40;
+n=1;
+%subplot(4,1,1)
+hold on
+plot(t,Uy(:,n)/Uy0,spec_line);
+%plot(t,Uz(:,n)/Uz0,spec_line);
 end
 

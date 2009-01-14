@@ -1,7 +1,18 @@
 clear all;
 
+%src='0000'; % exp
+%src='0001'; %_mech(0,90,0);  %001
+%src='0002'; %_mech(0,90,90); %002
+%src='0003'; %_mech(0,90,180);%003
+%src='0004'; %_mech(0,90,270);%004
+%src='0005'; %_mech(0,90,45); %005
+%src='0006'; %_mech(0,90,135);%006
+%src='0007'; %_mech(0,90,225);%007
+%src='0008'; %_mech(0,90,315);%008
+%src='0009'; %_mech(0,45,45); %009
 src='0010'; % 45/45/45
 %src='0011'; % 45/45/90
+
 %src='0012'; % 8km,exp
 %src='0013'; % 8km,0/90/0
 %src='0014'; % 8km,0/90/45
@@ -9,12 +20,21 @@ src='0010'; % 45/45/45
 %src='0016'; % 8km,45/45/45
 %src='0017'; % 8km,45/45/90
 
-rcv='03'; % 5deg
-rcv='04'; % 10deg
+%rcv='01'; % 1deg
+%rcv='02'; % 2deg
+%rcv='03'; % 3deg
+%rcv='04'; % 5deg
+%rcv='05'; % 10deg
+%rcv='06'; % 15deg
+rcv='07'; % 20deg
 
 spec_line='k';
 
-fnm_out=['ELA/S' src '.R' rcv '.ASC'];
+%fnm_out=['ELA/S' src '.R' rcv '.ASC'];
+%fnm_out=['/net/fs01/data/wzhang/spher/d30-dr1dh0.04/postproc.timg/ELA/S' src '.R' rcv '.ASC'];
+%fnm_out=['/home/wzhang/iodata/spher/normalmode/water/S' src '.R' rcv '.ASC'];
+fnm_out=['/home/wzhang/iodata/spher/normalmode/ELA/S' src '.R' rcv '.ASC'];
+
 
 % ------------------ load data ------------------------
 fid=fopen(fnm_out);
@@ -67,7 +87,7 @@ hold on
 plot(t,Uz/max(max(abs(Uz))),'r');
 end
 
-if 1
+if 0
 %figure
 %U0=max(max(abs([Ux,Uy,Uz]))); Ux0=U0;Uy0=U0;Uz0=U0;
 %Ux0=max(max(abs(Ux]))); Uy0=max(max(abs(Uy]))); Uz0=max(max(abs(Uz])));
@@ -80,6 +100,17 @@ subplot(3,1,3)
 hold on; plot(t,Uz/Uz0,spec_line);
 
 subplot(3,1,1)
-title(fnm_out)
+title(['S' src ' and R' rcv])
 end
+
+if 1
+%figure
+%U0=max(max(abs([Ux,Uy,Uz]))); Ux0=U0;Uy0=U0;Uz0=U0;
+%Ux0=max(max(abs(Ux))); Uy0=max(max(abs(Uy))); Uz0=max(max(abs(Uz)));
+Ux0=1;Uy0=1;Uz0=1;
+%subplot(4,1,1)
+hold on; plot(t,Uy/Uy0,spec_line);
+%hold on; plot(t,Uz/Uz0,spec_line);
+end
+
 
