@@ -1,17 +1,17 @@
-!******************************************************************************!
-!*  This program generates grid and calculates the metric                     *!
-!*                                                                            *!
-!*  Author: Wei ZHANG     Email: zhangw.pku@gmail.com                         *!
-!*  Copyright (C) Wei ZHANG, 2006. All Rights Reserved.                       *!
-!******************************************************************************!
+program seis3d_grid
 
+! This program generates grid coordinate
+!
+! Author: Wei ZHANG     Email: zhangwei.zw@gmail.com
+! Copyright (C) 2006 Wei ZHANG
+
+!*****************************************************************************
+!
 ! $Date$
 ! $Revision$
 ! $LastChangedBy$
-
-!-----------------------------------------------------------------------------
-program seis3d_grid
-!-----------------------------------------------------------------------------
+!
+!*****************************************************************************
 
 #include "mod_macdrp.h"
 

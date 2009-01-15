@@ -1,17 +1,19 @@
-!******************************************************************************!
-!*  This program calculates finite-frequency kernels of tau_p and tau_q.      *!
-!*  Following the code of L ZHAO, P CHEN, ZG ZHANG and Y SHEN                 *!
-!*                                                                            *!
-!*  Author: Wei ZHANG     Email: zhangw.pku@gmail.com                         *!
-!******************************************************************************!
+program SI_ker_pair
 
+! This program calculates finite-frequency sensitivity kernels for pair of
+! event and station.
+! The core of kernel calculation coming from the code of Z Li, C Po, Z Zhang and Y Shen.
+!
+! Author: Wei ZHANG     Email: zhangwei.zw@gmail.com
+! Copyright (C) 2008 Wei ZHANG
+
+!*****************************************************************************
+!
 ! $Date$
 ! $Revision$
 ! $LastChangedBy$
-
-!-----------------------------------------------------------------------------
-program tomo_kernel
-!-----------------------------------------------------------------------------
+!
+!*****************************************************************************
 
 #define VERBOSE
 
@@ -942,83 +944,6 @@ subroutine error_except(msg)
 #endif
 end subroutine error_except
 
-end program tomo_kernel
+end program SI_ker_pair
 
 ! vim:ft=fortran:ts=4:sw=4:nu:et:ai:
-
-!subroutine cal_kernel(V,U,                &
-!           ExxR,EyyR,EzzR,ExyR,ExzR,EyzR, &
-!           ExxS,EyyS,EzzS,ExyS,ExzS,EyzS, &
-!           lam,miu,                       &
-!           nt1,nt2,dt,subc,Kap,Kaq,Kbp,Kbq)
-!
-!integer,intent(in) :: nt1,nt2
-!real(SP),dimension(:),intent(in) :: V,U
-!real(SP),dimension(:,:,:,:),intent(in) ::         &
-!     ExxS,EyyS,EzzS,ExyS,ExzS,EyzS, &
-!     ExxR,EyyR,EzzR,ExyR,ExzR,EyzR
-!real(SP),dimension(:,:,:),intent(in) :: miu,lam
-!real(SP),dimension(:,:,:),intent(out) :: Kap,Kaq,Kbp,Kbq
-!integer,dimension(SEIS_GEO),intent(in) :: subc
-!real(SP),intent(in) :: dt
-!
-!integer :: m,n,i,j,k,ts,te
-!real(SP) :: Vprho,Vsrho
-!real(kind=SP) :: x1,x2
-!
-!if (flag_filter) then
-!   ts=1; te=knt
-!else
-!   ts=nt1; te=nt2
-!end if
-!
-!do k=1,subc(3)
-!do j=1,subc(2)
-!do i=1,subc(1)
-!   E11R(1:te)=ExxR(i,j,k,1:te);E22R=EyyR(i,j,k,1:te);E33R=EzzR(i,j,k,1:te)
-!   E12R(1:te)=ExyR(i,j,k,1:te);E13R=ExzR(i,j,k,1:te);E23R=EyzR(i,j,k,1:te)
-!   E11S(1:te)=ExxS(i,j,k,1:te);E22S=EyyS(i,j,k,1:te);E33S=EzzS(i,j,k,1:te)
-!   E12S(1:te)=ExyS(i,j,k,1:te);E13S=ExzS(i,j,k,1:te);E23S=EyzS(i,j,k,1:te)
-!
-!do n=ts,te
-!   x1=0.0_SP; x2=0.0_SP
-!do m=1,n-1
-!   x1=x1+1.0_SP*dt*(E11R(m)+E22R(m)+E33R(m))*(E11S(n-m)+E22S(n-m)+E33S(n-m))
-!   x2=x2+1.0_SP*dt*( E11R(m)*E11S(n-m)+E22R(m)*E22S(n-m)+E33R(m)*E33S(n-m)     &
-!               +2.0_SP*E12R(m)*E12S(n-m)+2.0_SP*E13R(m)*E13S(n-m)+2.0_SP*E23R(m)*E23S(n-m) )
-!end do
-!   Ka(n)=x1; Kb(n)=2.0_SP*(x2-x1)
-!end do
-!
-!if (flag_filter) then
-!   vecx(NOD+1:NOD+te)=Ka
-!   call filtfilt(NOD,NEL,filt_b,filt_a,vecx,vecy,vecw)
-!   Ka(nt1:nt2)=vecy(NOD+nt1:NOD+nt2)
-!   
-!   vecx(NOD+1:NOD+te)=Kb
-!   call filtfilt(NOD,NEL,filt_b,filt_a,vecx,vecy,vecw)
-!   Kb(nt1:nt2)=vecy(NOD+nt1:NOD+nt2)
-!end if
-!
-!! Forming kernels for tau_p and tau_q.
-!Kap(i,j,k)=0.5*dt*(V(nt1)*Ka(nt1)+V(nt2)*Ka(nt2))
-!Kaq(i,j,k)=0.5*dt*(U(nt1)*Ka(nt1)+U(nt2)*Ka(nt2))
-!Kbp(i,j,k)=0.5*dt*(V(nt1)*Kb(nt1)+V(nt2)*Kb(nt2))
-!Kbq(i,j,k)=0.5*dt*(U(nt1)*Kb(nt1)+U(nt2)*Kb(nt2))
-!do n=nt1+1,nt2-1
-!   Kap(i,j,k)=Kap(i,j,k)+V(n)*Ka(n)*dt
-!   Kaq(i,j,k)=Kaq(i,j,k)+U(n)*Ka(n)*dt
-!   Kbp(i,j,k)=Kbp(i,j,k)+V(n)*Kb(n)*dt
-!   Kbq(i,j,k)=Kbq(i,j,k)+U(n)*Kb(n)*dt
-!end do
-!
-!Vprho= lam(i,j,k)+2.0*miu(i,j,k); Vsrho= miu(i,j,k)
-!Kap(i,j,k)= Kap(i,j,k)*2.0*Vprho
-!Kaq(i,j,k)=-Kaq(i,j,k)*2.0*Vprho
-!Kbp(i,j,k)= Kbp(i,j,k)*2.0*Vsrho
-!Kbq(i,j,k)=-Kbq(i,j,k)*2.0*Vsrho
-!
-!end do
-!end do
-!end do
-!end subroutine cal_kernel

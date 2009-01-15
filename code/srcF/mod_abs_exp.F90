@@ -1,20 +1,21 @@
-!******************************************************************************!
-!*  This module is used for absorbing outgoing waves based on                 *!
-!*    Cerjan and Kosloff's nonreflecting boundary condition                   *!
-!*    (Cerjan C., et al.(1985), Geophysics, 50(4):705-708)                    *!
-!*    with improvement of taking into account time step value                 *!
-!*                                                                            *!
-!*  Author: Wei ZHANG     Email: zhangw.pku@gmail.com                         *!
-!*  Copyright (C) Wei ZHANG, 2006. All Rights Reserved.                       *!
-!******************************************************************************!
+module abs_mod
 
+! This module is used for absorbing outgoing waves based on
+! Cerjan and Kosloff's nonreflecting boundary condition
+! (Cerjan C., et al.(1985), Geophysics, 50(4):705-708)
+! with improvement of taking into account time step value
+!
+! Author: Wei ZHANG     Email: zhangwei.zw@gmail.com
+! Copyright (C) 2006 Wei ZHANG
+
+!*****************************************************************************
+!
 ! $Date$
 ! $Revision$
 ! $LastChangedBy$
-  
-!-----------------------------------------------------------------------------
-module abs_mod
-!-----------------------------------------------------------------------------
+!
+!*****************************************************************************
+
 
 use constants_mod
 use string_mod, only : string_conf

@@ -1,16 +1,17 @@
-!******************************************************************************!
-!*  This program calculates finite-frequency kernels distribution             *!
-!*                                                                            *!
-!*  Author: Wei ZHANG     Email: zhangw.zw@gmail.com                          *!
-!******************************************************************************!
+program SI_ker2assm
 
+! This program is used to assemble kernel value on inversion block.
+!
+! Author: Wei ZHANG     Email: zhangwei.zw@gmail.com
+! Copyright (C) 2008 Wei ZHANG
+
+!*****************************************************************************
+!
 ! $Date$
 ! $Revision$
 ! $LastChangedBy$
-
-!-----------------------------------------------------------------------------
-program tomo_kernel_assm
-!-----------------------------------------------------------------------------
+!
+!*****************************************************************************
 
 #define VERBOSE
 #define PhaseDelay
@@ -610,5 +611,5 @@ subroutine error_except(msg)
 #endif
 end subroutine error_except
 
-end program tomo_kernel_assm
+end program SI_ker2assm
 

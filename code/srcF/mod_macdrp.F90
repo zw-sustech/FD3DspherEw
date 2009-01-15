@@ -1,18 +1,18 @@
-!******************************************************************************!
-!*  This module contains the variables and subroutines                        *!
-!*       used in the DRP/opt MacCormack fd operator                           *!
-!*                                                                            *!
-!*  Author: Wei ZHANG     Email: zhangw.pku@gmail.com                         *!
-!*  Copyright (C) Wei ZHANG, 2006. All Rights Reserved.                       *!
-!******************************************************************************!
+module macdrp_mod
 
-! $LastChangedDate$
+! This module contains the variables and subroutines
+! used in the DRP/opt MacCormack fd operator
+!
+! Author: Wei ZHANG     Email: zhangwei.zw@gmail.com
+! Copyright (C) 2006 Wei ZHANG
+
+!*****************************************************************************
+!
+! $Date$
 ! $Revision$
 ! $LastChangedBy$
-
-!-----------------------------------------------------------------------------
-module macdrp_mod
-!-----------------------------------------------------------------------------
+!
+!*****************************************************************************
 
 #include "mod_macdrp.h"
 

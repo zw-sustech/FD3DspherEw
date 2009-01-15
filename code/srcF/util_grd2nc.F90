@@ -1,18 +1,19 @@
-!******************************************************************************!
-!*  This program converts the file in PLOT3D format to netcdf file            *!
-!*                                                                            *!
-!*  Author: Wei ZHANG     Email: zhangw.pku@gmail.com                         *!
-!*  Copyright (C) Wei ZHANG, 2006. All Rights Reserved.                       *!
-!******************************************************************************!
+program grd2nc
 
+! This program converts the file in PLOT3D format to netcdf file
+!
+! Author: Wei ZHANG     Email: zhangwei.zw@gmail.com
+! Copyright (C) 2006 Wei ZHANG
+
+!*****************************************************************************
+!
 ! $Date$
 ! $Revision$
 ! $LastChangedBy$
+!
+!*****************************************************************************
 
 #define USE_GETARG
-!-----------------------------------------------------------------------------
-program grd2nc
-!-----------------------------------------------------------------------------
 
 use netcdf
 implicit none

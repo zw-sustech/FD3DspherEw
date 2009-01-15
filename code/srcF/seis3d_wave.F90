@@ -1,17 +1,17 @@
-!******************************************************************************!
-!*  This is the main program to simulate seismic wave propagation             *!
-!*                                                                            *!
-!*  Author: Wei ZHANG     Email: zhangw.pku@gmail.com                         *!
-!*  Copyright (C) Wei ZHANG, 2006. All Rights Reserved.                       *!
-!******************************************************************************!
+program seis3d_wave
 
+! This is the main program to simulate seismic wave propagation
+!
+! Author: Wei ZHANG     Email: zhangwei.zw@gmail.com
+! Copyright (C) 2006 Wei ZHANG
+
+!*****************************************************************************
+!
 ! $Date$
 ! $Revision$
 ! $LastChangedBy$
-
-!-----------------------------------------------------------------------------
-program seis3d_wave
-!-----------------------------------------------------------------------------
+!
+!*****************************************************************************
 
 !#define PML
 #define PMLNT 1

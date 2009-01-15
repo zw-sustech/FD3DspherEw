@@ -1,19 +1,18 @@
-!******************************************************************************!
-!*  This module contains subroutines about math functions                     *!
-!*                                                                            *!
-!*  Author: Wei ZHANG     Email: zhangw.pku@gmail.com                         *!
-!*  Copyright (C) Wei ZHANG, 2006. All Rights Reserved.                       *!
-!******************************************************************************!
+module math_mod
 
+! This module contains subroutines about math functions
+!
+! Author: Wei ZHANG     Email: zhangwei.zw@gmail.com
+! Copyright (C) 2006 Wei ZHANG
+
+!*****************************************************************************
+!
 ! $Date$
 ! $Revision$
 ! $LastChangedBy$
+!
+!*****************************************************************************
 
-!-----------------------------------------------------------------------------
-module math_mod
-!-----------------------------------------------------------------------------
-
-    !use fd_cons_mod
 implicit none
 
 INTEGER, PARAMETER,private :: DP = KIND(1.0D0)

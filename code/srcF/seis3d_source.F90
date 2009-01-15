@@ -1,17 +1,17 @@
-!******************************************************************************!
-!*  This program locates the seismic source                                   *!
-!*                                                                            *!
-!*  Author: Wei ZHANG     Email: zhangw.pku@gmail.com                         *!
-!*  Copyright (C) Wei ZHANG, 2006. All Rights Reserved.                       *!
-!******************************************************************************!
+program seis3d_source
 
+! This program inits and distributes the seismic source
+!
+! Author: Wei ZHANG     Email: zhangwei.zw@gmail.com
+! Copyright (C) 2006 Wei ZHANG
+
+!*****************************************************************************
+!
 ! $Date$
 ! $Revision$
 ! $LastChangedBy$
-
-!-----------------------------------------------------------------------------
-program seis3d_source
-!-----------------------------------------------------------------------------
+!
+!*****************************************************************************
 
 #include "mod_macdrp.h"
 

@@ -1,17 +1,17 @@
-!******************************************************************************!
-!*  This module deals with text files and string converting.                  *!
-!*                                                                            *!
-!*  Author: Wei ZHANG     Email: zhangw.pku@gmail.com                         *!
-!*  Copyright (C) Wei ZHANG, 2006. All Rights Reserved.                       *!
-!******************************************************************************!
+module string_mod
 
+! This module deals with text files and string converting
+!
+! Author: Wei ZHANG     Email: zhangwei.zw@gmail.com
+! Copyright (C) 2006 Wei ZHANG
+
+!*****************************************************************************
+!
 ! $Date$
 ! $Revision$
 ! $LastChangedBy$
-
-!-----------------------------------------------------------------------------
-module string_mod
-!-----------------------------------------------------------------------------
+!
+!*****************************************************************************
 
 implicit none
 private

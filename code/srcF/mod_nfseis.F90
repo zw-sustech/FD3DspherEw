@@ -1,17 +1,17 @@
-!******************************************************************************!
-!*  This module relates with netcdf subroutines                               *!
-!*                                                                            *!
-!*  Author: Wei ZHANG     Email: zhangw.pku@gmail.com                         *!
-!*  Copyright (C) Wei ZHANG, 2006. All Rights Reserved.                       *!
-!******************************************************************************!
+module nfseis_mod
 
+! This module relates with netcdf subroutines
+!
+! Author: Wei ZHANG     Email: zhangwei.zw@gmail.com
+! Copyright (C) 2006 Wei ZHANG
+
+!*****************************************************************************
+!
 ! $Date$
 ! $Revision$
 ! $LastChangedBy$
-
-!-----------------------------------------------------------------------------
-module nfseis_mod
-!-----------------------------------------------------------------------------
+!
+!*****************************************************************************
 
 #include "mod_macdrp.h"
 

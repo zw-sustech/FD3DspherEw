@@ -1,17 +1,17 @@
-!******************************************************************************!
-!*  This module is used for output data                                       *!
-!*                                                                            *!
-!*  Author: Wei ZHANG     Email: zhangw.pku@gmail.com                         *!
-!*  Copyright (C) Wei ZHANG, 2006. All Rights Reserved.                       *!
-!******************************************************************************!
+module io_mod
 
+! This module is used for input and output data
+!
+! Author: Wei ZHANG     Email: zhangwei.zw@gmail.com
+! Copyright (C) 2006 Wei ZHANG
+
+!*****************************************************************************
+!
 ! $Date$
 ! $Revision$
 ! $LastChangedBy$
-
-!-----------------------------------------------------------------------------
-module io_mod
-!-----------------------------------------------------------------------------
+!
+!*****************************************************************************
 
 use constants_mod, only : SEIS_STRLEN,SEIS_GEO
 use string_mod, only : string_conf

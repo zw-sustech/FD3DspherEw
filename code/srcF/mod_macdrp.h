@@ -1,3 +1,14 @@
+/****************************************************************************
+ * This file is used for defining fd operators.                             *
+ *                                                                          *
+ * Author: Wei ZHANG     Email: zhangwei.zw@gmail.com                       *
+ * Copyright (C) 2006 Wei ZHANG                                             *
+ *                                                                          *
+ * $Date: 2009-01-14 16:30:51 -0500 (Wed, 14 Jan 2009) $                    *
+ * $Revision: 510 $                                                         *
+ * $LastChangedBy: zhangw $                                                 *
+*****************************************************************************/
+
 /* ! 8th order finite difference
  ! #define FDWET real,parameter :: C0=9.0/8.0, C1=1.0/24.0,C2=0.0,C3=0.0
  ! #define FDWET real,parameter :: C0=1225.0/1024.0,C1=245.0/3072.0,C2=49.0/5120.0,C3=5.0/7168.0 */

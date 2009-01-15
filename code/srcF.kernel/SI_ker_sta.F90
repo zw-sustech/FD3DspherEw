@@ -1,16 +1,20 @@
-!******************************************************************************!
-!*  This program calculates finite-frequency kernels of tau_p and tau_q.      *!
-!*                                                                            *!
-!*  Author: Wei ZHANG     Email: zhangw.pku@gmail.com                         *!
-!******************************************************************************!
+program SI_ker_sta
 
+! This program calculates finite-frequency sensitivity kernels for multi pairs
+! of event and station by swapping event strain tensors when keeping station
+! sgt in memory.
+! The core of kernel calculation coming from the code of Z Li, C Po, Z Zhang and Y Shen.
+!
+! Author: Wei ZHANG     Email: zhangwei.zw@gmail.com
+! Copyright (C) 2008 Wei ZHANG
+
+!*****************************************************************************
+!
 ! $Date$
 ! $Revision$
 ! $LastChangedBy$
-
-!-----------------------------------------------------------------------------
-program tomo_kernel
-!-----------------------------------------------------------------------------
+!
+!*****************************************************************************
 
 #define VERBOSE
 !#define DEBUG
@@ -1570,5 +1574,5 @@ subroutine warning_print(msg)
   print *, idstr//" warning :"//trim(msg)
 end subroutine warning_print
 
-end program tomo_kernel
+end program SI_ker_sta
 

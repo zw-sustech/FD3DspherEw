@@ -1,16 +1,17 @@
-!******************************************************************************!
-!*  This program calculates finite-frequency kernels distribution             *!
-!*                                                                            *!
-!*  Author: Wei ZHANG     Email: zhangw.zw@gmail.com                          *!
-!******************************************************************************!
+program SI_ker2info
 
+! This program is used to calculate kernel distribution.
+!
+! Author: Wei ZHANG     Email: zhangwei.zw@gmail.com
+! Copyright (C) 2008 Wei ZHANG
+
+!*****************************************************************************
+!
 ! $Date$
 ! $Revision$
 ! $LastChangedBy$
-
-!-----------------------------------------------------------------------------
-program tomo_kernel_info
-!-----------------------------------------------------------------------------
+!
+!*****************************************************************************
 
 #include "mod_macdrp.h"
 
@@ -495,5 +496,5 @@ subroutine error_except(msg)
 #endif
 end subroutine error_except
 
-end program tomo_kernel_info
+end program SI_ker2info
 

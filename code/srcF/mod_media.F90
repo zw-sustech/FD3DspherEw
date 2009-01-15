@@ -1,17 +1,17 @@
-!******************************************************************************!
-!*  This module contains the variables for 3D media                           *!
-!*                                                                            *!
-!*  Author: Wei ZHANG     Email: zhangw.pku@gmail.com                         *!
-!*  Copyright (C) Wei ZHANG, 2006. All Rights Reserved.                       *!
-!******************************************************************************!
+module media_mod
 
+! This module contains the variables for 3D medium
+!
+! Author: Wei ZHANG     Email: zhangwei.zw@gmail.com
+! Copyright (C) 2006 Wei ZHANG
+
+!*****************************************************************************
+!
 ! $Date$
 ! $Revision$
 ! $LastChangedBy$
-
-!-----------------------------------------------------------------------------
-module media_mod
-!-----------------------------------------------------------------------------
+!
+!*****************************************************************************
 
 use constants_mod, only : SEIS_STRLEN,SEIS_GEO,SEIS_ZERO,PI
 use string_mod, only : string_conf
