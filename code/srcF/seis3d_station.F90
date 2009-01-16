@@ -26,7 +26,7 @@ use io_mod
 
 implicit none
 
-integer :: n_i,n_j,n_k,n1,n2,n3
+integer :: n_i,n_j,n_k
 
 !-----------------------------------------------------------------------------
 
@@ -47,7 +47,7 @@ do n_k=0,dims(3)-1
   write(*,"(i10,2(i2),a,3(i2))") n_i,n_j,n_k, ' of ',dims
   call swmpi_change_fnm(n_i,n_j,n_k)
   call swmpi_set_gindx(n_i,n_j,n_k)
-  call grid_import(n_i,n_j,n_k)
+  call grid_coord_import(n_i,n_j,n_k)
 
   call receiver_locate(n_i,n_j,n_k)
 
@@ -75,7 +75,7 @@ do n=1,num_pt
    if (z0<=topo_hyper_height) then
       p=minloc(abs(x-x0)); i=p(1)
       p=minloc(abs(y-y0)); j=p(1)
-      p=minloc(abs(z-z0)); j=p(1)
+      p=minloc(abs(z-z0)); k=p(1)
    elseif (n_k==dims(3)-1) then
       p=minloc(abs(x-x0)); i=p(1)
       p=minloc(abs(y-y0)); j=p(1)
@@ -90,17 +90,17 @@ do n=1,num_pt
       gi=swmpi_globi(i,n_i)
       gj=swmpi_globj(j,n_j)
       gk=swmpi_globk(k,n_k)
-      call nfseis_varput(filenm,'indx',(/i,j,k/),          &
+      call nfseis_varput(filenm,'indx',(/i,j,k/),                          &
            (/1,npt/),(/SEIS_GEO,1/),(/1,1/))
       call nfseis_varput(filenm,'gindx',(/out_i(gi),out_j(gj),out_k(gk)/), &
            (/1,npt/),(/SEIS_GEO,1/),(/1,1/))
-      call nfseis_varput(filenm,'coord',(/x0,y0,z0/),      &
+      call nfseis_varput(filenm,'coord',(/x0,y0,z0/),                      &
            (/1,npt/),(/SEIS_GEO,1/),(/1,1/))
-      call nfseis_varput(filenm,'grid',(/x(i),y(j),z(k)/), &
+      call nfseis_varput(filenm,'grid',(/x(i),y(j),z(k)/),                 &
            (/1,npt/),(/SEIS_GEO,1/),(/1,1/))
-      call nfseis_varput(filenm,'id',pt_id(:,n),           &
+      call nfseis_varput(filenm,'id',pt_id(:,n),                           &
            (/1,npt/),(/2,1/),(/1,1/))
-    end if
+   end if
 end do
 end subroutine receiver_locate
 
