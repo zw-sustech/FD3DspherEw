@@ -73,7 +73,7 @@ do n=1,nthd
    i2=info_list(n)%indxe(1);j2=info_list(n)%indxe(2);k2=info_list(n)%indxe(3);
    subs=info_list(n)%subs;subc=info_list(n)%subc;subt=info_list(n)%subt;
    sube=info_list(n)%sube
-   filenm=swmpi_rename_fnm(pnm_grid,fnm_grid)
+   filenm=grid_coordfnm_get(n_i,n_j,n_k)
 
    call nfseis_varget(filenm,'x',Vx(i1:i2,j1:j2,k1:k2),subs,subc,subt) 
    call nfseis_varget(filenm,'y',Vy(i1:i2,j1:j2,k1:k2),subs,subc,subt) 
