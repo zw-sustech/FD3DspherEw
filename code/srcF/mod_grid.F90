@@ -23,11 +23,13 @@ use nfseis_mod
 implicit none
 
 private
-public ::        &
-  grid_fnm_init, &
-  grid_fnm_get,  &
-  grid_alloc,    &
-  grid_import,   &
+public ::             &
+  grid_fnm_init,      &
+  grid_coordfnm_get,  &
+  grid_metricfnm_get, &
+  grid_coord_import,  &
+  grid_metric_import, &
+  grid_alloc,         &
   grid_dealloc
 
 !-----------------------------------------------------------------------------
@@ -71,8 +73,8 @@ end subroutine grid_dealloc
 !*                                  grid io                              *
 !*************************************************************************
 subroutine grid_fnm_init(fnm_conf)
-character (len=*) :: fnm_conf
-integer fid
+character (len=*),intent(in) :: fnm_conf
+integer :: fid
 fid=1001
 open(fid,file=trim(fnm_conf),status="old")
   call string_conf(fid,1,'GRID_CONF',2,fnm_grid_conf)
@@ -80,26 +82,37 @@ open(fid,file=trim(fnm_conf),status="old")
 close(fid)
 end subroutine grid_fnm_init
 
-subroutine grid_import(n_i,n_j,n_k)
+function grid_coordfnm_get(n_i,n_j,n_k) result(filenm)
   integer,intent(in) :: n_i,n_j,n_k
   character (len=SEIS_STRLEN) :: filenm
-  filenm=grid_fnm_get(n_i,n_j,n_k)
+  filenm=trim(pnm_grid)//'/'//'coord'//'_'//set_mpi_subfix(n_i,n_j,n_k)//'.nc'
+end function grid_coordfnm_get
+function grid_metricfnm_get(n_i,n_j,n_k) result(filenm)
+  integer,intent(in) :: n_i,n_j,n_k
+  character (len=SEIS_STRLEN) :: filenm
+  filenm=trim(pnm_grid)//'/'//'metric'//'_'//set_mpi_subfix(n_i,n_j,n_k)//'.nc'
+end function grid_metricfnm_get
+
+subroutine grid_coord_import(n_i,n_j,n_k)
+  integer,intent(in) :: n_i,n_j,n_k
+  character (len=SEIS_STRLEN) :: filenm
+  filenm=grid_coordfnm_get(n_i,n_j,n_k)
   call nfseis_varget( filenm, 'x', x, (/1/),(/nx/),(/1/))
-  call nfseis_varget( filenm, 'xsin', xsin, (/1/),(/nx/),(/1/))
-  call nfseis_varget( filenm, 'xcot', xcot, (/1/),(/nx/),(/1/))
   call nfseis_varget( filenm, 'y', y, (/1/),(/ny/),(/1/))
   call nfseis_varget( filenm, 'z', z, (/1/),(/nz/),(/1/))
+end subroutine grid_coord_import
+
+subroutine grid_metric_import(n_i,n_j,n_k)
+  integer,intent(in) :: n_i,n_j,n_k
+  character (len=SEIS_STRLEN) :: filenm
+  filenm=grid_metricfnm_get(n_i,n_j,n_k)
+  call nfseis_varget( filenm, 'xsin', xsin, (/1/),(/nx/),(/1/))
+  call nfseis_varget( filenm, 'xcot', xcot, (/1/),(/nx/),(/1/))
   call nfseis_varget( filenm, 'xi_x',   xi_x, (/1/),(/nx/),(/1/))
   call nfseis_varget( filenm, 'eta_y',  eta_y, (/1/),(/ny/),(/1/))
   call nfseis_varget( filenm, 'zeta_z', zeta_z, (/1/),(/nz/),(/1/))
-end subroutine grid_import
+end subroutine grid_metric_import
 
-function grid_fnm_get(n_i,n_j,n_k) result(filenm)
-  integer,intent(in) :: n_i,n_j,n_k
-  character (len=SEIS_STRLEN) :: filenm
-  !filenm=trim(pnm_grid)//'/'//'coord'//'_'//set_mpi_subfix(n_i,n_j,n_k)//'.nc'
-  filenm=trim(pnm_grid)//'/'//set_mpi_prefix(n_i,n_j,n_k)//'_coord.nc'
-end function grid_fnm_get
 
 end module grid_mod
 
