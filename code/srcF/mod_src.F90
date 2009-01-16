@@ -113,8 +113,8 @@ subroutine src_destroy
   if (allocated(MomTxy)) deallocate(MomTxy)
   if (allocated(MomTxz)) deallocate(MomTxz)
   if (allocated(MomTyz)) deallocate(MomTyz)
-  if (allocated( force_indx)) deallocate( force_indx)
-  if (allocated( force_shift)) deallocate( force_shift)
+  if (allocated(force_indx)) deallocate(force_indx)
+  if (allocated(force_shift)) deallocate(force_shift)
   if (allocated(frcstf_time)) deallocate(frcstf_time)
   if (allocated(frcstf_freq)) deallocate(frcstf_freq)
   if (allocated(ForceX)) deallocate(ForceX)
@@ -223,7 +223,7 @@ do n=1,num_moment
    si=moment_indx(1,n); sj=moment_indx(2,n); sk=moment_indx(3,n)
 #ifdef SrcSmooth
    x0=moment_shift(1,n); y0=moment_shift(2,n); z0=moment_shift(3,n)
-   call cal_norm_delt(normd, x0,y0,z0,                                  &
+   call cal_norm_delt(normd, x0,y0,z0,                            &
         real(LenFD/2.0,SP), real(LenFD/2.0,SP), real(LenFD/2.0,SP) )
    if (freenode .and. sk+LenFD>nk2)  then
       normd=normd/sum(normd(:,:,-LenFD:nk2-sk))
@@ -572,6 +572,8 @@ case ('triangle_int')
      id=SIG_SVF_TRIANGLE
 case ('B(shift)')
      id=SIG_STF_BSHIFT
+case ('step')
+     id=SIG_STF_STEP
 case default
      print *, "Have you told me how to generate the STF of ", trim(stfname)
      stop 1
@@ -595,6 +597,8 @@ case (SIG_SVF_TRIANGLE)
      stfname='triangle_int'
 case (SIG_STF_BSHIFT)
      stfname='B(shift)'
+case (SIG_STF_STEP)
+     stfname='step'
 case default
      print *, "Cann't find the stf name for ", id
      stop 1
