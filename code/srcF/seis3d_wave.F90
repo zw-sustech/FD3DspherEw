@@ -13,7 +13,7 @@ program seis3d_wave
 !
 !*****************************************************************************
 
-!#define PML
+!#define USEPML
 #define PMLNT 1
 
 !{ -- declare module used --
@@ -46,7 +46,8 @@ call swmpi_reinit_para
 
 call grid_fnm_init(fnm_conf)
 call grid_alloc
-call grid_import(thisid(1),thisid(2),thisid(3))
+call grid_coord_import(thisid(1),thisid(2),thisid(3))
+call grid_metric_import(thisid(1),thisid(2),thisid(3))
 
 call media_fnm_init(fnm_conf)
 call media_alloc
@@ -97,8 +98,8 @@ loop_time: do
 
 if ( ntime>nt ) exit
 
-#ifdef PML
-if ( ntime<= PMLNT .or. ntime >2*PMLNT) then
+#ifdef USEPML
+if ( ntime< PMLNT .or. ntime >=2*PMLNT) then
 #endif
 ! 1-1A FFF
 ! {==========================================================================
@@ -298,9 +299,9 @@ call io_wave_export(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,stept)
 call io_rest_export(Txx,Tyy,Tzz,Txy,Txz,Tyz,Vx,Vy,Vz,ntime)
 ! ========================================================================== }
 
-#ifdef PML
+#ifdef USEPML
 end if
-if (ntime>PMLNT) then
+if (ntime>=PMLNT) then
 
 ! 6-2B FBB
 ! {==========================================================================
