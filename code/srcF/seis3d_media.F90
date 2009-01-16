@@ -42,7 +42,7 @@ type STRUCT_1D
      real(SP),dimension(:),pointer :: d
      real(SP),dimension(:),pointer :: Vp,Vs,Dp
      real(SP),dimension(:),pointer :: Qs
-     real(SP) :: Qf0
+     real(SP) :: QsF0,QsINF
 end type STRUCT_1D
 
 type STRUCT_INTERFACE
@@ -130,7 +130,7 @@ integer,dimension(SEIS_GEO) :: dtindx,dtnode
 
 integer :: n_i,n_j,n_k
 #ifdef MediaMPI
-integer ierr,ROOT
+integer :: ierr,ROOT
 real(SP),dimension(2) :: dtin,dtout
 #endif
 
@@ -142,8 +142,8 @@ call MPI_INIT(ierr)
 
 call get_conf_name(fnm_conf)
 
-call para_init(fnm_conf)
 call swmpi_init(fnm_conf)
+call para_init(fnm_conf)
 
 #ifdef MediaMPI
 call swmpi_cart_creat
@@ -187,18 +187,18 @@ do n_k=dims(3)-1,0,-1
    call swmpi_set_gindx(n_i,n_j,n_k)
 #endif
 
-   call grid_import(n_i,n_j,dims(3)-1); ztopo=z(nk2)
-   call grid_import(n_i,n_j,n_k)
+   call grid_coord_import(n_i,n_j,dims(3)-1); ztopo=z(nk2)
+   call grid_coord_import(n_i,n_j,n_k)
 
-   if (BV%yes) call volume_read(BV)
-   if (PV%yes) call volume_read(PV)
+  if (BV%yes) call volume_read(BV)
+  if (PV%yes) call volume_read(PV)
 
-   if (BP%yes) call verpoly_read(BP)
-   if (PP%yes) call verpoly_read(PP)
+  if (BP%yes) call verpoly_read(BP)
+  if (PP%yes) call verpoly_read(PP)
 
-   call effmedia_eval
+  call effmedia_eval
 
-   call media_extend
+  call media_extend
 
 #ifdef MediaMPI
    if (masternode) write(*,*) "exchange media on boundary stencil ..."
@@ -1200,9 +1200,9 @@ if (PP%yes) then
    else
       if (PP%rz0-z0<PP%rz(wi,wj,wk)) wk=wk-1
       z1=(PP%rz0-z0)-PP%rz(wi,wj,wk)
-      dVp(:)  =eval_poly(PP%Vp_poly_c(wi,wj,wk,:),PP%Vp_poly_d,z1)
-      dVs(:)  =eval_poly(PP%Vs_poly_c(wi,wj,wk,:),PP%Vs_poly_d,z1)
-      dDp(:)  =eval_poly(PP%Dp_poly_c(wi,wj,wk,:),PP%Dp_poly_d,z1)
+      dVp(:)=eval_poly(PP%Vp_poly_c(wi,wj,wk,:),PP%Vp_poly_d,z1)
+      dVs(:)=eval_poly(PP%Vs_poly_c(wi,wj,wk,:),PP%Vs_poly_d,z1)
+      dDp(:)=eval_poly(PP%Dp_poly_c(wi,wj,wk,:),PP%Dp_poly_d,z1)
    end if
    Vp=Vp*(1.0+dVp)
    Vs=Vs*(1.0+dVs)
@@ -1259,7 +1259,7 @@ subroutine media_extend
   call extend_equal(lambda)
 end subroutine media_extend
 subroutine extend_equal(w)
-   real(SP),dimension(nx1:nx2,ny1:ny2,nz1:nz2) :: w
+   real(SP),dimension(nx1:nx2,ny1:ny2,nz1:nz2),intent(inout) :: w
    integer i,j,k,n
    ! x1, x2
    do k=nz1,nz2
