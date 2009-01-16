@@ -38,7 +38,6 @@ public :: swmpi_init,                          &
           swmpi_time_init,                     &
           swmpi_time_write,                    &
           swmpi_time_end,                      &
-          set_mpi_prefix,                      &
           set_mpi_subfix,                      &
           swmpi_except
 
@@ -406,12 +405,12 @@ subroutine swmpi_time_end(filenm)
 end subroutine swmpi_time_end
 function set_mpi_prefix(i,j,k) result(filenm)
     integer,intent(in) :: i,j,k
-    character (len=11) :: filenm
+    character (len=12) :: filenm
     character (len=2) :: str1,str2,str3
     write(str1,"(i2.2)") i
     write(str2,"(i2.2)") j
     write(str3,"(i2.2)") k
-    filenm  ='swmpi'//str1//str2//str3
+    filenm  ='swmpi'//str1//str2//str3//'_'
 end function set_mpi_prefix
 function set_mpi_subfix(i,j,k) result(filenm)
     integer,intent(in) :: i,j,k
