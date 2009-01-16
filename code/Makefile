@@ -75,6 +75,10 @@ SRC_GRID    := seis3d_grid.f90
 EXE_GRID    := seis3d_grid
 OBJ_GRID    := $(foreach file,$(SRC_GRID),$(OBJDIR)/$(file:.f90=.o))
 
+SRC_METRIC     := seis3d_metric.f90
+EXE_METRIC     := seis3d_metric
+OBJ_METRIC     := $(foreach file,$(SRC_METRIC),$(OBJDIR)/$(file:.f90=.o))
+
 SRC_MEDIA   := seis3d_media.f90
 EXE_MEDIA   := seis3d_media
 OBJ_MEDIA   := $(foreach file,$(SRC_MEDIA),$(OBJDIR)/$(file:.f90=.o))
@@ -123,6 +127,7 @@ all: skel preprocess solver kernel
 #all: skel preprocess solver postprocess kernel
 
 preprocess: $(BINDIR)/$(EXE_GRID)  \
+            $(BINDIR)/$(EXE_METRIC)  \
             $(BINDIR)/$(EXE_MEDIA) $(BINDIR)/$(EXE_MEDIA_MPI) \
             $(BINDIR)/$(EXE_SOURCE) $(BINDIR)/$(EXE_STATION)
 solver:  $(BINDIR)/$(EXE_WAVE)
@@ -134,6 +139,8 @@ $(BINDIR)/$(EXE_WAVE): $(OBJ_MOD)  $(OBJ_WAVE)
 	$(FC) -o $@ $(OBJ_MOD) $(OBJ_WAVE) $(LDFLAGS)
 $(BINDIR)/$(EXE_GRID): $(OBJ_MOD) $(OBJ_GRID)
 	$(FC) -o $@ $(OBJ_MOD) $(OBJ_GRID) $(LDFLAGS)
+$(BINDIR)/$(EXE_METRIC): $(OBJ_MOD) $(OBJ_METRIC)
+	$(FC) -o $@ $(OBJ_MOD) $(OBJ_METRIC) $(LDFLAGS)
 $(BINDIR)/$(EXE_MEDIA): $(OBJ_MOD) $(OBJ_MEDIA)
 	$(FC) -o $@ $(OBJ_MOD) $(OBJ_MEDIA) $(LDFLAGS)
 $(BINDIR)/$(EXE_MEDIA_MPI): $(OBJ_MOD) $(OBJ_MEDIA_MPI)
