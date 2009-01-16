@@ -78,7 +78,7 @@ character (len=SEIS_STRLEN),public :: &
     pnm_rest, fnm_rest, fnm_rest_point
 
 !---------------------------------------------
-integer pt_ncid,pt_tid,pt_vid(3),pt_sid(6)
+integer pt_ncid,pt_tid,pt_vid(SEIS_GEO),pt_sid(6)
 integer rest_tinv,run_from_rest
 integer :: nt_dyn_rest, nt_dyn_sync, nt_dyn_new
 
@@ -529,9 +529,10 @@ if ( n1==0 ) then
    if (vel_out(n)) then
    filenm=get_fnm_snapnode(pnm_out,'vel_',n,ntime,thisid(1),thisid(2),thisid(3))
    call nfseis_snap_def(filenm,vel_ncid(n),vel_tid(n),stept*snap_tinv(n),     &
+          subc,"snap of velocity feilds")
+   call nfseis_snap_attdef(vel_ncid(n), &
           snap_gsubs(:,n), snap_gsubc(:,n), snap_gsubt(:,n), snap_gsube(:,n), &
-          isubs, subc, subt, isube,                                           &
-          "snap of velocity feilds")
+          isubs, subc, subt, isube)
    call nfseis_snap_defvar(vel_ncid(n),'Vx',vel_vid(1,n))
    call nfseis_snap_defvar(vel_ncid(n),'Vy',vel_vid(2,n))
    call nfseis_snap_defvar(vel_ncid(n),'Vz',vel_vid(3,n))
@@ -541,9 +542,10 @@ if ( n1==0 ) then
    if (sgt_out(n)) then
    filenm=get_fnm_snapnode(pnm_out,'sgt_',n,ntime,thisid(1),thisid(2),thisid(3))
    call nfseis_snap_def(filenm,sgt_ncid(n),sgt_tid(n),stept*snap_tinv(n),     &
+          subc,"snap of stress feilds")
+   call nfseis_snap_attdef(sgt_ncid(n), &
           snap_gsubs(:,n), snap_gsubc(:,n), snap_gsubt(:,n), snap_gsube(:,n), &
-          isubs, subc, subt, isube,                                           &
-          "snap of stress feilds")
+          isubs, subc, subt, isube)
    call nfseis_snap_defvar(sgt_ncid(n),'Txx',sgt_vid(1,n))
    call nfseis_snap_defvar(sgt_ncid(n),'Tyy',sgt_vid(2,n))
    call nfseis_snap_defvar(sgt_ncid(n),'Tzz',sgt_vid(3,n))
