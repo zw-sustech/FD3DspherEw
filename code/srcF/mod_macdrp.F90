@@ -357,6 +357,7 @@ subroutine atten_graves
  do j=nj1,nj2
  do i=ni1,ni2
  if (Qs(i,j,k)<QsINF) then
+    ! Qs is Q value not attenuation coefficient now
     Qatt=exp((-PI*QsF0*stept)/Qs(i,j,k))
     Txx(i,j,k)=Txx(i,j,k)*Qatt
     Tyy(i,j,k)=Tyy(i,j,k)*Qatt
