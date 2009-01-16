@@ -48,7 +48,7 @@ contains
 subroutine get_conf_name(fnm_input)
 character (*),intent(out) :: fnm_input
 
-#ifdef USE_GETARG
+#ifdef GETARG
 integer numarg,i,iargc
    numarg = iargc( )
    do i=1,numarg
