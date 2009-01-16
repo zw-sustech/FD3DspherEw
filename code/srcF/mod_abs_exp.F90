@@ -18,9 +18,8 @@ module abs_mod
 
 
 use constants_mod
-use string_mod, only : string_conf
-use macdrp_mod, only :                        &
-    Txx,Tyy,Tzz,Txy,Txz,Tyz,Vx,Vy,Vz
+use string_mod
+use macdrp_mod, only : Txx,Tyy,Tzz,Txy,Txz,Tyz,Vx,Vy,Vz
 use para_mod
 use grid_mod
 use mpi_mod
@@ -104,8 +103,8 @@ contains
 
 subroutine abs_init(fnm_conf)
 use mpi_mod, only : absnode
-character (len=*) :: fnm_conf
-integer fid,n,m,i,j,k,ierr,npt
+character (len=*),intent(in) :: fnm_conf
+integer fid,n,m,i,j,k
 real(SP),dimension(SEIS_GEO,2) :: Vs
 real(SP),dimension(SEIS_GEO) :: vec1
 real(SP) :: L,stepx,stepy,stepz
@@ -245,13 +244,13 @@ subroutine fun_noop
    return
 end subroutine fun_noop
 subroutine fun_noop_para(rka,rkb)
-real(SP),optional :: rka,rkb
+real(SP),intent(in),optional :: rka,rkb
    return
 end subroutine fun_noop_para
 
 subroutine abs_apply(rka,rkb)
-real(SP),optional :: rka,rkb
-integer :: n,m,i,j,k
+real(SP),intent(in),optional :: rka,rkb
+integer :: n,i,j,k
 real(SP) :: d
 
 do n=1,num_blk
@@ -291,8 +290,9 @@ end subroutine abs_apply
 !end if
 !end function cal_e
 function cal_e(i,Vs,ah,nb) result(d)
-integer i,nb
-real(SP) :: Vs,d,ah
+integer,intent(in) :: i,nb
+real(SP),intent(in) :: Vs,ah
+real(SP) :: d
 real(SP) :: ie
 integer m,n
 ie=i

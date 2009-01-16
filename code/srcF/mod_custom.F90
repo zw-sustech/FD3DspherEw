@@ -21,10 +21,10 @@ implicit none
 contains
 !-----------------------------------------------------------------------------
 subroutine custom_media(x,y,z,vp,vs,dens,Qatt,Qf0,model)
-real :: x,y,z
-real,dimension(2) :: Vp,Vs,dens,Qatt
-real :: Qf0
-character (len=*) :: model
+real(SP),intent(in) :: x,y,z
+real(SP),dimension(2),intent(out) :: Vp,Vs,dens,Qatt
+real,intent(out) :: Qf0
+character (len=*),intent(in) :: model
 select case (trim(model))
 case ('ak135')
    call custom_media_ak135(x,y,z,Vp,Vs,dens,Qatt,Qf0)
@@ -37,9 +37,9 @@ end select
 end subroutine custom_media
 
 subroutine custom_media_ESG2006(x,y,z,vp,vs,dens,Qatt,Qf0)
-real :: x,y,z
-real,dimension(2) :: Vp,Vs,dens,Qatt
-real :: Qf0
+real,intent(in) :: x,y,z
+real,dimension(2),intent(out) :: Vp,Vs,dens,Qatt
+real,intent(out) :: Qf0
 
 !bechmark2 of ESG2006
 real x0,y0,z0
@@ -68,9 +68,9 @@ Qatt  = 50
 end subroutine custom_media_ESG2006
 
 subroutine custom_media_ak135(x,y,z,vp,vs,dens,Qatt,Qf0)
-real :: x,y,z
-real,dimension(2) :: Vp,Vs,dens,Qatt
-real :: Qf0
+real,intent(in) :: x,y,z
+real,dimension(2),intent(out) :: Vp,Vs,dens,Qatt
+real,intent(out) :: Qf0
 
 real,dimension(2,10) :: alpha,beta,rho,Q
 real,dimension(10) :: H
@@ -165,8 +165,8 @@ call custom_media_perturb(x,y,z,Vp,Vs,dens,Qatt)
 end subroutine custom_media_ak135
 
 subroutine custom_media_perturb(x,y,z,Vp,Vs,dens,Qatt)
-real :: x,y,z
-real,dimension(2) :: Vp,Vs,dens,Qatt
+real,intent(in) :: x,y,z
+real,dimension(2),intent(out) :: Vp,Vs,dens,Qatt
 
 real x0,y0,z0,dx,dy,dz
 real fct
