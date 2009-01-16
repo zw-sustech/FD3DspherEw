@@ -24,6 +24,7 @@ interface nfseis_attget
    module procedure nfseis_attget_int1d
    module procedure nfseis_attget_real
    module procedure nfseis_attget_real1d
+   module procedure nfseis_attget_character
 end interface
 
 interface nfseis_attput
@@ -67,6 +68,7 @@ interface nfseis_put
    module procedure nfseis_put_real1d
    module procedure nfseis_put_real2d
    module procedure nfseis_put_real3d
+   module procedure nfseis_put_real4d
 end interface
 
 !-------------------------------------------------------------------------!
@@ -126,14 +128,11 @@ end subroutine nfseis_seismo_enddef
 !*************************************************************************
 !*                     3D snap wave field file                           *
 !*************************************************************************
-subroutine nfseis_snap_def(filenm,ncid,tid,stept, &
-           gsubs,gsubc,gsubt,gsube,               &
-           subs,subc,subt,sube,title)
+subroutine nfseis_snap_def(filenm,ncid,tid,stept,subc,title)
 character (len=*),intent(in) :: filenm
 integer,intent(out) :: ncid,tid
 real(SP),intent(in) :: stept
-integer,dimension(SEIS_GEO),intent(in) :: gsubs,gsubc,gsubt,gsube
-integer,dimension(SEIS_GEO),intent(in) :: subs,subc,subt,sube
+integer,dimension(SEIS_GEO),intent(in) :: subc
 character (len=*),intent(in),optional :: title
 
 integer ierr,oldMode
@@ -154,21 +153,12 @@ ierr=nf90_def_dim(ncid, 'time', nf90_unlimited, tdimid)
      call nfseis_except(ierr,'time dim in wave_init')
 ierr=nf90_def_var(ncid,'time',SEISNC_DATATYPE,(/ tdimid /), tid )
      call nfseis_except(ierr,'time var in wave_init')
+ierr=nf90_put_att(ncid,NF90_GLOBAL,"stept",stept )
 !-- define global attribute
 if (present(title) ) then
    ierr=nf90_put_att(ncid,NF90_GLOBAL,"title",title )
      call nfseis_except(ierr,'title att in wave_init')
 end if
-!-- define variable attribute
-ierr=nf90_put_att(ncid,NF90_GLOBAL,"gsubs",gsubs)
-ierr=nf90_put_att(ncid,NF90_GLOBAL,"gsubc",gsubc)
-ierr=nf90_put_att(ncid,NF90_GLOBAL,"gsubt",gsubt)
-ierr=nf90_put_att(ncid,NF90_GLOBAL,"gsube",gsube)
-ierr=nf90_put_att(ncid,NF90_GLOBAL,"subs",subs)
-ierr=nf90_put_att(ncid,NF90_GLOBAL,"subc",subc)
-ierr=nf90_put_att(ncid,NF90_GLOBAL,"subt",subt)
-ierr=nf90_put_att(ncid,NF90_GLOBAL,"sube",sube)
-ierr=nf90_put_att(ncid,NF90_GLOBAL,"stept",stept )
 !--
 !ierr=nf90_enddef(ncid)
 !     call nfseis_except(ierr,'enddef in wave_init')
@@ -189,6 +179,22 @@ ierr=nf90_def_var(ncid,varnm,SEISNC_DATATYPE, &
      (/ xdimid, ydimid, zdimid,tdimid /), vid )
      call nfseis_except(ierr,'add var in snap_addvar')
 end subroutine nfseis_snap_defvar
+subroutine nfseis_snap_attdef(ncid, &
+  gsubs,gsubc,gsubt,gsube,subs,subc,subt,sube)
+integer,intent(in) :: ncid
+integer,dimension(SEIS_GEO),intent(in) :: gsubs,gsubc,gsubt,gsube
+integer,dimension(SEIS_GEO),intent(in) :: subs,subc,subt,sube
+integer ierr
+!-- define variable attribute
+ierr=nf90_put_att(ncid,NF90_GLOBAL,"gsubs",gsubs)
+ierr=nf90_put_att(ncid,NF90_GLOBAL,"gsubc",gsubc)
+ierr=nf90_put_att(ncid,NF90_GLOBAL,"gsubt",gsubt)
+ierr=nf90_put_att(ncid,NF90_GLOBAL,"gsube",gsube)
+ierr=nf90_put_att(ncid,NF90_GLOBAL,"subs",subs)
+ierr=nf90_put_att(ncid,NF90_GLOBAL,"subc",subc)
+ierr=nf90_put_att(ncid,NF90_GLOBAL,"subt",subt)
+ierr=nf90_put_att(ncid,NF90_GLOBAL,"sube",sube)
+end subroutine nfseis_snap_attdef
 subroutine nfseis_snap_enddef(ncid)
 integer ncid
 integer ierr
@@ -493,6 +499,19 @@ ierr=nf90_put_var(ncid,varid,var,subs,subc,subt)
      call nfseis_except(ierr,'in nfseis_put_real3d')
      end if
 end subroutine nfseis_put_real3d
+subroutine nfseis_put_real4d(ncid,varid,var,subs,subc,subt)
+integer,intent(in) :: ncid,varid
+real(SP),dimension(:,:,:,:),intent(in) :: var
+integer,dimension(:),intent(in) :: subs,subc,subt
+integer :: ierr
+ierr=nf90_put_var(ncid,varid,var,subs,subc,subt)
+     if (ierr /= nf90_noerr) then
+     print *, 'subs=',subs
+     print *, 'subc=',subc
+     print *, 'subt=',subt
+     call nfseis_except(ierr,'in nfseis_put_real4d')
+     end if
+end subroutine nfseis_put_real4d
 
 ! --- varput ---
 subroutine nfseis_varput_int(filenm,varnm,var,subs,subc,subt)
@@ -944,6 +963,16 @@ ierr=nf90_get_att(ncid,NF90_GLOBAL,attnm,att )
 ! close
 ierr=nf90_close(ncid)
 end subroutine nfseis_attget_real1d
+subroutine nfseis_attget_character(filenm,attnm,att)
+character (len=*),intent(in) :: filenm,attnm
+character (len=SEIS_STRLEN),intent(out) :: att
+integer :: ierr,ncid
+! open
+ierr=nf90_open(trim(filenm),NF90_NOWRITE,ncid)
+ierr=nf90_get_att(ncid,NF90_GLOBAL,attnm,att )
+! close
+ierr=nf90_close(ncid)
+end subroutine nfseis_attget_character
 
 ! --- put att ---
 subroutine nfseis_attput_int(filenm,attnm,att)
