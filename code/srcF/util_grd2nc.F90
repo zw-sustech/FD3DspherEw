@@ -441,4 +441,4 @@ end subroutine nfseis_handle_err
 
 end program grd2nc
 
-
+! vim:ft=fortran:ts=4:sw=4:nu:et:ai:
