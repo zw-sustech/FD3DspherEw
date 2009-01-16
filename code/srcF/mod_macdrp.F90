@@ -150,9 +150,9 @@ if (ierr>0) then
 end if
 allocate(matVx2Vz(SEIS_GEO,SEIS_GEO,nx,ny),stat=ierr); matVx2Vz=0.0_SP
 allocate(matVy2Vz(SEIS_GEO,SEIS_GEO,nx,ny),stat=ierr); matVy2Vz=0.0_SP
-allocate(TxSrc(nx,ny),stat=ierr); TxSrc=0.0_SP
-allocate(TySrc(nx,ny),stat=ierr); TySrc=0.0_SP
-allocate(TzSrc(nx,ny),stat=ierr); TzSrc=0.0_SP
+allocate(TxSrc(nx1:nx2,ny1:ny2),stat=ierr); TxSrc=0.0_SP
+allocate(TySrc(nx1:nx2,ny1:ny2),stat=ierr); TySrc=0.0_SP
+allocate(TzSrc(nx1:nx2,ny1:ny2),stat=ierr); TzSrc=0.0_SP
 ! main
 indx(:,SEIS_GEO*2+1)=(/ ni1+LenFD,ni2-LenFD, &
                         nj1+LenFD,nj2-LenFD, &
@@ -186,7 +186,7 @@ deallocate(tTxx,tTyy,tTxy,tVx,tVy)
 #endif
 end subroutine macdrp_destroy
 subroutine macdrp_check(ntime)
-integer ntime
+integer,intent(in) :: ntime
 real(SP) :: V1,V2,V3,T11,T22,T33,T12,T13,T23,W
 integer ierr
 if (mod(ntime,1)==0) then
@@ -279,7 +279,7 @@ subroutine macdrp_RK_beg(rka,rkb)
 !$OMP END PARALLEL DO
 #ifdef CondFreeCharac
 call free_charac
-call free_symmetric
+call free_extrap
 #endif
 end subroutine macdrp_RK_beg
 
@@ -317,7 +317,7 @@ subroutine macdrp_RK_inn(rka,rkb)
 !$OMP END PARALLEL DO
 #ifdef CondFreeCharac
 call free_charac
-call free_symmetric
+call free_extrap
 #endif
 end subroutine macdrp_RK_inn
 
@@ -345,25 +345,29 @@ subroutine macdrp_RK_fin(rkb)
 !$OMP END PARALLEL DO
 #ifdef CondFreeCharac
 call free_charac
-call free_symmetric
+call free_extrap
 #endif
 end subroutine macdrp_RK_fin
 
 subroutine atten_graves
- integer i,j,k
+ integer :: i,j,k
+ real(SP) :: Qatt
 !$OMP PARALLEL DO DEFAULT(shared) PRIVATE(i,j,k)
  do k=nk1,nk2
  do j=nj1,nj2
  do i=ni1,ni2
-    Txx(i,j,k)=Txx(i,j,k)*Qs(i,j,k)
-    Tyy(i,j,k)=Tyy(i,j,k)*Qs(i,j,k)
-    Tzz(i,j,k)=Tzz(i,j,k)*Qs(i,j,k)
-    Txy(i,j,k)=Txy(i,j,k)*Qs(i,j,k)
-    Txz(i,j,k)=Txz(i,j,k)*Qs(i,j,k)
-    Tyz(i,j,k)=Tyz(i,j,k)*Qs(i,j,k)
-    Vx (i,j,k)=Vx (i,j,k)*Qs(i,j,k)
-    Vy (i,j,k)=Vy (i,j,k)*Qs(i,j,k)
-    Vz (i,j,k)=Vz (i,j,k)*Qs(i,j,k)
+ if (Qs(i,j,k)<QsINF) then
+    Qatt=exp((-PI*QsF0*stept)/Qs(i,j,k))
+    Txx(i,j,k)=Txx(i,j,k)*Qatt
+    Tyy(i,j,k)=Tyy(i,j,k)*Qatt
+    Tzz(i,j,k)=Tzz(i,j,k)*Qatt
+    Txy(i,j,k)=Txy(i,j,k)*Qatt
+    Txz(i,j,k)=Txz(i,j,k)*Qatt
+    Tyz(i,j,k)=Tyz(i,j,k)*Qatt
+    Vx (i,j,k)=Vx (i,j,k)*Qatt
+    Vy (i,j,k)=Vy (i,j,k)*Qatt
+    Vz (i,j,k)=Vz (i,j,k)*Qatt
+ end if
  end do
  end do
  end do
@@ -382,10 +386,10 @@ subroutine in_LxF_LyF_LzF
 #endif
   !Txx=real(myid)
 #ifdef CondFreeTIMG
-  call free_timg
+  if (freenode) call free_timg
 #endif
 #ifdef CondFreeVEXT
-  call free_vext
+  if (freenode) call free_vext
 #endif
   n=SEIS_GEO*2+1
   call MPI_STARTALL(NREQ,reqXF,ierr)
@@ -405,7 +409,7 @@ subroutine in_LxF_LyF_LzF
   end do
 
 #ifdef CondFreeVHOC
-     call LxF_LyF_LzF_VHOC
+   if (freenode)  call LxF_LyF_LzF_VHOC
 #endif
 
 end subroutine in_LxF_LyF_LzF
@@ -417,10 +421,10 @@ subroutine in_LxB_LyB_LzB
 #endif
 
 #ifdef CondFreeTIMG
-  call free_timg
+  if (freenode) call free_timg
 #endif
 #ifdef CondFreeVEXT
-  call free_vext
+  if (freenode) call free_vext
 #endif
   !Txx=real(myid)
   n=SEIS_GEO*2+1
@@ -445,7 +449,7 @@ subroutine in_LxB_LyB_LzB
   end do
 
 #ifdef CondFreeVHOC
-     call LxB_LyB_LzB_VHOC
+   if (freenode)  call LxB_LyB_LzB_VHOC
 #endif
 end subroutine in_LxB_LyB_LzB
 subroutine in_LxB_LyB_LzF
@@ -456,10 +460,10 @@ subroutine in_LxB_LyB_LzF
 #endif
 
 #ifdef CondFreeTIMG
-  call free_timg
+  if (freenode) call free_timg
 #endif
 #ifdef CondFreeVEXT
-  call free_vext
+  if (freenode) call free_vext
 #endif
   n=SEIS_GEO*2+1
   call MPI_STARTALL(NREQ,reqXB,ierr)
@@ -479,7 +483,7 @@ subroutine in_LxB_LyB_LzF
   end do
 
 #ifdef CondFreeVHOC
-     call LxB_LyB_LzF_VHOC
+   if (freenode)  call LxB_LyB_LzF_VHOC
 #endif
 end subroutine in_LxB_LyB_LzF
 subroutine in_LxF_LyF_LzB
@@ -490,10 +494,10 @@ subroutine in_LxF_LyF_LzB
 #endif
 
 #ifdef CondFreeTIMG
-  call free_timg
+  if (freenode) call free_timg
 #endif
 #ifdef CondFreeVEXT
-  call free_vext
+  if (freenode) call free_vext
 #endif
   n=SEIS_GEO*2+1
   call MPI_STARTALL(NREQ,reqXF,ierr)
@@ -513,7 +517,7 @@ subroutine in_LxF_LyF_LzB
   end do
 
 #ifdef CondFreeVHOC
-     call LxF_LyF_LzB_VHOC
+   if (freenode)  call LxF_LyF_LzB_VHOC
 #endif
 end subroutine in_LxF_LyF_LzB
 subroutine in_LxB_LyF_LzF
@@ -524,10 +528,10 @@ subroutine in_LxB_LyF_LzF
 #endif
   !Txx=real(myid)
 #ifdef CondFreeTIMG
-  call free_timg
+  if (freenode) call free_timg
 #endif
 #ifdef CondFreeVEXT
-  call free_vext
+  if (freenode) call free_vext
 #endif
   n=SEIS_GEO*2+1
   call MPI_STARTALL(NREQ,reqXB,ierr)
@@ -547,7 +551,7 @@ subroutine in_LxB_LyF_LzF
   end do
 
 #ifdef CondFreeVHOC
-     call LxB_LyF_LzF_VHOC
+   if (freenode)  call LxB_LyF_LzF_VHOC
 #endif
 end subroutine in_LxB_LyF_LzF
 subroutine in_LxF_LyB_LzB
@@ -558,10 +562,10 @@ subroutine in_LxF_LyB_LzB
 #endif
   !Txx=real(myid)
 #ifdef CondFreeTIMG
-  call free_timg
+  if (freenode) call free_timg
 #endif
 #ifdef CondFreeVEXT
-  call free_vext
+  if (freenode) call free_vext
 #endif
   n=SEIS_GEO*2+1
   call MPI_STARTALL(NREQ,reqXF,ierr)
@@ -581,7 +585,7 @@ subroutine in_LxF_LyB_LzB
   end do
 
 #ifdef CondFreeVHOC
-     call LxF_LyB_LzB_VHOC
+   if (freenode)  call LxF_LyB_LzB_VHOC
 #endif
 end subroutine in_LxF_LyB_LzB
 subroutine in_LxF_LyB_LzF
@@ -592,10 +596,10 @@ subroutine in_LxF_LyB_LzF
 #endif
   !Txx=real(myid)
 #ifdef CondFreeTIMG
-  call free_timg
+  if (freenode) call free_timg
 #endif
 #ifdef CondFreeVEXT
-  call free_vext
+  if (freenode) call free_vext
 #endif
   n=SEIS_GEO*2+1
   call MPI_STARTALL(NREQ,reqXF,ierr)
@@ -615,7 +619,7 @@ subroutine in_LxF_LyB_LzF
   end do
 
 #ifdef CondFreeVHOC
-     call LxF_LyB_LzF_VHOC
+   if (freenode)  call LxF_LyB_LzF_VHOC
 #endif
 end subroutine in_LxF_LyB_LzF
 subroutine in_LxB_LyF_LzB
@@ -626,10 +630,10 @@ subroutine in_LxB_LyF_LzB
 #endif
   !Txx=real(myid)
 #ifdef CondFreeTIMG
-  call free_timg
+  if (freenode) call free_timg
 #endif
 #ifdef CondFreeVEXT
-  call free_vext
+  if (freenode) call free_vext
 #endif
   n=SEIS_GEO*2+1
   call MPI_STARTALL(NREQ,reqXB,ierr)
@@ -649,7 +653,7 @@ subroutine in_LxB_LyF_LzB
   end do
 
 #ifdef CondFreeVHOC
-     call LxB_LyF_LzB_VHOC
+   if (freenode)  call LxB_LyF_LzB_VHOC
 #endif
 end subroutine in_LxB_LyF_LzB
 !-- private subroutine --
@@ -3121,7 +3125,7 @@ end do
 end do
 end subroutine free_charac
 
-subroutine free_symmetric
+subroutine free_extrap
 integer i,j,k
 
 if (freenode) then
@@ -3141,7 +3145,7 @@ end do
 end do
 end do
 end if
-end subroutine free_symmetric
+end subroutine free_extrap
 subroutine free_timg
 integer i,j,k
 
