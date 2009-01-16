@@ -16,7 +16,7 @@ program seis3d_grid
 #include "mod_macdrp.h"
 
 use constants_mod
-use string_mod, only : string_conf
+use string_mod
 use para_mod
 use math_mod
 use mpi_mod
@@ -28,27 +28,19 @@ implicit none
 
 !-----------------------------------------------------------------------------
 
-real,allocatable :: gx(:),gy(:),gz(:),gxsin(:),gxcot(:), &
-     x_xi(:),y_eta(:),z_zeta(:)
+real,allocatable :: gx(:),gy(:),gz(:)
 character (len=SEIS_STRLEN) :: filenm
 
 integer :: ierr
 integer :: n,i,j,k,num_x,num_y,num_z,num_i,num_j,num_k
 integer :: n_i,n_j,n_k
 
-integer :: vecF(5),vecB(5)
-real(SP) :: coeF(5),coeB(5)
-
-vecF=(/ -1,0,1,2,3 /)
-coeF=(/ -0.30874,-0.6326,1.2330,-0.3334,0.04168 /)
-vecB=(/ -3,-2,-1,0,1 /)
-coeB=(/ -0.04168,0.3334,-1.2330,0.6326,0.30874 /)
-
 !-----------------------------------------------------------------------------
 
 call get_conf_name(fnm_conf)
-call para_init(fnm_conf)
+
 call swmpi_init(fnm_conf)
+call para_init(fnm_conf)
 call grid_fnm_init(fnm_conf)
 
 !-----------------------------------------------------------------------------
@@ -65,38 +57,6 @@ call alloc_local(num_x,num_y,num_z)
 
 call read_grid_coord(fnm_grid_conf) 
 
-! calculate metric
-do i=nx1,num_x
-   gxsin(i)=sin(real(gx(i),DP))
-   gxcot(i)=1.0_DP/tan(real(gx(i),DP))
-end do
-do i=ni1,num_i
-   x_xi(i) = (                        &
-      dot_product(gx(i+vecB),coeB) &
-     +dot_product(gx(i+vecF),coeF) &
-     )*0.5
-   xi_x(i)=1.0_SP/x_xi(i)
-end do
-do j=nj1,num_j
-   y_eta(j) = (                       &
-      dot_product(gy(j+vecB),coeB) &
-     +dot_product(gy(j+vecF),coeF) &
-     )*0.5
-   eta_y(j)=1.0_SP/y_eta(j)
-end do
-do k=nk1,num_k
-   z_zeta(k) = (                      &
-      dot_product(gz(k+vecB),coeB) &
-     +dot_product(gz(k+vecF),coeF) &
-     )*0.5
-   zeta_z(k)=1.0_SP/z_zeta(k)
-end do
-do n=1,LenFD
-   xi_x(ni1-n)=xi_x(ni1); xi_x(num_i+n)=xi_x(num_i)
-   eta_y(nj1-n)=eta_y(nj1); eta_y(num_j+n)=eta_y(num_j)
-   zeta_z(nk1-n)=zeta_z(nk1); zeta_z(num_k+n)=zeta_z(num_k)
-end do
-
 print *, "output grid coordinate and locating ..."
 do n_i=0,dims(1)-1
 do n_j=0,dims(2)-1
@@ -107,17 +67,11 @@ do n_k=0,dims(3)-1
    call swmpi_set_gindx(n_i,n_j,n_k)
 
    !output grid
-   filenm=grid_fnm_get(n_i,n_j,n_k)
-   call grid_skel(filenm,nx,ny,nz)
+   filenm=grid_coordfnm_get(n_i,n_j,n_k)
+   call coord_skel(filenm,nx,ny,nz)
    call nfseis_varput(filenm,'x',gx(ngx1:ngx2),(/1/),(/nx/),(/1/))
    call nfseis_varput(filenm,'y',gy(ngy1:ngy2),(/1/),(/ny/),(/1/))
    call nfseis_varput(filenm,'z',gz(ngz1:ngz2),(/1/),(/nz/),(/1/))
-   call nfseis_varput(filenm,'xsin',gxsin(ngx1:ngx2),(/1/),(/nx/),(/1/))
-   call nfseis_varput(filenm,'xcot',gxcot(ngx1:ngx2),(/1/),(/nx/),(/1/))
-   call nfseis_varput(filenm,'xi_x',xi_x(ngx1:ngx2),(/1/),(/nx/),(/1/))
-   call nfseis_varput(filenm,'eta_y',eta_y(ngy1:ngy2),(/1/),(/ny/),(/1/))
-   call nfseis_varput(filenm,'zeta_z',zeta_z(ngz1:ngz2),(/1/),(/nz/),(/1/))
-
 end do
 end do
 end do
@@ -128,16 +82,8 @@ contains
 subroutine alloc_local(n1,n2,n3)
 integer,intent(in) :: n1,n2,n3
 allocate(gx(nx1:n1)); gx=0.0
-allocate(gxsin(nx1:n1)); gxsin=0.0
-allocate(gxcot(nx1:n1)); gxcot=0.0
-allocate(gy(ny1:num_y)); gy=0.0
-allocate(gz(nz1:num_z)); gz=0.0
-allocate(x_xi(nx1:n1)); x_xi=0.0
-allocate(y_eta(ny1:n2)); y_eta=0.0
-allocate(z_zeta(nz1:n3)); z_zeta=0.0
-allocate(xi_x(nx1:n1)); xi_x=0.0
-allocate(eta_y(ny1:n2)); eta_y=0.0
-allocate(zeta_z(nz1:n3)); zeta_z=0.0
+allocate(gy(ny1:n2)); gy=0.0
+allocate(gz(nz1:n3)); gz=0.0
 end subroutine
 
 subroutine read_grid_coord(fnm_conf)
@@ -202,7 +148,7 @@ open(fid,file=trim(fnm_conf),status="old")
 close(fid)
 end subroutine read_grid_coord
 
-subroutine grid_skel(filenm,nx,ny,nz)
+subroutine coord_skel(filenm,nx,ny,nz)
 character (len=*),intent(in) :: filenm
 integer,intent(in) :: nx,ny,nz
 
@@ -224,16 +170,11 @@ ierr=nf90_def_dim(ncid, 'K', nz, zid);     call nfseis_handle_err(ierr)
 ierr=nf90_def_var(ncid, 'x', nf90_float, (/ xid /), vid )
 ierr=nf90_def_var(ncid, 'y', nf90_float, (/ yid /), vid )
 ierr=nf90_def_var(ncid, 'z', nf90_float, (/ zid /), vid )
-ierr=nf90_def_var(ncid, 'xsin', nf90_float, (/ xid /), vid )
-ierr=nf90_def_var(ncid, 'xcot', nf90_float, (/ xid /), vid )
-ierr=nf90_def_var(ncid, 'xi_x', nf90_float, (/ xid /), vid )
-ierr=nf90_def_var(ncid, 'eta_y', nf90_float, (/ yid /), vid )
-ierr=nf90_def_var(ncid, 'zeta_z', nf90_float, (/ zid /), vid )
 !--
 ierr=nf90_enddef(ncid)
 !--
 ierr=nf90_close(ncid); call nfseis_handle_err(ierr)
-end subroutine grid_skel
+end subroutine coord_skel
 
 end program seis3d_grid
 
