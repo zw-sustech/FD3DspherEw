@@ -76,7 +76,7 @@ end subroutine invert_real
 subroutine invert_DP(matrix)
     real(DP),intent(in out) :: matrix(:,:)
     integer :: i,k,n
-    real(SP) :: con
+    real(DP) :: con
     n=ubound(matrix,1)
     do k=1,n
        con=matrix(k,k); matrix(k,k)=1
