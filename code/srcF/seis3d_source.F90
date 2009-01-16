@@ -62,7 +62,7 @@ do n_k=0,dims(3)-1
    write(*,"(i10,2(i2),a,3(i2))") n_i,n_j,n_k, ' of ',dims
    call swmpi_change_fnm(n_i,n_j,n_k)
    call swmpi_set_gindx(n_i,n_j,n_k)
-   call grid_import(n_i,n_j,n_k)
+   call grid_coord_import(n_i,n_j,n_k)
 
    xmin=minval(x); xmax=maxval(x)
    ymin=minval(y); ymax=maxval(y)
@@ -325,15 +325,13 @@ subroutine read_src_para(fnm_conf)
 character (len=*),intent(in) :: fnm_conf
 character (len=SEIS_STRLEN) :: mommech,stf_type,str
 real(DP) :: strike,dip,rake
-real(SP) :: d2m,f0,m0
+real(SP) :: f0,m0
 integer fid,n,m
 
 fid=1001
 open(fid,file=trim(fnm_conf),status="old")
 
-call string_conf(fid,1,'distance2meter',2,d2m)
 call string_conf(fid,1,'src_hyper_height',2,src_hyper_height)
-src_hyper_height=src_hyper_height*d2m
 
 !force
 call string_conf(fid,1,"number_of_force_source",2,num_force)
@@ -357,7 +355,6 @@ if (num_force>=1) then
       ForceZ(m,n)=ForceZ(m,n)*f0
    end do
       force_axis(1:2,n)=force_axis(1:2,n)*PI/180.0_SP
-      force_axis(3,n)=force_axis(3,n)*d2m
    end do
 end if
 !moment
@@ -383,7 +380,6 @@ if (num_moment>=1) then
          MomTxy(m,n)=m0*MomTxy(m,n);MomTxz(m,n)=m0*MomTxz(m,n);MomTyz(m,n)=m0*MomTyz(m,n)
       end do
          moment_axis(1:2,n)=moment_axis(1:2,n)*PI/180.0_SP
-         moment_axis(3,n)=moment_axis(3,n)*d2m
       end do
    else
       do n=1,num_moment
@@ -395,7 +391,6 @@ if (num_moment>=1) then
          MomTxy(m,n)=m0*MomTxy(m,n);MomTxz(m,n)=m0*MomTxz(m,n);MomTyz(m,n)=m0*MomTyz(m,n)
       end do
          moment_axis(1:2,n)=moment_axis(1:2,n)*PI/180.0_SP
-         moment_axis(3,n)=moment_axis(3,n)*d2m
       end do
    end if
 end if
