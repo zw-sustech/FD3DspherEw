@@ -13,8 +13,8 @@ module media_mod
 !
 !*****************************************************************************
 
-use constants_mod, only : SEIS_STRLEN,SEIS_GEO,SEIS_ZERO,PI
-use string_mod, only : string_conf
+use constants_mod
+use string_mod
 use math_mod
 use para_mod
 use mpi_mod
@@ -33,7 +33,7 @@ public ::         &
 
 real(SP),dimension(:,:,:),allocatable,public :: rho,mu,lambda
 real(SP),dimension(:,:,:),allocatable,public :: Qs
-real(SP),public :: Qf0,Qsinf
+real(SP),public :: QsF0,QsINF
 character (len=SEIS_STRLEN),public ::       &
      fnm_media_conf, pnm_media
 integer :: ierr
@@ -47,8 +47,8 @@ contains
 !*************************************************************************
 subroutine media_alloc
   allocate( mu(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr);  mu=0.0_SP
-  allocate( lambda(nx1:nx2,ny1:ny,nz1:nz2),stat=ierr);  lambda=0.0_SP
-  allocate( rho(nx1:nx2,ny1:ny,nz1:nz2),stat=ierr);  rho=0.0_SP
+  allocate( lambda(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr);  lambda=0.0_SP
+  allocate( rho(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr);  rho=0.0_SP
 #ifdef WITHQS
   allocate( Qs(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr);  Qs=0.0_SP
 #endif
@@ -76,8 +76,7 @@ end subroutine media_fnm_init
 function media_fnm_get(n_i,n_j,n_k) result(filenm)
   integer,intent(in) :: n_i,n_j,n_k
   character (len=SEIS_STRLEN) :: filenm
-  !filenm=trim(pnm_media)//'/'//'media'//'_'//set_mpi_subfix(n_i,n_j,n_k)//'.nc'
-  filenm=trim(pnm_media)//'/'//set_mpi_prefix(n_i,n_j,n_k)//'_media.nc'
+  filenm=trim(pnm_media)//'/'//'media'//'_'//set_mpi_subfix(n_i,n_j,n_k)//'.nc'
 end function media_fnm_get
 
 subroutine media_import(n_i,n_j,n_k)
@@ -91,8 +90,8 @@ subroutine media_import(n_i,n_j,n_k)
   call nfseis_varget( filenm, 'rho', rho, subs,subc,subt)
 #ifdef WITHQS
   call nfseis_varget( filenm, 'Qs', Qs, subs,subc,subt)
-  call nfseis_attget( filenm, 'Qf0', Qf0)
-  call nfseis_attget( filenm, 'Qsinf', Qsinf)
+  call nfseis_attget( filenm, 'QsF0', QsF0)
+  call nfseis_attget( filenm, 'QsINF', QsINF)
 #endif
 end subroutine media_import
   
