@@ -244,7 +244,7 @@ subroutine swmpi_reinit_para
    if (thisid(3)==dims(3)-1) point_in_this(6)=ngz2
 
    NTPI=ni*dims(1); NTPJ=nj*dims(2); NTPK=nk*dims(3)
-   NTPX=nx*dims(1); NTPY=ny*dims(2); NTPZ=nz*dims(3)
+   NTPX=NTPI+(nx-ni); NTPY=NTPJ+(ny-nj); NTPZ=NTPK+(nz-nk)
    npi1=thisid(1)*ni+1; npi2=(thisid(1)+1)*ni
    npj1=thisid(2)*nj+1; npj2=(thisid(2)+1)*nj
    npk1=thisid(3)*nk+1; npk2=(thisid(3)+1)*nk
@@ -273,7 +273,7 @@ subroutine swmpi_set_gindx(n_i,n_j,n_k)
    if (n_k==0)         point_in_this(5)=ngz1
    if (n_k==dims(3)-1) point_in_this(6)=ngz2
    NTPI=ni*dims(1); NTPJ=nj*dims(2); NTPK=nk*dims(3)
-   NTPX=nx*dims(1); NTPY=ny*dims(2); NTPZ=nz*dims(3)
+   NTPX=NTPI+(nx-ni); NTPY=NTPJ+(ny-nj); NTPZ=NTPK+(nz-nk)
    npi1=n_i*ni+1; npi2=(n_i+1)*ni
    npj1=n_j*nj+1; npj2=(n_j+1)*nj
    npk1=n_k*nk+1; npk2=(n_k+1)*nk
