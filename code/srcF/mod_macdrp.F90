@@ -15,6 +15,7 @@ module macdrp_mod
 !*****************************************************************************
 
 #include "mod_macdrp.h"
+!#define WATER
 
 use constants_mod, only : SEIS_GEO
 use math_mod
@@ -75,13 +76,26 @@ end interface
 DEFFDWET
 DEFFDWET24
 DEFFDWET22
+DEFLDDRK2A
+DEFLDDRK2B
 DEFLDDRK4A
 DEFLDDRK4B
 HOCWETL
 HOCWETR
 
+#ifdef MPIBuffered
+real(SP),dimension(:),allocatable ::        &
+     BufX1,BufX2,BufY1,BufY2,BufZ1,BufZ2,   &
+     RevX1,RevX2,RevY1,RevY2,RevZ1,RevZ2
+integer,parameter,private :: NREQ=4
+integer,private :: &
+     NBufXL, NBufXS, &
+     NBufYL, NBufYS, &
+     NBufZL, NBufZS
+#else
 !integer,parameter,private :: NREQ=36
 integer,parameter,private :: NREQ=24
+#endif
 
 real(SP),dimension(:,:,:),allocatable ::        &
       Txx, Tyy, Txy, Vx, Vy, Tzz, Txz, Tyz, Vz, &
@@ -91,7 +105,8 @@ real(SP),dimension(:,:,:),allocatable ::        &
 real(SP),dimension(:,:,:,:),allocatable,public :: &
      matVx2Vz,matVy2Vz
 real(SP),dimension(:,:),allocatable,public :: &
-     TxSrc,TySrc,TzSrc
+     TxSrc,TySrc,TzSrc,                       &
+     VxSrc,VySrc,VzSrc
 real(SP),dimension(4),public :: firRKa,firRKb, secRKa,secRKb
 integer,dimension(SEIS_GEO*2,SEIS_GEO*2+1),public :: indx
 integer ierr
@@ -153,6 +168,29 @@ allocate(matVy2Vz(SEIS_GEO,SEIS_GEO,nx,ny),stat=ierr); matVy2Vz=0.0_SP
 allocate(TxSrc(nx1:nx2,ny1:ny2),stat=ierr); TxSrc=0.0_SP
 allocate(TySrc(nx1:nx2,ny1:ny2),stat=ierr); TySrc=0.0_SP
 allocate(TzSrc(nx1:nx2,ny1:ny2),stat=ierr); TzSrc=0.0_SP
+allocate(VxSrc(nx1:nx2,ny1:ny2),stat=ierr); VxSrc=0.0_SP
+allocate(VySrc(nx1:nx2,ny1:ny2),stat=ierr); VySrc=0.0_SP
+allocate(VzSrc(nx1:nx2,ny1:ny2),stat=ierr); VzSrc=0.0_SP
+#ifdef MPIBuffered
+allocate(BufX1(LenFD*nj*nk*6),stat=ierr); BufX1=0.0_SP
+allocate(BufX2(LenFD*nj*nk*6),stat=ierr); BufX2=0.0_SP
+allocate(BufY1(LenFD*ni*nk*6),stat=ierr); BufY1=0.0_SP
+allocate(BufY2(LenFD*ni*nk*6),stat=ierr); BufY2=0.0_SP
+allocate(BufZ1(LenFD*ni*nj*6),stat=ierr); BufZ1=0.0_SP
+allocate(BufZ2(LenFD*ni*nj*6),stat=ierr); BufZ2=0.0_SP
+allocate(RevX1(LenFD*nj*nk*6),stat=ierr); RevX1=0.0_SP
+allocate(RevX2(LenFD*nj*nk*6),stat=ierr); RevX2=0.0_SP
+allocate(RevY1(LenFD*ni*nk*6),stat=ierr); RevY1=0.0_SP
+allocate(RevY2(LenFD*ni*nk*6),stat=ierr); RevY2=0.0_SP
+allocate(RevZ1(LenFD*ni*nj*6),stat=ierr); RevZ1=0.0_SP
+allocate(RevZ2(LenFD*ni*nj*6),stat=ierr); RevZ2=0.0_SP
+NBufXL=nj*nk*LenFDL*6
+NBufXS=nj*nk*LenFDS*6
+NBufYL=ni*nk*LenFDL*6
+NBufYS=ni*nk*LenFDS*6
+NBufZL=ni*nj*LenFDL*6
+NBufZS=ni*nj*LenFDS*6
+#endif
 ! main
 indx(:,SEIS_GEO*2+1)=(/ ni1+LenFD,ni2-LenFD, &
                         nj1+LenFD,nj2-LenFD, &
@@ -166,8 +204,10 @@ indx(:,4)=(/ ni2-LenFD+1,ni2,nj1+LenFD,nj2-LenFD,nk1+LenFD,nk2-LenFD /) ! x2
 ! rk coefficient
 firRKa=(/ RK4a2, RK4a3, RK4a4, 0.0 /)
 firRKb=(/ RK4b1, RK4b2, RK4b3, RK4b4 /)
-secRKa=(/ RK4a2, RK4a3, RK4a4, 0.0 /)
-secRKb=(/ RK4b1, RK4b2, RK4b3, RK4b4 /)
+!secRKa=(/ RK4a2, RK4a3, RK4a4, 0.0 /)
+!secRKb=(/ RK4b1, RK4b2, RK4b3, RK4b4 /)
+secRKa=(/ RK2a2, 0.0, 0.0, 0.0 /)
+secRKb=(/ RK2b1, RK2b2, 0.0, 0.0 /)
 ! mat to convert V,z
 #ifdef VERBOSE
   fid_out=9050
@@ -189,6 +229,9 @@ subroutine macdrp_check(ntime)
 integer,intent(in) :: ntime
 real(SP) :: V1,V2,V3,T11,T22,T33,T12,T13,T23,W
 integer ierr
+#ifndef CheckOverFlow
+ return
+#endif
 if (mod(ntime,1)==0) then
     V1=maxval(abs(Vx))
     V2=maxval(abs(Vy))
@@ -393,6 +436,11 @@ subroutine in_LxF_LyF_LzF
   if (freenode) call free_vext
 #endif
   n=SEIS_GEO*2+1
+#ifdef MPIBuffered
+  call fill_buff_LxF
+  call fill_buff_LyF
+  call fill_buff_LzF
+#endif
   call MPI_STARTALL(NREQ,reqXF,ierr)
   call MPI_STARTALL(NREQ,reqYF,ierr)
   call MPI_STARTALL(NREQ,reqZF,ierr)
@@ -402,6 +450,11 @@ subroutine in_LxF_LyF_LzF
   call MPI_WAITALL(NREQ,reqXF,reqstat,ierr)
   call MPI_WAITALL(NREQ,reqYF,reqstat,ierr)
   call MPI_WAITALL(NREQ,reqZF,reqstat,ierr)
+#ifdef MPIBuffered
+  call recv_buff_LxF
+  call recv_buff_LyF
+  call recv_buff_LzF
+#endif
 
   do n=1,SEIS_GEO*2
   call LxF_LyF_LzF( indx(1,n),indx(2,n), &
@@ -433,6 +486,11 @@ subroutine in_LxB_LyB_LzB
   !  Vx=1.0;Vy=2.0;Vz=3.0;Txx=4.0;Tyy=5.0;Tzz=6.0;Txy=7.0;Txz=8.0;Tyz=9.0
   !end if
 
+#ifdef MPIBuffered
+  call fill_buff_LxB
+  call fill_buff_LyB
+  call fill_buff_LzB
+#endif
   call MPI_STARTALL(NREQ,reqXB,ierr)
   call MPI_STARTALL(NREQ,reqYB,ierr)
   call MPI_STARTALL(NREQ,reqZB,ierr)
@@ -442,6 +500,11 @@ subroutine in_LxB_LyB_LzB
   call MPI_WAITALL(NREQ,reqXB,reqstat,ierr)
   call MPI_WAITALL(NREQ,reqYB,reqstat,ierr)
   call MPI_WAITALL(NREQ,reqZB,reqstat,ierr)
+#ifdef MPIBuffered
+  call recv_buff_LxB
+  call recv_buff_LyB
+  call recv_buff_LzB
+#endif
 
   do n=1,SEIS_GEO*2
   call LxB_LyB_LzB( indx(1,n),indx(2,n), &
@@ -467,6 +530,12 @@ subroutine in_LxB_LyB_LzF
   if (freenode) call free_vext
 #endif
   n=SEIS_GEO*2+1
+
+#ifdef MPIBuffered
+  call fill_buff_LxB
+  call fill_buff_LyB
+  call fill_buff_LzF
+#endif
   call MPI_STARTALL(NREQ,reqXB,ierr)
   call MPI_STARTALL(NREQ,reqYB,ierr)
   call MPI_STARTALL(NREQ,reqZF,ierr)
@@ -476,6 +545,11 @@ subroutine in_LxB_LyB_LzF
   call MPI_WAITALL(NREQ,reqXB,reqstat,ierr)
   call MPI_WAITALL(NREQ,reqYB,reqstat,ierr)
   call MPI_WAITALL(NREQ,reqZF,reqstat,ierr)
+#ifdef MPIBuffered
+  call recv_buff_LxB
+  call recv_buff_LyB
+  call recv_buff_LzF
+#endif
 
   do n=1,SEIS_GEO*2
   call LxB_LyB_LzF( indx(1,n),indx(2,n), &
@@ -501,6 +575,12 @@ subroutine in_LxF_LyF_LzB
   if (freenode) call free_vext
 #endif
   n=SEIS_GEO*2+1
+
+#ifdef MPIBuffered
+  call fill_buff_LxF
+  call fill_buff_LyF
+  call fill_buff_LzB
+#endif
   call MPI_STARTALL(NREQ,reqXF,ierr)
   call MPI_STARTALL(NREQ,reqYF,ierr)
   call MPI_STARTALL(NREQ,reqZB,ierr)
@@ -510,6 +590,11 @@ subroutine in_LxF_LyF_LzB
   call MPI_WAITALL(NREQ,reqXF,reqstat,ierr)
   call MPI_WAITALL(NREQ,reqYF,reqstat,ierr)
   call MPI_WAITALL(NREQ,reqZB,reqstat,ierr)
+#ifdef MPIBuffered
+  call recv_buff_LxF
+  call recv_buff_LyF
+  call recv_buff_LzB
+#endif
 
   do n=1,SEIS_GEO*2
   call LxF_LyF_LzB( indx(1,n),indx(2,n), &
@@ -535,6 +620,12 @@ subroutine in_LxB_LyF_LzF
   if (freenode) call free_vext
 #endif
   n=SEIS_GEO*2+1
+
+#ifdef MPIBuffered
+  call fill_buff_LxB
+  call fill_buff_LyF
+  call fill_buff_LzF
+#endif
   call MPI_STARTALL(NREQ,reqXB,ierr)
   call MPI_STARTALL(NREQ,reqYF,ierr)
   call MPI_STARTALL(NREQ,reqZF,ierr)
@@ -544,6 +635,11 @@ subroutine in_LxB_LyF_LzF
   call MPI_WAITALL(NREQ,reqXB,reqstat,ierr)
   call MPI_WAITALL(NREQ,reqYF,reqstat,ierr)
   call MPI_WAITALL(NREQ,reqZF,reqstat,ierr)
+#ifdef MPIBuffered
+  call recv_buff_LxB
+  call recv_buff_LyF
+  call recv_buff_LzF
+#endif
 
   do n=1,SEIS_GEO*2
   call LxB_LyF_LzF( indx(1,n),indx(2,n), &
@@ -569,6 +665,12 @@ subroutine in_LxF_LyB_LzB
   if (freenode) call free_vext
 #endif
   n=SEIS_GEO*2+1
+
+#ifdef MPIBuffered
+  call fill_buff_LxF
+  call fill_buff_LyB
+  call fill_buff_LzB
+#endif
   call MPI_STARTALL(NREQ,reqXF,ierr)
   call MPI_STARTALL(NREQ,reqYB,ierr)
   call MPI_STARTALL(NREQ,reqZB,ierr)
@@ -578,6 +680,11 @@ subroutine in_LxF_LyB_LzB
   call MPI_WAITALL(NREQ,reqXF,reqstat,ierr)
   call MPI_WAITALL(NREQ,reqYB,reqstat,ierr)
   call MPI_WAITALL(NREQ,reqZB,reqstat,ierr)
+#ifdef MPIBuffered
+  call recv_buff_LxF
+  call recv_buff_LyB
+  call recv_buff_LzB
+#endif
 
   do n=1,SEIS_GEO*2
   call LxF_LyB_LzB( indx(1,n),indx(2,n), &
@@ -603,6 +710,12 @@ subroutine in_LxF_LyB_LzF
   if (freenode) call free_vext
 #endif
   n=SEIS_GEO*2+1
+
+#ifdef MPIBuffered
+  call fill_buff_LxF
+  call fill_buff_LyB
+  call fill_buff_LzF
+#endif
   call MPI_STARTALL(NREQ,reqXF,ierr)
   call MPI_STARTALL(NREQ,reqYB,ierr)
   call MPI_STARTALL(NREQ,reqZF,ierr)
@@ -612,6 +725,11 @@ subroutine in_LxF_LyB_LzF
   call MPI_WAITALL(NREQ,reqXF,reqstat,ierr)
   call MPI_WAITALL(NREQ,reqYB,reqstat,ierr)
   call MPI_WAITALL(NREQ,reqZF,reqstat,ierr)
+#ifdef MPIBuffered
+  call recv_buff_LxF
+  call recv_buff_LyB
+  call recv_buff_LzF
+#endif
 
   do n=1,SEIS_GEO*2
   call LxF_LyB_LzF( indx(1,n),indx(2,n), &
@@ -637,6 +755,12 @@ subroutine in_LxB_LyF_LzB
   if (freenode) call free_vext
 #endif
   n=SEIS_GEO*2+1
+
+#ifdef MPIBuffered
+  call fill_buff_LxB
+  call fill_buff_LyF
+  call fill_buff_LzB
+#endif
   call MPI_STARTALL(NREQ,reqXB,ierr)
   call MPI_STARTALL(NREQ,reqYF,ierr)
   call MPI_STARTALL(NREQ,reqZB,ierr)
@@ -646,6 +770,11 @@ subroutine in_LxB_LyF_LzB
   call MPI_WAITALL(NREQ,reqXB,reqstat,ierr)
   call MPI_WAITALL(NREQ,reqYF,reqstat,ierr)
   call MPI_WAITALL(NREQ,reqZB,reqstat,ierr)
+#ifdef MPIBuffered
+  call recv_buff_LxB
+  call recv_buff_LyF
+  call recv_buff_LzB
+#endif
 
   do n=1,SEIS_GEO*2
   call LxB_LyF_LzB( indx(1,n),indx(2,n), &
@@ -728,6 +857,18 @@ do i=I1,I2
      m3d_FDyF2(Vz,i,j,k)  &
      )*eta_y(j)
 
+   DzTzz = (              &
+     m3d_FDzF1(Tzz,i,j,k) &
+     m3d_FDzF2(Tzz,i,j,k) &
+     )*zeta_z(k)
+   DzTxz = (              &
+     m3d_FDzF1(Txz,i,j,k) &
+     m3d_FDzF2(Txz,i,j,k) &
+     )*zeta_z(k)
+   DzTyz = (              &
+     m3d_FDzF1(Tyz,i,j,k) &
+     m3d_FDzF2(Tyz,i,j,k) &
+     )*zeta_z(k)
 #ifdef CondFreeVLOW
    if (freenode .and. k==nk2-1) then
    DzVx = (               &
@@ -772,18 +913,17 @@ do i=I1,I2
 #ifdef CondFreeVLOW
    end if
 #endif
-   DzTzz = (              &
-     m3d_FDzF1(Tzz,i,j,k) &
-     m3d_FDzF2(Tzz,i,j,k) &
-     )*zeta_z(k)
-   DzTxz = (              &
-     m3d_FDzF1(Txz,i,j,k) &
-     m3d_FDzF2(Txz,i,j,k) &
-     )*zeta_z(k)
-   DzTyz = (              &
-     m3d_FDzF1(Tyz,i,j,k) &
-     m3d_FDzF2(Tyz,i,j,k) &
-     )*zeta_z(k)
+
+#ifdef WATER
+   if (miu<=SEIS_ZERO) then
+      DxTxy=0.0
+      DxTxz=0.0
+      DyTxy=0.0
+      DyTyz=0.0
+      DzTxz=0.0
+      DzTyz=0.0
+   end if
+#endif
 
    hVx(i,j,k)= rrho*( DxTxx/z(k)+DyTxy/z(k)/xsin(i)+DzTxz                    &
         +(3.0_SP*Txz(i,j,k)+Txx(i,j,k)*xcot(i)-Tyy(i,j,k)*xcot(i))/z(k) )
@@ -795,19 +935,20 @@ do i=I1,I2
    E11=(DxVx+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy/xsin(i)+Vz(i,j,k))/z(k)
    E12=(DxVy+DyVx/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)/2.0_SP
+
+   E33=DzVz
+   E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))/2.0_SP
+   E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))/2.0_SP
 #ifndef CondFreeCharac
+#ifndef CondFreeVHOC
    if (freenode .and. k==nk2) then
-      E33=-lam/lam2mu*(E11+E22)
-      E13=0.0
-      E23=0.0
-   else
-#endif
-      E33=DzVz
-      E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))/2.0_SP
-      E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))/2.0_SP
-#ifndef CondFreeCharac
+      E33=-lam/lam2mu*(E11+E22)+VzSrc(i,j)/lam2mu
+      E13=VxSrc(i,j)/miu/2.0_SP
+      E23=VySrc(i,j)/miu/2.0_SP
    end if
 #endif
+#endif
+
    hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
    hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
    hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
@@ -890,6 +1031,18 @@ do i=I1,I2
      m3d_FDyB2(Vz,i,j,k)  &
      )*eta_y(j)
 
+   DzTzz = (              &
+     m3d_FDzB1(Tzz,i,j,k) &
+     m3d_FDzB2(Tzz,i,j,k) &
+     )*zeta_z(k)
+   DzTxz = (              &
+     m3d_FDzB1(Txz,i,j,k) &
+     m3d_FDzB2(Txz,i,j,k) &
+     )*zeta_z(k)
+   DzTyz = (              &
+     m3d_FDzB1(Tyz,i,j,k) &
+     m3d_FDzB2(Tyz,i,j,k) &
+     )*zeta_z(k)
 #ifdef CondFreeVLOW
    if (freenode .and. k==nk2-1) then
    DzVx = (               &
@@ -934,18 +1087,17 @@ do i=I1,I2
 #ifdef CondFreeVLOW
    end if
 #endif
-   DzTzz = (              &
-     m3d_FDzB1(Tzz,i,j,k) &
-     m3d_FDzB2(Tzz,i,j,k) &
-     )*zeta_z(k)
-   DzTxz = (              &
-     m3d_FDzB1(Txz,i,j,k) &
-     m3d_FDzB2(Txz,i,j,k) &
-     )*zeta_z(k)
-   DzTyz = (              &
-     m3d_FDzB1(Tyz,i,j,k) &
-     m3d_FDzB2(Tyz,i,j,k) &
-     )*zeta_z(k)
+
+#ifdef WATER
+   if (miu<=SEIS_ZERO) then
+      DxTxy=0.0
+      DxTxz=0.0
+      DyTxy=0.0
+      DyTyz=0.0
+      DzTxz=0.0
+      DzTyz=0.0
+   end if
+#endif
 
    hVx(i,j,k)= rrho*( DxTxx/z(k)+DyTxy/z(k)/xsin(i)+DzTxz                    &
         +(3.0_SP*Txz(i,j,k)+Txx(i,j,k)*xcot(i)-Tyy(i,j,k)*xcot(i))/z(k) )
@@ -957,19 +1109,20 @@ do i=I1,I2
    E11=(DxVx+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy/xsin(i)+Vz(i,j,k))/z(k)
    E12=(DxVy+DyVx/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)/2.0_SP
+
+   E33=DzVz
+   E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))/2.0_SP
+   E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))/2.0_SP
 #ifndef CondFreeCharac
+#ifndef CondFreeVHOC
    if (freenode .and. k==nk2) then
-      E33=-lam/lam2mu*(E11+E22)
-      E13=0.0
-      E23=0.0
-   else
-#endif
-      E33=DzVz
-      E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))/2.0_SP
-      E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))/2.0_SP
-#ifndef CondFreeCharac
+      E33=-lam/lam2mu*(E11+E22)+VzSrc(i,j)/lam2mu
+      E13=VxSrc(i,j)/miu/2.0_SP
+      E23=VySrc(i,j)/miu/2.0_SP
    end if
 #endif
+#endif
+
    hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
    hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
    hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
@@ -1052,6 +1205,18 @@ do i=I1,I2
      m3d_FDyF2(Vz,i,j,k)  &
      )*eta_y(j)
 
+   DzTzz = (              &
+     m3d_FDzB1(Tzz,i,j,k) &
+     m3d_FDzB2(Tzz,i,j,k) &
+     )*zeta_z(k)
+   DzTxz = (              &
+     m3d_FDzB1(Txz,i,j,k) &
+     m3d_FDzB2(Txz,i,j,k) &
+     )*zeta_z(k)
+   DzTyz = (              &
+     m3d_FDzB1(Tyz,i,j,k) &
+     m3d_FDzB2(Tyz,i,j,k) &
+     )*zeta_z(k)
 #ifdef CondFreeVLOW
    if (freenode .and. k==nk2-1) then
    DzVx = (               &
@@ -1096,18 +1261,17 @@ do i=I1,I2
 #ifdef CondFreeVLOW
    end if
 #endif
-   DzTzz = (              &
-     m3d_FDzB1(Tzz,i,j,k) &
-     m3d_FDzB2(Tzz,i,j,k) &
-     )*zeta_z(k)
-   DzTxz = (              &
-     m3d_FDzB1(Txz,i,j,k) &
-     m3d_FDzB2(Txz,i,j,k) &
-     )*zeta_z(k)
-   DzTyz = (              &
-     m3d_FDzB1(Tyz,i,j,k) &
-     m3d_FDzB2(Tyz,i,j,k) &
-     )*zeta_z(k)
+
+#ifdef WATER
+   if (miu<=SEIS_ZERO) then
+      DxTxy=0.0
+      DxTxz=0.0
+      DyTxy=0.0
+      DyTyz=0.0
+      DzTxz=0.0
+      DzTyz=0.0
+   end if
+#endif
 
    hVx(i,j,k)= rrho*( DxTxx/z(k)+DyTxy/z(k)/xsin(i)+DzTxz                    &
         +(3.0_SP*Txz(i,j,k)+Txx(i,j,k)*xcot(i)-Tyy(i,j,k)*xcot(i))/z(k) )
@@ -1119,19 +1283,21 @@ do i=I1,I2
    E11=(DxVx+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy/xsin(i)+Vz(i,j,k))/z(k)
    E12=(DxVy+DyVx/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)/2.0_SP
+
+   E33=DzVz
+   E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))/2.0_SP
+   E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))/2.0_SP
 #ifndef CondFreeCharac
+#ifndef CondFreeVHOC
    if (freenode .and. k==nk2) then
-      E33=-lam/lam2mu*(E11+E22)
-      E13=0.0
-      E23=0.0
-   else
-#endif
-      E33=DzVz
-      E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))/2.0_SP
-      E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))/2.0_SP
-#ifndef CondFreeCharac
+      E33=-lam/lam2mu*(E11+E22)+VzSrc(i,j)/lam2mu
+      E13=VxSrc(i,j)/miu/2.0_SP
+      E23=VySrc(i,j)/miu/2.0_SP
    end if
 #endif
+#endif
+
+
    hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
    hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
    hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
@@ -1214,6 +1380,18 @@ do i=I1,I2
      m3d_FDyB2(Vz,i,j,k)  &
      )*eta_y(j)
 
+   DzTzz = (              &
+     m3d_FDzF1(Tzz,i,j,k) &
+     m3d_FDzF2(Tzz,i,j,k) &
+     )*zeta_z(k)
+   DzTxz = (              &
+     m3d_FDzF1(Txz,i,j,k) &
+     m3d_FDzF2(Txz,i,j,k) &
+     )*zeta_z(k)
+   DzTyz = (              &
+     m3d_FDzF1(Tyz,i,j,k) &
+     m3d_FDzF2(Tyz,i,j,k) &
+     )*zeta_z(k)
 #ifdef CondFreeVLOW
    if (freenode .and. k==nk2-1) then
    DzVx = (               &
@@ -1258,18 +1436,17 @@ do i=I1,I2
 #ifdef CondFreeVLOW
    end if
 #endif
-   DzTzz = (              &
-     m3d_FDzF1(Tzz,i,j,k) &
-     m3d_FDzF2(Tzz,i,j,k) &
-     )*zeta_z(k)
-   DzTxz = (              &
-     m3d_FDzF1(Txz,i,j,k) &
-     m3d_FDzF2(Txz,i,j,k) &
-     )*zeta_z(k)
-   DzTyz = (              &
-     m3d_FDzF1(Tyz,i,j,k) &
-     m3d_FDzF2(Tyz,i,j,k) &
-     )*zeta_z(k)
+
+#ifdef WATER
+   if (miu<=SEIS_ZERO) then
+      DxTxy=0.0
+      DxTxz=0.0
+      DyTxy=0.0
+      DyTyz=0.0
+      DzTxz=0.0
+      DzTyz=0.0
+   end if
+#endif
 
    hVx(i,j,k)= rrho*( DxTxx/z(k)+DyTxy/z(k)/xsin(i)+DzTxz                    &
         +(3.0_SP*Txz(i,j,k)+Txx(i,j,k)*xcot(i)-Tyy(i,j,k)*xcot(i))/z(k) )
@@ -1281,19 +1458,20 @@ do i=I1,I2
    E11=(DxVx+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy/xsin(i)+Vz(i,j,k))/z(k)
    E12=(DxVy+DyVx/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)/2.0_SP
+
+   E33=DzVz
+   E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))/2.0_SP
+   E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))/2.0_SP
 #ifndef CondFreeCharac
+#ifndef CondFreeVHOC
    if (freenode .and. k==nk2) then
-      E33=-lam/lam2mu*(E11+E22)
-      E13=0.0
-      E23=0.0
-   else
-#endif
-      E33=DzVz
-      E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))/2.0_SP
-      E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))/2.0_SP
-#ifndef CondFreeCharac
+      E33=-lam/lam2mu*(E11+E22)+VzSrc(i,j)/lam2mu
+      E13=VxSrc(i,j)/miu/2.0_SP
+      E23=VySrc(i,j)/miu/2.0_SP
    end if
 #endif
+#endif
+
    hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
    hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
    hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
@@ -1376,6 +1554,18 @@ do i=I1,I2
      m3d_FDyF2(Vz,i,j,k)  &
      )*eta_y(j)
 
+   DzTzz = (              &
+     m3d_FDzF1(Tzz,i,j,k) &
+     m3d_FDzF2(Tzz,i,j,k) &
+     )*zeta_z(k)
+   DzTxz = (              &
+     m3d_FDzF1(Txz,i,j,k) &
+     m3d_FDzF2(Txz,i,j,k) &
+     )*zeta_z(k)
+   DzTyz = (              &
+     m3d_FDzF1(Tyz,i,j,k) &
+     m3d_FDzF2(Tyz,i,j,k) &
+     )*zeta_z(k)
 #ifdef CondFreeVLOW
    if (freenode .and. k==nk2-1) then
    DzVx = (               &
@@ -1420,18 +1610,17 @@ do i=I1,I2
 #ifdef CondFreeVLOW
    end if
 #endif
-   DzTzz = (              &
-     m3d_FDzF1(Tzz,i,j,k) &
-     m3d_FDzF2(Tzz,i,j,k) &
-     )*zeta_z(k)
-   DzTxz = (              &
-     m3d_FDzF1(Txz,i,j,k) &
-     m3d_FDzF2(Txz,i,j,k) &
-     )*zeta_z(k)
-   DzTyz = (              &
-     m3d_FDzF1(Tyz,i,j,k) &
-     m3d_FDzF2(Tyz,i,j,k) &
-     )*zeta_z(k)
+
+#ifdef WATER
+   if (miu<=SEIS_ZERO) then
+      DxTxy=0.0
+      DxTxz=0.0
+      DyTxy=0.0
+      DyTyz=0.0
+      DzTxz=0.0
+      DzTyz=0.0
+   end if
+#endif
 
    hVx(i,j,k)= rrho*( DxTxx/z(k)+DyTxy/z(k)/xsin(i)+DzTxz                    &
         +(3.0_SP*Txz(i,j,k)+Txx(i,j,k)*xcot(i)-Tyy(i,j,k)*xcot(i))/z(k) )
@@ -1443,19 +1632,20 @@ do i=I1,I2
    E11=(DxVx+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy/xsin(i)+Vz(i,j,k))/z(k)
    E12=(DxVy+DyVx/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)/2.0_SP
+
+   E33=DzVz
+   E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))/2.0_SP
+   E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))/2.0_SP
 #ifndef CondFreeCharac
+#ifndef CondFreeVHOC
    if (freenode .and. k==nk2) then
-      E33=-lam/lam2mu*(E11+E22)
-      E13=0.0
-      E23=0.0
-   else
-#endif
-      E33=DzVz
-      E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))/2.0_SP
-      E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))/2.0_SP
-#ifndef CondFreeCharac
+      E33=-lam/lam2mu*(E11+E22)+VzSrc(i,j)/lam2mu
+      E13=VxSrc(i,j)/miu/2.0_SP
+      E23=VySrc(i,j)/miu/2.0_SP
    end if
 #endif
+#endif
+
    hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
    hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
    hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
@@ -1538,6 +1728,18 @@ do i=I1,I2
      m3d_FDyB2(Vz,i,j,k)  &
      )*eta_y(j)
 
+   DzTzz = (              &
+     m3d_FDzB1(Tzz,i,j,k) &
+     m3d_FDzB2(Tzz,i,j,k) &
+     )*zeta_z(k)
+   DzTxz = (              &
+     m3d_FDzB1(Txz,i,j,k) &
+     m3d_FDzB2(Txz,i,j,k) &
+     )*zeta_z(k)
+   DzTyz = (              &
+     m3d_FDzB1(Tyz,i,j,k) &
+     m3d_FDzB2(Tyz,i,j,k) &
+     )*zeta_z(k)
 #ifdef CondFreeVLOW
    if (freenode .and. k==nk2-1) then
    DzVx = (               &
@@ -1582,18 +1784,17 @@ do i=I1,I2
 #ifdef CondFreeVLOW
    end if
 #endif
-   DzTzz = (              &
-     m3d_FDzB1(Tzz,i,j,k) &
-     m3d_FDzB2(Tzz,i,j,k) &
-     )*zeta_z(k)
-   DzTxz = (              &
-     m3d_FDzB1(Txz,i,j,k) &
-     m3d_FDzB2(Txz,i,j,k) &
-     )*zeta_z(k)
-   DzTyz = (              &
-     m3d_FDzB1(Tyz,i,j,k) &
-     m3d_FDzB2(Tyz,i,j,k) &
-     )*zeta_z(k)
+
+#ifdef WATER
+   if (miu<=SEIS_ZERO) then
+      DxTxy=0.0
+      DxTxz=0.0
+      DyTxy=0.0
+      DyTyz=0.0
+      DzTxz=0.0
+      DzTyz=0.0
+   end if
+#endif
 
    hVx(i,j,k)= rrho*( DxTxx/z(k)+DyTxy/z(k)/xsin(i)+DzTxz                    &
         +(3.0_SP*Txz(i,j,k)+Txx(i,j,k)*xcot(i)-Tyy(i,j,k)*xcot(i))/z(k) )
@@ -1605,19 +1806,20 @@ do i=I1,I2
    E11=(DxVx+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy/xsin(i)+Vz(i,j,k))/z(k)
    E12=(DxVy+DyVx/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)/2.0_SP
+
+   E33=DzVz
+   E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))/2.0_SP
+   E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))/2.0_SP
 #ifndef CondFreeCharac
+#ifndef CondFreeVHOC
    if (freenode .and. k==nk2) then
-      E33=-lam/lam2mu*(E11+E22)
-      E13=0.0
-      E23=0.0
-   else
-#endif
-      E33=DzVz
-      E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))/2.0_SP
-      E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))/2.0_SP
-#ifndef CondFreeCharac
+      E33=-lam/lam2mu*(E11+E22)+VzSrc(i,j)/lam2mu
+      E13=VxSrc(i,j)/miu/2.0_SP
+      E23=VySrc(i,j)/miu/2.0_SP
    end if
 #endif
+#endif
+
    hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
    hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
    hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
@@ -1700,6 +1902,18 @@ do i=I1,I2
      m3d_FDyB2(Vz,i,j,k)  &
      )*eta_y(j)
 
+   DzTzz = (              &
+     m3d_FDzF1(Tzz,i,j,k) &
+     m3d_FDzF2(Tzz,i,j,k) &
+     )*zeta_z(k)
+   DzTxz = (              &
+     m3d_FDzF1(Txz,i,j,k) &
+     m3d_FDzF2(Txz,i,j,k) &
+     )*zeta_z(k)
+   DzTyz = (              &
+     m3d_FDzF1(Tyz,i,j,k) &
+     m3d_FDzF2(Tyz,i,j,k) &
+     )*zeta_z(k)
 #ifdef CondFreeVLOW
    if (freenode .and. k==nk2-1) then
    DzVx = (               &
@@ -1744,18 +1958,17 @@ do i=I1,I2
 #ifdef CondFreeVLOW
    end if
 #endif
-   DzTzz = (              &
-     m3d_FDzF1(Tzz,i,j,k) &
-     m3d_FDzF2(Tzz,i,j,k) &
-     )*zeta_z(k)
-   DzTxz = (              &
-     m3d_FDzF1(Txz,i,j,k) &
-     m3d_FDzF2(Txz,i,j,k) &
-     )*zeta_z(k)
-   DzTyz = (              &
-     m3d_FDzF1(Tyz,i,j,k) &
-     m3d_FDzF2(Tyz,i,j,k) &
-     )*zeta_z(k)
+
+#ifdef WATER
+   if (miu<=SEIS_ZERO) then
+      DxTxy=0.0
+      DxTxz=0.0
+      DyTxy=0.0
+      DyTyz=0.0
+      DzTxz=0.0
+      DzTyz=0.0
+   end if
+#endif
 
    hVx(i,j,k)= rrho*( DxTxx/z(k)+DyTxy/z(k)/xsin(i)+DzTxz                    &
         +(3.0_SP*Txz(i,j,k)+Txx(i,j,k)*xcot(i)-Tyy(i,j,k)*xcot(i))/z(k) )
@@ -1767,19 +1980,20 @@ do i=I1,I2
    E11=(DxVx+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy/xsin(i)+Vz(i,j,k))/z(k)
    E12=(DxVy+DyVx/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)/2.0_SP
+
+   E33=DzVz
+   E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))/2.0_SP
+   E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))/2.0_SP
 #ifndef CondFreeCharac
+#ifndef CondFreeVHOC
    if (freenode .and. k==nk2) then
-      E33=-lam/lam2mu*(E11+E22)
-      E13=0.0
-      E23=0.0
-   else
-#endif
-      E33=DzVz
-      E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))/2.0_SP
-      E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))/2.0_SP
-#ifndef CondFreeCharac
+      E33=-lam/lam2mu*(E11+E22)+VzSrc(i,j)/lam2mu
+      E13=VxSrc(i,j)/miu/2.0_SP
+      E23=VySrc(i,j)/miu/2.0_SP
    end if
 #endif
+#endif
+
    hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
    hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
    hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
@@ -1862,6 +2076,18 @@ do i=I1,I2
      m3d_FDyF2(Vz,i,j,k)  &
      )*eta_y(j)
 
+   DzTzz = (              &
+     m3d_FDzB1(Tzz,i,j,k) &
+     m3d_FDzB2(Tzz,i,j,k) &
+     )*zeta_z(k)
+   DzTxz = (              &
+     m3d_FDzB1(Txz,i,j,k) &
+     m3d_FDzB2(Txz,i,j,k) &
+     )*zeta_z(k)
+   DzTyz = (              &
+     m3d_FDzB1(Tyz,i,j,k) &
+     m3d_FDzB2(Tyz,i,j,k) &
+     )*zeta_z(k)
 #ifdef CondFreeVLOW
    if (freenode .and. k==nk2-1) then
    DzVx = (               &
@@ -1906,18 +2132,17 @@ do i=I1,I2
 #ifdef CondFreeVLOW
    end if
 #endif
-   DzTzz = (              &
-     m3d_FDzB1(Tzz,i,j,k) &
-     m3d_FDzB2(Tzz,i,j,k) &
-     )*zeta_z(k)
-   DzTxz = (              &
-     m3d_FDzB1(Txz,i,j,k) &
-     m3d_FDzB2(Txz,i,j,k) &
-     )*zeta_z(k)
-   DzTyz = (              &
-     m3d_FDzB1(Tyz,i,j,k) &
-     m3d_FDzB2(Tyz,i,j,k) &
-     )*zeta_z(k)
+
+#ifdef WATER
+   if (miu<=SEIS_ZERO) then
+      DxTxy=0.0
+      DxTxz=0.0
+      DyTxy=0.0
+      DyTyz=0.0
+      DzTxz=0.0
+      DzTyz=0.0
+   end if
+#endif
 
    hVx(i,j,k)= rrho*( DxTxx/z(k)+DyTxy/z(k)/xsin(i)+DzTxz                    &
         +(3.0_SP*Txz(i,j,k)+Txx(i,j,k)*xcot(i)-Tyy(i,j,k)*xcot(i))/z(k) )
@@ -1929,19 +2154,20 @@ do i=I1,I2
    E11=(DxVx+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy/xsin(i)+Vz(i,j,k))/z(k)
    E12=(DxVy+DyVx/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)/2.0_SP
+
+   E33=DzVz
+   E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))/2.0_SP
+   E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))/2.0_SP
 #ifndef CondFreeCharac
+#ifndef CondFreeVHOC
    if (freenode .and. k==nk2) then
-      E33=-lam/lam2mu*(E11+E22)
-      E13=0.0
-      E23=0.0
-   else
-#endif
-      E33=DzVz
-      E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))/2.0_SP
-      E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))/2.0_SP
-#ifndef CondFreeCharac
+      E33=-lam/lam2mu*(E11+E22)+VzSrc(i,j)/lam2mu
+      E13=VxSrc(i,j)/miu/2.0_SP
+      E23=VySrc(i,j)/miu/2.0_SP
    end if
 #endif
+#endif
+
    hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
    hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
    hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
@@ -2006,9 +2232,9 @@ loop_xi:  do i=ni1,ni2
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
 
-   DzVx(n) = -DxVz(n)/z(k)+Vx(i,j,k)/z(k)
-   DzVy(n) = -DyVz(n)/z(k)/xsin(i)+Vy(i,j,k)/z(k)
-   DzVz(n) = -lam/lam2mu*(E11+E22)
+   DzVx(n) = (-DxVz(n)/z(k)+Vx(i,j,k)/z(k)+VxSrc(i,j)/miu)/zeta_z(k)
+   DzVy(n) = (-DyVz(n)/z(k)/xsin(i)+Vy(i,j,k)/z(k)+VySrc(i,j)/miu)/zeta_z(k)
+   DzVz(n) = (-lam/lam2mu*(E11+E22)+VzSrc(i,j)/lam2mu)/zeta_z(k)
 
    !-- j=ny-LenFD+1:ny-1 --
 do n=LenFD,2,-1
@@ -2043,7 +2269,7 @@ do n=LenFD,2,-1
    rhs_Dz= (                  &
      m3d_HOCzF1_RHS(Vx,i,j,k) &
      m3d_HOCzF2_RHS(Vx,i,j,k) &
-     )*zeta_z(k)
+     )
    lhs_Dz= (                  &
      vec_HOC_F_LHS(DzVx,n)    &
      )
@@ -2052,7 +2278,7 @@ do n=LenFD,2,-1
    rhs_Dz= (                  &
      m3d_HOCzF1_RHS(Vy,i,j,k) &
      m3d_HOCzF2_RHS(Vy,i,j,k) &
-     )*zeta_z(k)
+     )
    lhs_Dz= (                  &
      vec_HOC_F_LHS(DzVy,n)    &
      )
@@ -2061,7 +2287,7 @@ do n=LenFD,2,-1
    rhs_Dz= (                  &
      m3d_HOCzF1_RHS(Vz,i,j,k) &
      m3d_HOCzF2_RHS(Vz,i,j,k) &
-     )*zeta_z(k)
+     )
    lhs_Dz= (                  &
      vec_HOC_F_LHS(DzVz,n)    &
      )
@@ -2070,6 +2296,9 @@ do n=LenFD,2,-1
 end do
 do n=2,LenFD+1
    k=nk2-LenFD +n-1
+   DzVx(n)=DzVx(n)*zeta_z(k)
+   DzVy(n)=DzVy(n)*zeta_z(k)
+   DzVz(n)=DzVz(n)*zeta_z(k)
    lam=lambda(i,j,k);miu=mu(i,j,k);lam2mu=lam+2.0*miu;rrho=1.0/rho(i,j,k)
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
@@ -2084,9 +2313,9 @@ do n=2,LenFD+1
    hTxz(i,j,k)=2.0_SP*miu*E13
    hTyz(i,j,k)=2.0_SP*miu*E23
    if (k==nk2) then
-      hTxz(i,j,k)=0.0_SP
-      hTyz(i,j,k)=0.0_SP
-      hTzz(i,j,k)=0.0_SP
+      hTxz(i,j,k)=VxSrc(i,j)
+      hTyz(i,j,k)=VySrc(i,j)
+      hTzz(i,j,k)=VzSrc(i,j)
    end if
 end do
 end do loop_xi
@@ -2111,15 +2340,15 @@ loop_xi:  do i=ni1,ni2
    DzVx(n) =  (          &
      m3d_FDzB1(Vx,i,j,k) &
      m3d_FDzB2(Vx,i,j,k) &
-     )*zeta_z(k)
+     )
    DzVy(n) = (           &
      m3d_FDzB1(Vy,i,j,k) &
      m3d_FDzB2(Vy,i,j,k) &
-     )*zeta_z(k)
+     )
    DzVz(n) = (           &
      m3d_FDzB1(Vz,i,j,k) &
      m3d_FDzB2(Vz,i,j,k) &
-     )*zeta_z(k)
+     )
 
    !-- k=nk2 --
    n=LenFD+1; k=nk2
@@ -2154,9 +2383,9 @@ loop_xi:  do i=ni1,ni2
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
 
-   DzVx(n) = -DxVz(n)/z(k)+Vx(i,j,k)/z(k)
-   DzVy(n) = -DyVz(n)/z(k)/xsin(i)+Vy(i,j,k)/z(k)
-   DzVz(n) = -lam/lam2mu*(E11+E22)
+   DzVx(n) = (-DxVz(n)/z(k)+Vx(i,j,k)/z(k)+VxSrc(i,j)/miu)/zeta_z(k)
+   DzVy(n) = (-DyVz(n)/z(k)/xsin(i)+Vy(i,j,k)/z(k)+VySrc(i,j)/miu)/zeta_z(k)
+   DzVz(n) = (-lam/lam2mu*(E11+E22)+VzSrc(i,j)/lam2mu)/zeta_z(k)
 
    !-- k=nk2-LenFD+1:nk2-1 --
 do n=2,LenFD
@@ -2191,7 +2420,7 @@ do n=2,LenFD
    rhs_Dz= (                  &
      m3d_HOCzB1_RHS(Vx,i,j,k) &
      m3d_HOCzB2_RHS(Vx,i,j,k) &
-     )*zeta_z(k)
+     )
    lhs_Dz= (                  &
      vec_HOC_B_LHS(DzVx,n)    &
      )
@@ -2200,7 +2429,7 @@ do n=2,LenFD
    rhs_Dz= (                  &
      m3d_HOCzB1_RHS(Vy,i,j,k) &
      m3d_HOCzB2_RHS(Vy,i,j,k) &
-     )*zeta_z(k)
+     )
    lhs_Dz= (                  &
      vec_HOC_B_LHS(DzVy,n)    &
      )
@@ -2209,7 +2438,7 @@ do n=2,LenFD
    rhs_Dz= (                  &
      m3d_HOCzB1_RHS(Vz,i,j,k) &
      m3d_HOCzB2_RHS(Vz,i,j,k) &
-     )*zeta_z(k)
+     )
    lhs_Dz= (                  &
      vec_HOC_B_LHS(DzVz,n)    &
      )
@@ -2218,6 +2447,9 @@ end do
 
 do n=2,LenFD+1
    k=nk2-LenFD +n-1
+   DzVx(n)=DzVx(n)*zeta_z(k)
+   DzVy(n)=DzVy(n)*zeta_z(k)
+   DzVz(n)=DzVz(n)*zeta_z(k)
    lam=lambda(i,j,k);miu=mu(i,j,k);lam2mu=lam+2.0*miu;rrho=1.0/rho(i,j,k)
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
@@ -2232,9 +2464,9 @@ do n=2,LenFD+1
    hTxz(i,j,k)=2.0_SP*miu*E13
    hTyz(i,j,k)=2.0_SP*miu*E23
    if (k==nk2) then
-      hTxz(i,j,k)=0.0_SP
-      hTyz(i,j,k)=0.0_SP
-      hTzz(i,j,k)=0.0_SP
+      hTxz(i,j,k)=VxSrc(i,j)
+      hTyz(i,j,k)=VySrc(i,j)
+      hTzz(i,j,k)=VzSrc(i,j)
    end if
 end do
 end do loop_xi
@@ -2260,15 +2492,15 @@ loop_xi:  do i=ni1,ni2
    DzVx(n) =  (          &
      m3d_FDzB1(Vx,i,j,k) &
      m3d_FDzB2(Vx,i,j,k) &
-     )*zeta_z(k)
+     )
    DzVy(n) = (           &
      m3d_FDzB1(Vy,i,j,k) &
      m3d_FDzB2(Vy,i,j,k) &
-     )*zeta_z(k)
+     )
    DzVz(n) = (           &
      m3d_FDzB1(Vz,i,j,k) &
      m3d_FDzB2(Vz,i,j,k) &
-     )*zeta_z(k)
+     )
 
    !-- k=nk2 --
    n=LenFD+1; k=nk2
@@ -2303,9 +2535,9 @@ loop_xi:  do i=ni1,ni2
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
 
-   DzVx(n) = -DxVz(n)/z(k)+Vx(i,j,k)/z(k)
-   DzVy(n) = -DyVz(n)/z(k)/xsin(i)+Vy(i,j,k)/z(k)
-   DzVz(n) = -lam/lam2mu*(E11+E22)
+   DzVx(n) = (-DxVz(n)/z(k)+Vx(i,j,k)/z(k)+VxSrc(i,j)/miu)/zeta_z(k)
+   DzVy(n) = (-DyVz(n)/z(k)/xsin(i)+Vy(i,j,k)/z(k)+VySrc(i,j)/miu)/zeta_z(k)
+   DzVz(n) = (-lam/lam2mu*(E11+E22)+VzSrc(i,j)/lam2mu)/zeta_z(k)
 
    !-- k=nk2-LenFD+1:nk2-1 --
 do n=2,LenFD
@@ -2340,7 +2572,7 @@ do n=2,LenFD
    rhs_Dz= (                  &
      m3d_HOCzB1_RHS(Vx,i,j,k) &
      m3d_HOCzB2_RHS(Vx,i,j,k) &
-     )*zeta_z(k)
+     )
    lhs_Dz= (                  &
      vec_HOC_B_LHS(DzVx,n)    &
      )
@@ -2349,7 +2581,7 @@ do n=2,LenFD
    rhs_Dz= (                  &
      m3d_HOCzB1_RHS(Vy,i,j,k) &
      m3d_HOCzB2_RHS(Vy,i,j,k) &
-     )*zeta_z(k)
+     )
    lhs_Dz= (                  &
      vec_HOC_B_LHS(DzVy,n)    &
      )
@@ -2358,7 +2590,7 @@ do n=2,LenFD
    rhs_Dz= (                  &
      m3d_HOCzB1_RHS(Vz,i,j,k) &
      m3d_HOCzB2_RHS(Vz,i,j,k) &
-     )*zeta_z(k)
+     )
    lhs_Dz= (                  &
      vec_HOC_B_LHS(DzVz,n)    &
      )
@@ -2367,6 +2599,9 @@ end do
 
 do n=2,LenFD+1
    k=nk2-LenFD +n-1
+   DzVx(n)=DzVx(n)*zeta_z(k)
+   DzVy(n)=DzVy(n)*zeta_z(k)
+   DzVz(n)=DzVz(n)*zeta_z(k)
    lam=lambda(i,j,k);miu=mu(i,j,k);lam2mu=lam+2.0*miu;rrho=1.0/rho(i,j,k)
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
@@ -2381,9 +2616,9 @@ do n=2,LenFD+1
    hTxz(i,j,k)=2.0_SP*miu*E13
    hTyz(i,j,k)=2.0_SP*miu*E23
    if (k==nk2) then
-      hTxz(i,j,k)=0.0_SP
-      hTyz(i,j,k)=0.0_SP
-      hTzz(i,j,k)=0.0_SP
+      hTxz(i,j,k)=VxSrc(i,j)
+      hTyz(i,j,k)=VySrc(i,j)
+      hTzz(i,j,k)=VzSrc(i,j)
    end if
 end do
 end do loop_xi
@@ -2436,9 +2671,9 @@ loop_xi:  do i=ni1,ni2
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
 
-   DzVx(n) = -DxVz(n)/z(k)+Vx(i,j,k)/z(k)
-   DzVy(n) = -DyVz(n)/z(k)/xsin(i)+Vy(i,j,k)/z(k)
-   DzVz(n) = -lam/lam2mu*(E11+E22)
+   DzVx(n) = (-DxVz(n)/z(k)+Vx(i,j,k)/z(k)+VxSrc(i,j)/miu)/zeta_z(k)
+   DzVy(n) = (-DyVz(n)/z(k)/xsin(i)+Vy(i,j,k)/z(k)+VySrc(i,j)/miu)/zeta_z(k)
+   DzVz(n) = (-lam/lam2mu*(E11+E22)+VzSrc(i,j)/lam2mu)/zeta_z(k)
 
    !-- j=ny-LenFD+1:ny-1 --
 do n=LenFD,2,-1
@@ -2473,7 +2708,7 @@ do n=LenFD,2,-1
    rhs_Dz= (                  &
      m3d_HOCzF1_RHS(Vx,i,j,k) &
      m3d_HOCzF2_RHS(Vx,i,j,k) &
-     )*zeta_z(k)
+     )
    lhs_Dz= (                  &
      vec_HOC_F_LHS(DzVx,n)    &
      )
@@ -2482,7 +2717,7 @@ do n=LenFD,2,-1
    rhs_Dz= (                  &
      m3d_HOCzF1_RHS(Vy,i,j,k) &
      m3d_HOCzF2_RHS(Vy,i,j,k) &
-     )*zeta_z(k)
+     )
    lhs_Dz= (                  &
      vec_HOC_F_LHS(DzVy,n)    &
      )
@@ -2491,7 +2726,7 @@ do n=LenFD,2,-1
    rhs_Dz= (                  &
      m3d_HOCzF1_RHS(Vz,i,j,k) &
      m3d_HOCzF2_RHS(Vz,i,j,k) &
-     )*zeta_z(k)
+     )
    lhs_Dz= (                  &
      vec_HOC_F_LHS(DzVz,n)    &
      )
@@ -2500,6 +2735,9 @@ do n=LenFD,2,-1
 end do
 do n=2,LenFD+1
    k=nk2-LenFD +n-1
+   DzVx(n)=DzVx(n)*zeta_z(k)
+   DzVy(n)=DzVy(n)*zeta_z(k)
+   DzVz(n)=DzVz(n)*zeta_z(k)
    lam=lambda(i,j,k);miu=mu(i,j,k);lam2mu=lam+2.0*miu;rrho=1.0/rho(i,j,k)
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
@@ -2514,9 +2752,9 @@ do n=2,LenFD+1
    hTxz(i,j,k)=2.0_SP*miu*E13
    hTyz(i,j,k)=2.0_SP*miu*E23
    if (k==nk2) then
-      hTxz(i,j,k)=0.0_SP
-      hTyz(i,j,k)=0.0_SP
-      hTzz(i,j,k)=0.0_SP
+      hTxz(i,j,k)=VxSrc(i,j)
+      hTyz(i,j,k)=VySrc(i,j)
+      hTzz(i,j,k)=VzSrc(i,j)
    end if
 end do
 end do loop_xi
@@ -2570,9 +2808,9 @@ loop_xi:  do i=ni1,ni2
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
 
-   DzVx(n) = -DxVz(n)/z(k)+Vx(i,j,k)/z(k)
-   DzVy(n) = -DyVz(n)/z(k)/xsin(i)+Vy(i,j,k)/z(k)
-   DzVz(n) = -lam/lam2mu*(E11+E22)
+   DzVx(n) = (-DxVz(n)/z(k)+Vx(i,j,k)/z(k)+VxSrc(i,j)/miu)/zeta_z(k)
+   DzVy(n) = (-DyVz(n)/z(k)/xsin(i)+Vy(i,j,k)/z(k)+VySrc(i,j)/miu)/zeta_z(k)
+   DzVz(n) = (-lam/lam2mu*(E11+E22)+VzSrc(i,j)/lam2mu)/zeta_z(k)
 
    !-- j=ny-LenFD+1:ny-1 --
 do n=LenFD,2,-1
@@ -2607,7 +2845,7 @@ do n=LenFD,2,-1
    rhs_Dz= (                  &
      m3d_HOCzF1_RHS(Vx,i,j,k) &
      m3d_HOCzF2_RHS(Vx,i,j,k) &
-     )*zeta_z(k)
+     )
    lhs_Dz= (                  &
      vec_HOC_F_LHS(DzVx,n)    &
      )
@@ -2616,7 +2854,7 @@ do n=LenFD,2,-1
    rhs_Dz= (                  &
      m3d_HOCzF1_RHS(Vy,i,j,k) &
      m3d_HOCzF2_RHS(Vy,i,j,k) &
-     )*zeta_z(k)
+     )
    lhs_Dz= (                  &
      vec_HOC_F_LHS(DzVy,n)    &
      )
@@ -2625,7 +2863,7 @@ do n=LenFD,2,-1
    rhs_Dz= (                  &
      m3d_HOCzF1_RHS(Vz,i,j,k) &
      m3d_HOCzF2_RHS(Vz,i,j,k) &
-     )*zeta_z(k)
+     )
    lhs_Dz= (                  &
      vec_HOC_F_LHS(DzVz,n)    &
      )
@@ -2634,6 +2872,9 @@ do n=LenFD,2,-1
 end do
 do n=2,LenFD+1
    k=nk2-LenFD +n-1
+   DzVx(n)=DzVx(n)*zeta_z(k)
+   DzVy(n)=DzVy(n)*zeta_z(k)
+   DzVz(n)=DzVz(n)*zeta_z(k)
    lam=lambda(i,j,k);miu=mu(i,j,k);lam2mu=lam+2.0*miu;rrho=1.0/rho(i,j,k)
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
@@ -2648,9 +2889,9 @@ do n=2,LenFD+1
    hTxz(i,j,k)=2.0_SP*miu*E13
    hTyz(i,j,k)=2.0_SP*miu*E23
    if (k==nk2) then
-      hTxz(i,j,k)=0.0_SP
-      hTyz(i,j,k)=0.0_SP
-      hTzz(i,j,k)=0.0_SP
+      hTxz(i,j,k)=VxSrc(i,j)
+      hTyz(i,j,k)=VySrc(i,j)
+      hTzz(i,j,k)=VzSrc(i,j)
    end if
 end do
 end do loop_xi
@@ -2675,15 +2916,15 @@ loop_xi:  do i=ni1,ni2
    DzVx(n) =  (          &
      m3d_FDzB1(Vx,i,j,k) &
      m3d_FDzB2(Vx,i,j,k) &
-     )*zeta_z(k)
+     )
    DzVy(n) = (           &
      m3d_FDzB1(Vy,i,j,k) &
      m3d_FDzB2(Vy,i,j,k) &
-     )*zeta_z(k)
+     )
    DzVz(n) = (           &
      m3d_FDzB1(Vz,i,j,k) &
      m3d_FDzB2(Vz,i,j,k) &
-     )*zeta_z(k)
+     )
 
    !-- k=nk2 --
    n=LenFD+1; k=nk2
@@ -2718,9 +2959,9 @@ loop_xi:  do i=ni1,ni2
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
 
-   DzVx(n) = -DxVz(n)/z(k)+Vx(i,j,k)/z(k)
-   DzVy(n) = -DyVz(n)/z(k)/xsin(i)+Vy(i,j,k)/z(k)
-   DzVz(n) = -lam/lam2mu*(E11+E22)
+   DzVx(n) = (-DxVz(n)/z(k)+Vx(i,j,k)/z(k)+VxSrc(i,j)/miu)/zeta_z(k)
+   DzVy(n) = (-DyVz(n)/z(k)/xsin(i)+Vy(i,j,k)/z(k)+VySrc(i,j)/miu)/zeta_z(k)
+   DzVz(n) = (-lam/lam2mu*(E11+E22)+VzSrc(i,j)/lam2mu)/zeta_z(k)
 
    !-- k=nk2-LenFD+1:nk2-1 --
 do n=2,LenFD
@@ -2755,7 +2996,7 @@ do n=2,LenFD
    rhs_Dz= (                  &
      m3d_HOCzB1_RHS(Vx,i,j,k) &
      m3d_HOCzB2_RHS(Vx,i,j,k) &
-     )*zeta_z(k)
+     )
    lhs_Dz= (                  &
      vec_HOC_B_LHS(DzVx,n)    &
      )
@@ -2764,7 +3005,7 @@ do n=2,LenFD
    rhs_Dz= (                  &
      m3d_HOCzB1_RHS(Vy,i,j,k) &
      m3d_HOCzB2_RHS(Vy,i,j,k) &
-     )*zeta_z(k)
+     )
    lhs_Dz= (                  &
      vec_HOC_B_LHS(DzVy,n)    &
      )
@@ -2773,7 +3014,7 @@ do n=2,LenFD
    rhs_Dz= (                  &
      m3d_HOCzB1_RHS(Vz,i,j,k) &
      m3d_HOCzB2_RHS(Vz,i,j,k) &
-     )*zeta_z(k)
+     )
    lhs_Dz= (                  &
      vec_HOC_B_LHS(DzVz,n)    &
      )
@@ -2782,6 +3023,9 @@ end do
 
 do n=2,LenFD+1
    k=nk2-LenFD +n-1
+   DzVx(n)=DzVx(n)*zeta_z(k)
+   DzVy(n)=DzVy(n)*zeta_z(k)
+   DzVz(n)=DzVz(n)*zeta_z(k)
    lam=lambda(i,j,k);miu=mu(i,j,k);lam2mu=lam+2.0*miu;rrho=1.0/rho(i,j,k)
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
@@ -2796,9 +3040,9 @@ do n=2,LenFD+1
    hTxz(i,j,k)=2.0_SP*miu*E13
    hTyz(i,j,k)=2.0_SP*miu*E23
    if (k==nk2) then
-      hTxz(i,j,k)=0.0_SP
-      hTyz(i,j,k)=0.0_SP
-      hTzz(i,j,k)=0.0_SP
+      hTxz(i,j,k)=VxSrc(i,j)
+      hTyz(i,j,k)=VySrc(i,j)
+      hTzz(i,j,k)=VzSrc(i,j)
    end if
 end do
 end do loop_xi
@@ -2852,9 +3096,9 @@ loop_xi:  do i=ni1,ni2
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
 
-   DzVx(n) = -DxVz(n)/z(k)+Vx(i,j,k)/z(k)
-   DzVy(n) = -DyVz(n)/z(k)/xsin(i)+Vy(i,j,k)/z(k)
-   DzVz(n) = -lam/lam2mu*(E11+E22)
+   DzVx(n) = (-DxVz(n)/z(k)+Vx(i,j,k)/z(k)+VxSrc(i,j)/miu)/zeta_z(k)
+   DzVy(n) = (-DyVz(n)/z(k)/xsin(i)+Vy(i,j,k)/z(k)+VySrc(i,j)/miu)/zeta_z(k)
+   DzVz(n) = (-lam/lam2mu*(E11+E22)+VzSrc(i,j)/lam2mu)/zeta_z(k)
 
    !-- j=ny-LenFD+1:ny-1 --
 do n=LenFD,2,-1
@@ -2889,7 +3133,7 @@ do n=LenFD,2,-1
    rhs_Dz= (                  &
      m3d_HOCzF1_RHS(Vx,i,j,k) &
      m3d_HOCzF2_RHS(Vx,i,j,k) &
-     )*zeta_z(k)
+     )
    lhs_Dz= (                  &
      vec_HOC_F_LHS(DzVx,n)    &
      )
@@ -2898,7 +3142,7 @@ do n=LenFD,2,-1
    rhs_Dz= (                  &
      m3d_HOCzF1_RHS(Vy,i,j,k) &
      m3d_HOCzF2_RHS(Vy,i,j,k) &
-     )*zeta_z(k)
+     )
    lhs_Dz= (                  &
      vec_HOC_F_LHS(DzVy,n)    &
      )
@@ -2907,7 +3151,7 @@ do n=LenFD,2,-1
    rhs_Dz= (                  &
      m3d_HOCzF1_RHS(Vz,i,j,k) &
      m3d_HOCzF2_RHS(Vz,i,j,k) &
-     )*zeta_z(k)
+     )
    lhs_Dz= (                  &
      vec_HOC_F_LHS(DzVz,n)    &
      )
@@ -2916,6 +3160,9 @@ do n=LenFD,2,-1
 end do
 do n=2,LenFD+1
    k=nk2-LenFD +n-1
+   DzVx(n)=DzVx(n)*zeta_z(k)
+   DzVy(n)=DzVy(n)*zeta_z(k)
+   DzVz(n)=DzVz(n)*zeta_z(k)
    lam=lambda(i,j,k);miu=mu(i,j,k);lam2mu=lam+2.0*miu;rrho=1.0/rho(i,j,k)
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
@@ -2930,9 +3177,9 @@ do n=2,LenFD+1
    hTxz(i,j,k)=2.0_SP*miu*E13
    hTyz(i,j,k)=2.0_SP*miu*E23
    if (k==nk2) then
-      hTxz(i,j,k)=0.0_SP
-      hTyz(i,j,k)=0.0_SP
-      hTzz(i,j,k)=0.0_SP
+      hTxz(i,j,k)=VxSrc(i,j)
+      hTyz(i,j,k)=VySrc(i,j)
+      hTzz(i,j,k)=VzSrc(i,j)
    end if
 end do
 end do loop_xi
@@ -2957,15 +3204,15 @@ loop_xi:  do i=ni1,ni2
    DzVx(n) =  (          &
      m3d_FDzB1(Vx,i,j,k) &
      m3d_FDzB2(Vx,i,j,k) &
-     )*zeta_z(k)
+     )
    DzVy(n) = (           &
      m3d_FDzB1(Vy,i,j,k) &
      m3d_FDzB2(Vy,i,j,k) &
-     )*zeta_z(k)
+     )
    DzVz(n) = (           &
      m3d_FDzB1(Vz,i,j,k) &
      m3d_FDzB2(Vz,i,j,k) &
-     )*zeta_z(k)
+     )
 
    !-- k=nk2 --
    n=LenFD+1; k=nk2
@@ -3000,9 +3247,9 @@ loop_xi:  do i=ni1,ni2
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
 
-   DzVx(n) = -DxVz(n)/z(k)+Vx(i,j,k)/z(k)
-   DzVy(n) = -DyVz(n)/z(k)/xsin(i)+Vy(i,j,k)/z(k)
-   DzVz(n) = -lam/lam2mu*(E11+E22)
+   DzVx(n) = (-DxVz(n)/z(k)+Vx(i,j,k)/z(k)+VxSrc(i,j)/miu)/zeta_z(k)
+   DzVy(n) = (-DyVz(n)/z(k)/xsin(i)+Vy(i,j,k)/z(k)+VySrc(i,j)/miu)/zeta_z(k)
+   DzVz(n) = (-lam/lam2mu*(E11+E22)+VzSrc(i,j)/lam2mu)/zeta_z(k)
 
    !-- k=nk2-LenFD+1:nk2-1 --
 do n=2,LenFD
@@ -3037,7 +3284,7 @@ do n=2,LenFD
    rhs_Dz= (                  &
      m3d_HOCzB1_RHS(Vx,i,j,k) &
      m3d_HOCzB2_RHS(Vx,i,j,k) &
-     )*zeta_z(k)
+     )
    lhs_Dz= (                  &
      vec_HOC_B_LHS(DzVx,n)    &
      )
@@ -3046,7 +3293,7 @@ do n=2,LenFD
    rhs_Dz= (                  &
      m3d_HOCzB1_RHS(Vy,i,j,k) &
      m3d_HOCzB2_RHS(Vy,i,j,k) &
-     )*zeta_z(k)
+     )
    lhs_Dz= (                  &
      vec_HOC_B_LHS(DzVy,n)    &
      )
@@ -3055,7 +3302,7 @@ do n=2,LenFD
    rhs_Dz= (                  &
      m3d_HOCzB1_RHS(Vz,i,j,k) &
      m3d_HOCzB2_RHS(Vz,i,j,k) &
-     )*zeta_z(k)
+     )
    lhs_Dz= (                  &
      vec_HOC_B_LHS(DzVz,n)    &
      )
@@ -3064,6 +3311,9 @@ end do
 
 do n=2,LenFD+1
    k=nk2-LenFD +n-1
+   DzVx(n)=DzVx(n)*zeta_z(k)
+   DzVy(n)=DzVy(n)*zeta_z(k)
+   DzVz(n)=DzVz(n)*zeta_z(k)
    lam=lambda(i,j,k);miu=mu(i,j,k);lam2mu=lam+2.0*miu;rrho=1.0/rho(i,j,k)
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
@@ -3078,9 +3328,9 @@ do n=2,LenFD+1
    hTxz(i,j,k)=2.0_SP*miu*E13
    hTyz(i,j,k)=2.0_SP*miu*E23
    if (k==nk2) then
-      hTxz(i,j,k)=0.0_SP
-      hTyz(i,j,k)=0.0_SP
-      hTzz(i,j,k)=0.0_SP
+      hTxz(i,j,k)=VxSrc(i,j)
+      hTyz(i,j,k)=VySrc(i,j)
+      hTzz(i,j,k)=VzSrc(i,j)
    end if
 end do
 end do loop_xi
@@ -3111,9 +3361,8 @@ do i=ni1,ni2
    t12= Txy(i,j,k)
    t13= Txz(i,j,k)
    t23= Tyz(i,j,k)
-   Tx=-TxSrc(i,j)
-   Ty=-TySrc(i,j)
-   Tz= TzSrc(i,j)
+
+   Tx=-TxSrc(i,j); Ty=-TySrc(i,j); Tz= TzSrc(i,j)
    Vx (i,j,k)=v1-(t13+Tx)/f2
    Vy (i,j,k)=v2-(t23+Ty)/f2
    Vz (i,j,k)=v3-(t33-Tz)/f1
@@ -3147,6 +3396,21 @@ end do
 end do
 end if
 end subroutine free_extrap
+subroutine free_vext
+integer i,j,k
+
+if (freenode) then
+do k=nk2+1,nz2
+do j=nj1,nj2
+do i=ni1,ni2
+   Vx (i,j,k)=4.0*Vx (i,j,k-1)-6.0*Vx (i,j,k-2)+4.0*Vx (i,j,k-3)-Vx (i,j,k-4)
+   Vy (i,j,k)=4.0*Vy (i,j,k-1)-6.0*Vy (i,j,k-2)+4.0*Vy (i,j,k-3)-Vy (i,j,k-4)
+   Vz (i,j,k)=4.0*Vz (i,j,k-1)-6.0*Vz (i,j,k-2)+4.0*Vz (i,j,k-3)-Vz (i,j,k-4)
+end do
+end do
+end do
+end if
+end subroutine free_vext
 subroutine free_timg
 integer i,j,k
 
@@ -3170,21 +3434,6 @@ end do
 end do
 end if
 end subroutine free_timg
-subroutine free_vext
-integer i,j,k
-
-if (freenode) then
-do k=nk2+1,nz2
-do j=nj1,nj2
-do i=ni1,ni2
-   Vx (i,j,k)=4.0*Vx (i,j,k-1)-6.0*Vx (i,j,k-2)+4.0*Vx (i,j,k-3)-Vx (i,j,k-4)
-   Vy (i,j,k)=4.0*Vy (i,j,k-1)-6.0*Vy (i,j,k-2)+4.0*Vy (i,j,k-3)-Vy (i,j,k-4)
-   Vz (i,j,k)=4.0*Vz (i,j,k-1)-6.0*Vz (i,j,k-2)+4.0*Vz (i,j,k-3)-Vz (i,j,k-4)
-end do
-end do
-end do
-end if
-end subroutine free_vext
 
 !--------------------------------------------------------------------}
 subroutine macdrp_mesg_init
@@ -3199,6 +3448,13 @@ end subroutine macdrp_mesg_init
 subroutine mesg_init_LxF
 integer s1,s2,s3,s4,s5,s6,s7,s8,s9
 integer r1,r2,r3,r4,r5,r6,r7,r8,r9
+#ifdef MPIBuffered
+call MPI_SEND_INIT(BufX1,NBufXL,SEISMPI_DATATYPE,neigid(1,1),1131,SWMPI_COMM,s1,ierr)
+call MPI_RECV_INIT(RevX2,NBufXL,SEISMPI_DATATYPE,neigid(1,2),1131,SWMPI_COMM,r1,ierr)
+call MPI_SEND_INIT(BufX2,NBufXS,SEISMPI_DATATYPE,neigid(1,2),1211,SWMPI_COMM,s2,ierr)
+call MPI_RECV_INIT(RevX1,NBufXS,SEISMPI_DATATYPE,neigid(1,1),1211,SWMPI_COMM,r2,ierr)
+reqXF=(/ s1,r1,s2,r2 /)
+#else
 ! --- LxF ------------------------------------------------------------------
 ! to X1
 call MPI_SEND_INIT(Txx(ni1,ny1,nz1),1,DTypeXL,neigid(1,1),1131,SWMPI_COMM,s1,ierr)
@@ -3248,11 +3504,19 @@ call MPI_RECV_INIT(Vz (ni1-LenFDS,ny1,nz1),1,DTypeXS,neigid(1,1),1219,SWMPI_COMM
 !reqXF(19:36)=(/ s1,r1,s2,r2,s3,r3,s4,r4,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
 reqXF(13:24)=(/ s1,r1,s4,r4,s5,r5,s7,r7,s8,r8,s9,r9 /)
 !---------------------------------------------------------------------------
+#endif
 end subroutine mesg_init_LxF
 
 subroutine mesg_init_LxB
 integer s1,s2,s3,s4,s5,s6,s7,s8,s9
 integer r1,r2,r3,r4,r5,r6,r7,r8,r9
+#ifdef MPIBuffered
+call MPI_SEND_INIT(BufX1,NBufXS,SEISMPI_DATATYPE,neigid(1,1),1111,SWMPI_COMM,s1,ierr)
+call MPI_RECV_INIT(RevX2,NBufXS,SEISMPI_DATATYPE,neigid(1,2),1111,SWMPI_COMM,r1,ierr)
+call MPI_SEND_INIT(BufX2,NBufXL,SEISMPI_DATATYPE,neigid(1,2),1231,SWMPI_COMM,s2,ierr)
+call MPI_RECV_INIT(RevX1,NBufXL,SEISMPI_DATATYPE,neigid(1,1),1231,SWMPI_COMM,r2,ierr)
+reqXB=(/ s1,r1,s2,r2 /)
+#else
 ! --- LxB ------------------------------------------------------------------
 ! to X1
 call MPI_SEND_INIT(Txx(ni1,ny1,nz1),1,DTypeXS,neigid(1,1),1111,SWMPI_COMM,s1,ierr)
@@ -3302,11 +3566,19 @@ call MPI_RECV_INIT(Vz (ni1-LenFDL,ny1,nz1),1,DTypeXL,neigid(1,1),1239,SWMPI_COMM
 !reqXB(19:36)=(/ s1,r1,s2,r2,s3,r3,s4,r4,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
 reqXB(13:24)=(/ s1,r1,s4,r4,s5,r5,s7,r7,s8,r8,s9,r9 /)
 !---------------------------------------------------------------------------
+#endif
 end subroutine mesg_init_LxB
 
 subroutine mesg_init_LyF
 integer s1,s2,s3,s4,s5,s6,s7,s8,s9
 integer r1,r2,r3,r4,r5,r6,r7,r8,r9
+#ifdef MPIBuffered
+call MPI_SEND_INIT(BufY1,NBufYL,SEISMPI_DATATYPE,neigid(2,1),2131,SWMPI_COMM,s1,ierr)
+call MPI_RECV_INIT(RevY2,NBufYL,SEISMPI_DATATYPE,neigid(2,2),2131,SWMPI_COMM,r1,ierr)
+call MPI_SEND_INIT(BufY2,NBufYS,SEISMPI_DATATYPE,neigid(2,2),2211,SWMPI_COMM,s2,ierr)
+call MPI_RECV_INIT(RevY1,NBufYS,SEISMPI_DATATYPE,neigid(2,1),2211,SWMPI_COMM,r2,ierr)
+reqYF=(/ s1,r1,s2,r2 /)
+#else
 ! --- LyF ------------------------------------------------------------------
 ! to Y1
 !call MPI_SEND_INIT(Txx(nx1,nj1,nz1),1,DTypeYL,neigid(2,1),2131,SWMPI_COMM,s1,ierr)
@@ -3357,11 +3629,19 @@ call MPI_RECV_INIT(Vz (nx1,nj1-LenFDS,nz1),1,DTypeYS,neigid(2,1),2219,SWMPI_COMM
 !reqYF(19:36)=(/ s1,r1,s2,r2,s3,r3,s4,r4,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
 reqYF(13:24)=(/ s2,r2,s4,r4,s6,r6,s7,r7,s8,r8,s9,r9 /)
 !---------------------------------------------------------------------------
+#endif
 end subroutine mesg_init_LyF
 
 subroutine mesg_init_LyB
 integer s1,s2,s3,s4,s5,s6,s7,s8,s9
 integer r1,r2,r3,r4,r5,r6,r7,r8,r9
+#ifdef MPIBuffered
+call MPI_SEND_INIT(BufY1,NBufYS,SEISMPI_DATATYPE,neigid(2,1),2111,SWMPI_COMM,s1,ierr)
+call MPI_RECV_INIT(RevY2,NBufYS,SEISMPI_DATATYPE,neigid(2,2),2111,SWMPI_COMM,r1,ierr)
+call MPI_SEND_INIT(BufY2,NBufYL,SEISMPI_DATATYPE,neigid(2,2),2231,SWMPI_COMM,s2,ierr)
+call MPI_RECV_INIT(RevY1,NBufYL,SEISMPI_DATATYPE,neigid(2,1),2231,SWMPI_COMM,r2,ierr)
+reqYB=(/ s1,r1,s2,r2 /)
+#else
 ! --- LyB ------------------------------------------------------------------
 ! to Y1
 !call MPI_SEND_INIT(Txx(nx1,nj1,nz1),1,DTypeYS,neigid(2,1),2111,SWMPI_COMM,s1,ierr)
@@ -3411,11 +3691,19 @@ call MPI_RECV_INIT(Vz (nx1,nj1-LenFDL,nz1),1,DTypeYL,neigid(2,1),2239,SWMPI_COMM
 !reqYB(19:36)=(/ s1,r1,s2,r2,s3,r3,s4,r4,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
 reqYB(13:24)=(/ s2,r2,s4,r4,s6,r6,s7,r7,s8,r8,s9,r9 /)
 !---------------------------------------------------------------------------
+#endif
 end subroutine mesg_init_LyB
 
 subroutine mesg_init_LzF
 integer s1,s2,s3,s4,s5,s6,s7,s8,s9
 integer r1,r2,r3,r4,r5,r6,r7,r8,r9
+#ifdef MPIBuffered
+call MPI_SEND_INIT(BufZ1,NBufZL,SEISMPI_DATATYPE,neigid(3,1),3131,SWMPI_COMM,s1,ierr)
+call MPI_RECV_INIT(RevZ2,NBufZL,SEISMPI_DATATYPE,neigid(3,2),3131,SWMPI_COMM,r1,ierr)
+call MPI_SEND_INIT(BufZ2,NBufZS,SEISMPI_DATATYPE,neigid(3,2),3211,SWMPI_COMM,s2,ierr)
+call MPI_RECV_INIT(RevZ1,NBufZS,SEISMPI_DATATYPE,neigid(3,1),3211,SWMPI_COMM,r2,ierr)
+reqZF=(/ s1,r1,s2,r2 /)
+#else
 ! --- LzF ------------------------------------------------------------------
 !to Z1
 !call MPI_SEND_INIT(Txx(nx1,ny1,nk1),1,DTypeZL,neigid(3,1),3131,SWMPI_COMM,s1,ierr)
@@ -3465,11 +3753,19 @@ call MPI_RECV_INIT(Vz (nx1,ny1,nk1-LenFDS),1,DTypeZS,neigid(3,1),3219,SWMPI_COMM
 !reqZF(19:36)=(/ s1,r1,s2,r2,s3,r3,s4,r4,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
 reqZF(13:24)=(/ s3,r3,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
 !---------------------------------------------------------------------------
+#endif
 end subroutine mesg_init_LzF
 
 subroutine mesg_init_LzB
 integer s1,s2,s3,s4,s5,s6,s7,s8,s9
 integer r1,r2,r3,r4,r5,r6,r7,r8,r9
+#ifdef MPIBuffered
+call MPI_SEND_INIT(BufZ1,NBufZS,SEISMPI_DATATYPE,neigid(3,1),3111,SWMPI_COMM,s1,ierr)
+call MPI_RECV_INIT(RevZ2,NBufZS,SEISMPI_DATATYPE,neigid(3,2),3111,SWMPI_COMM,r1,ierr)
+call MPI_SEND_INIT(BufZ2,NBufZL,SEISMPI_DATATYPE,neigid(3,2),3231,SWMPI_COMM,s2,ierr)
+call MPI_RECV_INIT(RevZ1,NBufZL,SEISMPI_DATATYPE,neigid(3,1),3231,SWMPI_COMM,r2,ierr)
+reqZB=(/ s1,r1,s2,r2 /)
+#else
 ! --- LzB ------------------------------------------------------------------
 !to Z1
 !call MPI_SEND_INIT(Txx(nx1,ny1,nk1),1,DTypeZS,neigid(3,1),3111,SWMPI_COMM,s1,ierr)
@@ -3518,7 +3814,1180 @@ call MPI_RECV_INIT(Vz (nx1,ny1,nk1-LenFDL),1,DTypeZL,neigid(3,1),3239,SWMPI_COMM
 ! put into array
 !reqZB(19:36)=(/ s1,r1,s2,r2,s3,r3,s4,r4,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
 reqZB(13:24)=(/ s3,r3,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
+#endif
 end subroutine mesg_init_LzB
+
+#ifdef MPIBuffered
+subroutine fill_buff_LxF
+integer :: i,j,k,n
+! to X1
+n=0
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni1,ni1+LenFDL-1
+   n=n+1; BufX1(n)= Vx(i,j,k)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni1,ni1+LenFDL-1
+   n=n+1; BufX1(n)= Vy(i,j,k)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni1,ni1+LenFDL-1
+   n=n+1; BufX1(n)= Vz(i,j,k)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni1,ni1+LenFDL-1
+   n=n+1; BufX1(n)=Txx(i,j,k)
+end do
+end do
+end do
+   !n=n+1; BufX1(n)=Tyy(i,j,k)
+   !n=n+1; BufX1(n)=Tzz(i,j,k)
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni1,ni1+LenFDL-1
+   n=n+1; BufX1(n)=Txy(i,j,k)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni1,ni1+LenFDL-1
+   n=n+1; BufX1(n)=Txz(i,j,k)
+   !n=n+1; BufX1(n)=Tyz(i,j,k)
+end do
+end do
+end do
+! to X2
+n=0
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni2-LenFDS+1,ni2
+   n=n+1; BufX2(n)= Vx(i,j,k)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni2-LenFDS+1,ni2
+   n=n+1; BufX2(n)= Vy(i,j,k)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni2-LenFDS+1,ni2
+   n=n+1; BufX2(n)= Vz(i,j,k)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni2-LenFDS+1,ni2
+   n=n+1; BufX2(n)=Txx(i,j,k)
+end do
+end do
+end do
+   !n=n+1; BufX2(n)=Tyy(i,j,k)
+   !n=n+1; BufX2(n)=Tzz(i,j,k)
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni2-LenFDS+1,ni2
+   n=n+1; BufX2(n)=Txy(i,j,k)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni2-LenFDS+1,ni2
+   n=n+1; BufX2(n)=Txz(i,j,k)
+   !n=n+1; BufX2(n)=Tyz(i,j,k)
+end do
+end do
+end do
+end subroutine fill_buff_LxF
+subroutine recv_buff_LxF
+integer :: i,j,k,n
+! from X1
+n=0
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni1-LenFDS,ni1-1
+   n=n+1;  Vx(i,j,k)=RevX1(n)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni1-LenFDS,ni1-1
+   n=n+1;  Vy(i,j,k)=RevX1(n)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni1-LenFDS,ni1-1
+   n=n+1;  Vz(i,j,k)=RevX1(n)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni1-LenFDS,ni1-1
+   n=n+1; Txx(i,j,k)=RevX1(n)
+end do
+end do
+end do
+   !n=n+1; Tyy(i,j,k)=RevX1(n)
+   !n=n+1; Tzz(i,j,k)=RevX1(n)
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni1-LenFDS,ni1-1
+   n=n+1; Txy(i,j,k)=RevX1(n)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni1-LenFDS,ni1-1
+   n=n+1; Txz(i,j,k)=RevX1(n)
+   !n=n+1; Tyz(i,j,k)=RevX1(n)
+end do
+end do
+end do
+! from X2
+n=0
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni2+1,ni2+LenFDL
+   n=n+1;  Vx(i,j,k)=RevX2(n)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni2+1,ni2+LenFDL
+   n=n+1;  Vy(i,j,k)=RevX2(n)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni2+1,ni2+LenFDL
+   n=n+1;  Vz(i,j,k)=RevX2(n)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni2+1,ni2+LenFDL
+   n=n+1; Txx(i,j,k)=RevX2(n)
+end do
+end do
+end do
+   !n=n+1; Tyy(i,j,k)=RevX2(n)
+   !n=n+1; Tzz(i,j,k)=RevX2(n)
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni2+1,ni2+LenFDL
+   n=n+1; Txy(i,j,k)=RevX2(n)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni2+1,ni2+LenFDL
+   n=n+1; Txz(i,j,k)=RevX2(n)
+   !n=n+1; Tyz(i,j,k)=RevX2(n)
+end do
+end do
+end do
+end subroutine recv_buff_LxF
+
+subroutine fill_buff_LxB
+integer :: i,j,k,n
+! to X1
+n=0
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni1,ni1+LenFDS-1
+   n=n+1; BufX1(n)= Vx(i,j,k)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni1,ni1+LenFDS-1
+   n=n+1; BufX1(n)= Vy(i,j,k)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni1,ni1+LenFDS-1
+   n=n+1; BufX1(n)= Vz(i,j,k)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni1,ni1+LenFDS-1
+   n=n+1; BufX1(n)=Txx(i,j,k)
+end do
+end do
+end do
+   !n=n+1; BufX1(n)=Tyy(i,j,k)
+   !n=n+1; BufX1(n)=Tzz(i,j,k)
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni1,ni1+LenFDS-1
+   n=n+1; BufX1(n)=Txy(i,j,k)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni1,ni1+LenFDS-1
+   n=n+1; BufX1(n)=Txz(i,j,k)
+   !n=n+1; BufX1(n)=Tyz(i,j,k)
+end do
+end do
+end do
+! to X2
+n=0
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni2-LenFDL+1,ni2
+   n=n+1; BufX2(n)= Vx(i,j,k)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni2-LenFDL+1,ni2
+   n=n+1; BufX2(n)= Vy(i,j,k)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni2-LenFDL+1,ni2
+   n=n+1; BufX2(n)= Vz(i,j,k)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni2-LenFDL+1,ni2
+   n=n+1; BufX2(n)=Txx(i,j,k)
+end do
+end do
+end do
+   !n=n+1; BufX2(n)=Tyy(i,j,k)
+   !n=n+1; BufX2(n)=Tzz(i,j,k)
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni2-LenFDL+1,ni2
+   n=n+1; BufX2(n)=Txy(i,j,k)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni2-LenFDL+1,ni2
+   n=n+1; BufX2(n)=Txz(i,j,k)
+   !n=n+1; BufX2(n)=Tyz(i,j,k)
+end do
+end do
+end do
+end subroutine fill_buff_LxB
+subroutine recv_buff_LxB
+integer :: i,j,k,n
+! from X1
+n=0
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni1-LenFDL,ni1-1
+   n=n+1;  Vx(i,j,k)=RevX1(n)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni1-LenFDL,ni1-1
+   n=n+1;  Vy(i,j,k)=RevX1(n)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni1-LenFDL,ni1-1
+   n=n+1;  Vz(i,j,k)=RevX1(n)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni1-LenFDL,ni1-1
+   n=n+1; Txx(i,j,k)=RevX1(n)
+end do
+end do
+end do
+   !n=n+1; Tyy(i,j,k)=RevX1(n)
+   !n=n+1; Tzz(i,j,k)=RevX1(n)
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni1-LenFDL,ni1-1
+   n=n+1; Txy(i,j,k)=RevX1(n)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni1-LenFDL,ni1-1
+   n=n+1; Txz(i,j,k)=RevX1(n)
+   !n=n+1; Tyz(i,j,k)=RevX1(n)
+end do
+end do
+end do
+! from X2
+n=0
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni2+1,ni2+LenFDS
+   n=n+1;  Vx(i,j,k)=RevX2(n)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni2+1,ni2+LenFDS
+   n=n+1;  Vy(i,j,k)=RevX2(n)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni2+1,ni2+LenFDS
+   n=n+1;  Vz(i,j,k)=RevX2(n)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni2+1,ni2+LenFDS
+   n=n+1; Txx(i,j,k)=RevX2(n)
+end do
+end do
+end do
+   !n=n+1; Tyy(i,j,k)=RevX2(n)
+   !n=n+1; Tzz(i,j,k)=RevX2(n)
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni2+1,ni2+LenFDS
+   n=n+1; Txy(i,j,k)=RevX2(n)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1,nj2
+do i=ni2+1,ni2+LenFDS
+   n=n+1; Txz(i,j,k)=RevX2(n)
+   !n=n+1; Tyz(i,j,k)=RevX2(n)
+end do
+end do
+end do
+end subroutine recv_buff_LxB
+!---------------------------------------------------
+subroutine fill_buff_LyF
+integer :: i,j,k,n
+! to Y1
+n=0
+do k=nk1,nk2
+do j=nj1,nj1+LenFDL-1
+do i=ni1,ni2
+   n=n+1; BufY1(n)= Vx(i,j,k)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1,nj1+LenFDL-1
+do i=ni1,ni2
+   n=n+1; BufY1(n)= Vy(i,j,k)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1,nj1+LenFDL-1
+do i=ni1,ni2
+   n=n+1; BufY1(n)= Vz(i,j,k)
+end do
+end do
+end do
+   !n=n+1; BufY1(n)=Txx(i,j,k)
+do k=nk1,nk2
+do j=nj1,nj1+LenFDL-1
+do i=ni1,ni2
+   n=n+1; BufY1(n)=Tyy(i,j,k)
+end do
+end do
+end do
+   !n=n+1; BufY1(n)=Tzz(i,j,k)
+do k=nk1,nk2
+do j=nj1,nj1+LenFDL-1
+do i=ni1,ni2
+   n=n+1; BufY1(n)=Txy(i,j,k)
+end do
+end do
+end do
+   !n=n+1; BufY1(n)=Txz(i,j,k)
+do k=nk1,nk2
+do j=nj1,nj1+LenFDL-1
+do i=ni1,ni2
+   n=n+1; BufY1(n)=Tyz(i,j,k)
+end do
+end do
+end do
+! to Y2
+n=0
+do k=nk1,nk2
+do j=nj2-LenFDS+1,nj2
+do i=ni1,ni2
+   n=n+1; BufY2(n)= Vx(i,j,k)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj2-LenFDS+1,nj2
+do i=ni1,ni2
+   n=n+1; BufY2(n)= Vy(i,j,k)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj2-LenFDS+1,nj2
+do i=ni1,ni2
+   n=n+1; BufY2(n)= Vz(i,j,k)
+end do
+end do
+end do
+   !n=n+1; BufY2(n)=Txx(i,j,k)
+do k=nk1,nk2
+do j=nj2-LenFDS+1,nj2
+do i=ni1,ni2
+   n=n+1; BufY2(n)=Tyy(i,j,k)
+end do
+end do
+end do
+   !n=n+1; BufY2(n)=Tzz(i,j,k)
+do k=nk1,nk2
+do j=nj2-LenFDS+1,nj2
+do i=ni1,ni2
+   n=n+1; BufY2(n)=Txy(i,j,k)
+end do
+end do
+end do
+   !n=n+1; BufY2(n)=Txz(i,j,k)
+do k=nk1,nk2
+do j=nj2-LenFDS+1,nj2
+do i=ni1,ni2
+   n=n+1; BufY2(n)=Tyz(i,j,k)
+end do
+end do
+end do
+end subroutine fill_buff_LyF
+subroutine recv_buff_LyF
+integer :: i,j,k,n
+! from Y1
+n=0
+do k=nk1,nk2
+do j=nj1-LenFDS,nj1-1
+do i=ni1,ni2
+   n=n+1;  Vx(i,j,k)=RevY1(n)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1-LenFDS,nj1-1
+do i=ni1,ni2
+   n=n+1;  Vy(i,j,k)=RevY1(n)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1-LenFDS,nj1-1
+do i=ni1,ni2
+   n=n+1;  Vz(i,j,k)=RevY1(n)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1-LenFDS,nj1-1
+do i=ni1,ni2
+   !n=n+1; Txx(i,j,k)=RevY1(n)
+   n=n+1; Tyy(i,j,k)=RevY1(n)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1-LenFDS,nj1-1
+do i=ni1,ni2
+   !n=n+1; Tzz(i,j,k)=RevY1(n)
+   n=n+1; Txy(i,j,k)=RevY1(n)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1-LenFDS,nj1-1
+do i=ni1,ni2
+   !n=n+1; Txz(i,j,k)=RevY1(n)
+   n=n+1; Tyz(i,j,k)=RevY1(n)
+end do
+end do
+end do
+! from Y2
+n=0
+do k=nk1,nk2
+do j=nj2+1,nj2+LenFDL
+do i=ni1,ni2
+   n=n+1;  Vx(i,j,k)=RevY2(n)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj2+1,nj2+LenFDL
+do i=ni1,ni2
+   n=n+1;  Vy(i,j,k)=RevY2(n)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj2+1,nj2+LenFDL
+do i=ni1,ni2
+   n=n+1;  Vz(i,j,k)=RevY2(n)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj2+1,nj2+LenFDL
+do i=ni1,ni2
+   !n=n+1; Txx(i,j,k)=RevY2(n)
+   n=n+1; Tyy(i,j,k)=RevY2(n)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj2+1,nj2+LenFDL
+do i=ni1,ni2
+   !n=n+1; Tzz(i,j,k)=RevY2(n)
+   n=n+1; Txy(i,j,k)=RevY2(n)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj2+1,nj2+LenFDL
+do i=ni1,ni2
+   !n=n+1; Txz(i,j,k)=RevY2(n)
+   n=n+1; Tyz(i,j,k)=RevY2(n)
+end do
+end do
+end do
+end subroutine recv_buff_LyF
+subroutine fill_buff_LyB
+integer :: i,j,k,n
+! to Y1
+n=0
+do k=nk1,nk2
+do j=nj1,nj1+LenFDS-1
+do i=ni1,ni2
+   n=n+1; BufY1(n)= Vx(i,j,k)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1,nj1+LenFDS-1
+do i=ni1,ni2
+   n=n+1; BufY1(n)= Vy(i,j,k)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1,nj1+LenFDS-1
+do i=ni1,ni2
+   n=n+1; BufY1(n)= Vz(i,j,k)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1,nj1+LenFDS-1
+do i=ni1,ni2
+   !n=n+1; BufY1(n)=Txx(i,j,k)
+   n=n+1; BufY1(n)=Tyy(i,j,k)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1,nj1+LenFDS-1
+do i=ni1,ni2
+   !n=n+1; BufY1(n)=Tzz(i,j,k)
+   n=n+1; BufY1(n)=Txy(i,j,k)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1,nj1+LenFDS-1
+do i=ni1,ni2
+   !n=n+1; BufY1(n)=Txz(i,j,k)
+   n=n+1; BufY1(n)=Tyz(i,j,k)
+end do
+end do
+end do
+! to Y2
+n=0
+do k=nk1,nk2
+do j=nj2-LenFDL+1,nj2
+do i=ni1,ni2
+   n=n+1; BufY2(n)= Vx(i,j,k)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj2-LenFDL+1,nj2
+do i=ni1,ni2
+   n=n+1; BufY2(n)= Vy(i,j,k)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj2-LenFDL+1,nj2
+do i=ni1,ni2
+   n=n+1; BufY2(n)= Vz(i,j,k)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj2-LenFDL+1,nj2
+do i=ni1,ni2
+   !n=n+1; BufY2(n)=Txx(i,j,k)
+   n=n+1; BufY2(n)=Tyy(i,j,k)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj2-LenFDL+1,nj2
+do i=ni1,ni2
+   !n=n+1; BufY2(n)=Tzz(i,j,k)
+   n=n+1; BufY2(n)=Txy(i,j,k)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj2-LenFDL+1,nj2
+do i=ni1,ni2
+   !n=n+1; BufY2(n)=Txz(i,j,k)
+   n=n+1; BufY2(n)=Tyz(i,j,k)
+end do
+end do
+end do
+end subroutine fill_buff_LyB
+subroutine recv_buff_LyB
+integer :: i,j,k,n
+! from Y1
+n=0
+do k=nk1,nk2
+do j=nj1-LenFDL,nj1-1
+do i=ni1,ni2
+   n=n+1;  Vx(i,j,k)=RevY1(n)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1-LenFDL,nj1-1
+do i=ni1,ni2
+   n=n+1;  Vy(i,j,k)=RevY1(n)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1-LenFDL,nj1-1
+do i=ni1,ni2
+   n=n+1;  Vz(i,j,k)=RevY1(n)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1-LenFDL,nj1-1
+do i=ni1,ni2
+   !n=n+1; Txx(i,j,k)=RevY1(n)
+   n=n+1; Tyy(i,j,k)=RevY1(n)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1-LenFDL,nj1-1
+do i=ni1,ni2
+   !n=n+1; Tzz(i,j,k)=RevY1(n)
+   n=n+1; Txy(i,j,k)=RevY1(n)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj1-LenFDL,nj1-1
+do i=ni1,ni2
+   !n=n+1; Txz(i,j,k)=RevY1(n)
+   n=n+1; Tyz(i,j,k)=RevY1(n)
+end do
+end do
+end do
+! from Y2
+n=0
+do k=nk1,nk2
+do j=nj2+1,nj2+LenFDS
+do i=ni1,ni2
+   n=n+1;  Vx(i,j,k)=RevY2(n)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj2+1,nj2+LenFDS
+do i=ni1,ni2
+   n=n+1;  Vy(i,j,k)=RevY2(n)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj2+1,nj2+LenFDS
+do i=ni1,ni2
+   n=n+1;  Vz(i,j,k)=RevY2(n)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj2+1,nj2+LenFDS
+do i=ni1,ni2
+   !n=n+1; Txx(i,j,k)=RevY2(n)
+   n=n+1; Tyy(i,j,k)=RevY2(n)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj2+1,nj2+LenFDS
+do i=ni1,ni2
+   !n=n+1; Tzz(i,j,k)=RevY2(n)
+   n=n+1; Txy(i,j,k)=RevY2(n)
+end do
+end do
+end do
+do k=nk1,nk2
+do j=nj2+1,nj2+LenFDS
+do i=ni1,ni2
+   !n=n+1; Txz(i,j,k)=RevY2(n)
+   n=n+1; Tyz(i,j,k)=RevY2(n)
+end do
+end do
+end do
+end subroutine recv_buff_LyB
+!---------------------------------------------------
+subroutine fill_buff_LzF
+integer :: i,j,k,n
+! to Z1
+n=0
+do k=nk1,nk1+LenFDL-1
+do j=nj1,nj2
+do i=ni1,ni2
+   n=n+1; BufZ1(n)= Vx(i,j,k)
+end do
+end do
+end do
+do k=nk1,nk1+LenFDL-1
+do j=nj1,nj2
+do i=ni1,ni2
+   n=n+1; BufZ1(n)= Vy(i,j,k)
+end do
+end do
+end do
+do k=nk1,nk1+LenFDL-1
+do j=nj1,nj2
+do i=ni1,ni2
+   n=n+1; BufZ1(n)= Vz(i,j,k)
+end do
+end do
+end do
+do k=nk1,nk1+LenFDL-1
+do j=nj1,nj2
+do i=ni1,ni2
+   !n=n+1; BufZ1(n)=Txx(i,j,k)
+   !n=n+1; BufZ1(n)=Tyy(i,j,k)
+   n=n+1; BufZ1(n)=Tzz(i,j,k)
+end do
+end do
+end do
+do k=nk1,nk1+LenFDL-1
+do j=nj1,nj2
+do i=ni1,ni2
+   !n=n+1; BufZ1(n)=Txy(i,j,k)
+   n=n+1; BufZ1(n)=Txz(i,j,k)
+end do
+end do
+end do
+do k=nk1,nk1+LenFDL-1
+do j=nj1,nj2
+do i=ni1,ni2
+   n=n+1; BufZ1(n)=Tyz(i,j,k)
+end do
+end do
+end do
+! to Z2
+n=0
+do k=nk2-LenFDS+1,nk2
+do j=nj1,nj2
+do i=ni1,ni2
+   n=n+1; BufZ2(n)= Vx(i,j,k)
+end do
+end do
+end do
+do k=nk2-LenFDS+1,nk2
+do j=nj1,nj2
+do i=ni1,ni2
+   n=n+1; BufZ2(n)= Vy(i,j,k)
+end do
+end do
+end do
+do k=nk2-LenFDS+1,nk2
+do j=nj1,nj2
+do i=ni1,ni2
+   n=n+1; BufZ2(n)= Vz(i,j,k)
+end do
+end do
+end do
+do k=nk2-LenFDS+1,nk2
+do j=nj1,nj2
+do i=ni1,ni2
+   !n=n+1; BufZ2(n)=Txx(i,j,k)
+   !n=n+1; BufZ2(n)=Tyy(i,j,k)
+   n=n+1; BufZ2(n)=Tzz(i,j,k)
+end do
+end do
+end do
+do k=nk2-LenFDS+1,nk2
+do j=nj1,nj2
+do i=ni1,ni2
+   !n=n+1; BufZ2(n)=Txy(i,j,k)
+   n=n+1; BufZ2(n)=Txz(i,j,k)
+end do
+end do
+end do
+do k=nk2-LenFDS+1,nk2
+do j=nj1,nj2
+do i=ni1,ni2
+   n=n+1; BufZ2(n)=Tyz(i,j,k)
+end do
+end do
+end do
+end subroutine fill_buff_LzF
+subroutine recv_buff_LzF
+integer :: i,j,k,n
+! from Z1
+n=0
+do k=nk1-LenFDS,nk1-1
+do j=nj1,nj2
+do i=ni1,ni2
+   n=n+1;  Vx(i,j,k)=RevZ1(n)
+end do
+end do
+end do
+do k=nk1-LenFDS,nk1-1
+do j=nj1,nj2
+do i=ni1,ni2
+   n=n+1;  Vy(i,j,k)=RevZ1(n)
+end do
+end do
+end do
+do k=nk1-LenFDS,nk1-1
+do j=nj1,nj2
+do i=ni1,ni2
+   n=n+1;  Vz(i,j,k)=RevZ1(n)
+end do
+end do
+end do
+do k=nk1-LenFDS,nk1-1
+do j=nj1,nj2
+do i=ni1,ni2
+   !n=n+1; Txx(i,j,k)=RevZ1(n)
+   !n=n+1; Tyy(i,j,k)=RevZ1(n)
+   n=n+1; Tzz(i,j,k)=RevZ1(n)
+end do
+end do
+end do
+do k=nk1-LenFDS,nk1-1
+do j=nj1,nj2
+do i=ni1,ni2
+   !n=n+1; Txy(i,j,k)=RevZ1(n)
+   n=n+1; Txz(i,j,k)=RevZ1(n)
+end do
+end do
+end do
+do k=nk1-LenFDS,nk1-1
+do j=nj1,nj2
+do i=ni1,ni2
+   n=n+1; Tyz(i,j,k)=RevZ1(n)
+end do
+end do
+end do
+! from Z2
+n=0
+do k=nk2+1,nk2+LenFDL
+do j=nj1,nj2
+do i=ni1,ni2
+   n=n+1;  Vx(i,j,k)=RevZ2(n)
+end do
+end do
+end do
+do k=nk2+1,nk2+LenFDL
+do j=nj1,nj2
+do i=ni1,ni2
+   n=n+1;  Vy(i,j,k)=RevZ2(n)
+end do
+end do
+end do
+do k=nk2+1,nk2+LenFDL
+do j=nj1,nj2
+do i=ni1,ni2
+   n=n+1;  Vz(i,j,k)=RevZ2(n)
+end do
+end do
+end do
+do k=nk2+1,nk2+LenFDL
+do j=nj1,nj2
+do i=ni1,ni2
+   !n=n+1; Txx(i,j,k)=RevZ2(n)
+   !n=n+1; Tyy(i,j,k)=RevZ2(n)
+   n=n+1; Tzz(i,j,k)=RevZ2(n)
+end do
+end do
+end do
+do k=nk2+1,nk2+LenFDL
+do j=nj1,nj2
+do i=ni1,ni2
+   !n=n+1; Txy(i,j,k)=RevZ2(n)
+   n=n+1; Txz(i,j,k)=RevZ2(n)
+end do
+end do
+end do
+do k=nk2+1,nk2+LenFDL
+do j=nj1,nj2
+do i=ni1,ni2
+   n=n+1; Tyz(i,j,k)=RevZ2(n)
+end do
+end do
+end do
+end subroutine recv_buff_LzF
+
+subroutine fill_buff_LzB
+integer :: i,j,k,n
+! to Z1
+n=0
+do k=nk1,nk1+LenFDS-1
+do j=nj1,nj2
+do i=ni1,ni2
+   n=n+1; BufZ1(n)= Vx(i,j,k)
+end do
+end do
+end do
+do k=nk1,nk1+LenFDS-1
+do j=nj1,nj2
+do i=ni1,ni2
+   n=n+1; BufZ1(n)= Vy(i,j,k)
+end do
+end do
+end do
+do k=nk1,nk1+LenFDS-1
+do j=nj1,nj2
+do i=ni1,ni2
+   n=n+1; BufZ1(n)= Vz(i,j,k)
+end do
+end do
+end do
+do k=nk1,nk1+LenFDS-1
+do j=nj1,nj2
+do i=ni1,ni2
+   !n=n+1; BufZ1(n)=Txx(i,j,k)
+   !n=n+1; BufZ1(n)=Tyy(i,j,k)
+   n=n+1; BufZ1(n)=Tzz(i,j,k)
+end do
+end do
+end do
+do k=nk1,nk1+LenFDS-1
+do j=nj1,nj2
+do i=ni1,ni2
+   !n=n+1; BufZ1(n)=Txy(i,j,k)
+   n=n+1; BufZ1(n)=Txz(i,j,k)
+end do
+end do
+end do
+do k=nk1,nk1+LenFDS-1
+do j=nj1,nj2
+do i=ni1,ni2
+   n=n+1; BufZ1(n)=Tyz(i,j,k)
+end do
+end do
+end do
+! to Z2
+n=0
+do k=nk2-LenFDL+1,nk2
+do j=nj1,nj2
+do i=ni1,ni2
+   n=n+1; BufZ2(n)= Vx(i,j,k)
+end do
+end do
+end do
+do k=nk2-LenFDL+1,nk2
+do j=nj1,nj2
+do i=ni1,ni2
+   n=n+1; BufZ2(n)= Vy(i,j,k)
+end do
+end do
+end do
+do k=nk2-LenFDL+1,nk2
+do j=nj1,nj2
+do i=ni1,ni2
+   n=n+1; BufZ2(n)= Vz(i,j,k)
+end do
+end do
+end do
+do k=nk2-LenFDL+1,nk2
+do j=nj1,nj2
+do i=ni1,ni2
+   !n=n+1; BufZ2(n)=Txx(i,j,k)
+   !n=n+1; BufZ2(n)=Tyy(i,j,k)
+   n=n+1; BufZ2(n)=Tzz(i,j,k)
+end do
+end do
+end do
+do k=nk2-LenFDL+1,nk2
+do j=nj1,nj2
+do i=ni1,ni2
+   !n=n+1; BufZ2(n)=Txy(i,j,k)
+   n=n+1; BufZ2(n)=Txz(i,j,k)
+end do
+end do
+end do
+do k=nk2-LenFDL+1,nk2
+do j=nj1,nj2
+do i=ni1,ni2
+   n=n+1; BufZ2(n)=Tyz(i,j,k)
+end do
+end do
+end do
+end subroutine fill_buff_LzB
+subroutine recv_buff_LzB
+integer :: i,j,k,n
+! from Z1
+n=0
+do k=nk1-LenFDL,nk1-1
+do j=nj1,nj2
+do i=ni1,ni2
+   n=n+1;  Vx(i,j,k)=RevZ1(n)
+end do
+end do
+end do
+do k=nk1-LenFDL,nk1-1
+do j=nj1,nj2
+do i=ni1,ni2
+   n=n+1;  Vy(i,j,k)=RevZ1(n)
+end do
+end do
+end do
+do k=nk1-LenFDL,nk1-1
+do j=nj1,nj2
+do i=ni1,ni2
+   n=n+1;  Vz(i,j,k)=RevZ1(n)
+end do
+end do
+end do
+do k=nk1-LenFDL,nk1-1
+do j=nj1,nj2
+do i=ni1,ni2
+   !n=n+1; Txx(i,j,k)=RevZ1(n)
+   !n=n+1; Tyy(i,j,k)=RevZ1(n)
+   n=n+1; Tzz(i,j,k)=RevZ1(n)
+end do
+end do
+end do
+do k=nk1-LenFDL,nk1-1
+do j=nj1,nj2
+do i=ni1,ni2
+   !n=n+1; Txy(i,j,k)=RevZ1(n)
+   n=n+1; Txz(i,j,k)=RevZ1(n)
+end do
+end do
+end do
+do k=nk1-LenFDL,nk1-1
+do j=nj1,nj2
+do i=ni1,ni2
+   n=n+1; Tyz(i,j,k)=RevZ1(n)
+end do
+end do
+end do
+! from Z2
+n=0
+do k=nk2+1,nk2+LenFDS
+do j=nj1,nj2
+do i=ni1,ni2
+   n=n+1;  Vx(i,j,k)=RevZ2(n)
+end do
+end do
+end do
+do k=nk2+1,nk2+LenFDS
+do j=nj1,nj2
+do i=ni1,ni2
+   n=n+1;  Vy(i,j,k)=RevZ2(n)
+end do
+end do
+end do
+do k=nk2+1,nk2+LenFDS
+do j=nj1,nj2
+do i=ni1,ni2
+   n=n+1;  Vz(i,j,k)=RevZ2(n)
+end do
+end do
+end do
+do k=nk2+1,nk2+LenFDS
+do j=nj1,nj2
+do i=ni1,ni2
+   !n=n+1; Txx(i,j,k)=RevZ2(n)
+   !n=n+1; Tyy(i,j,k)=RevZ2(n)
+   n=n+1; Tzz(i,j,k)=RevZ2(n)
+end do
+end do
+end do
+do k=nk2+1,nk2+LenFDS
+do j=nj1,nj2
+do i=ni1,ni2
+   !n=n+1; Txy(i,j,k)=RevZ2(n)
+   n=n+1; Txz(i,j,k)=RevZ2(n)
+end do
+end do
+end do
+do k=nk2+1,nk2+LenFDS
+do j=nj1,nj2
+do i=ni1,ni2
+   n=n+1; Tyz(i,j,k)=RevZ2(n)
+end do
+end do
+end do
+end subroutine recv_buff_LzB
+
+#endif
 
 end module macdrp_mod
 
