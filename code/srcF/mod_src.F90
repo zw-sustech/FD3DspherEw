@@ -34,7 +34,8 @@ public ::           &
   src_import,       &
   src_fnm_get,      &
   src_stress,       &
-  src_force
+  src_force,        &
+  src_surface
 public ::        &
   fun_bell,      &
   fun_ricker,    &
@@ -53,7 +54,8 @@ integer,parameter,public ::  &
      SIG_STF_BSHIFT   =210,  &
      SIG_STF_GAUSS    =220,  &
      SIG_STF_BELL     =230,  &
-     SIG_STF_STEP     =240
+     SIG_STF_STEP     =240,  &
+     SIG_STF_DELTA    =250
 
 integer,public :: num_force,num_moment,ntwin_force,ntwin_moment
 integer,allocatable,public :: force_indx(:,:),moment_indx(:,:)
@@ -231,7 +233,7 @@ do n=1,num_moment
 #endif
 
 do m=1,ntwin_moment
-   rate=src_svf(t-moment_t0(n),momstf_time(m),momstf_freq(m),momstf_id)
+   rate=src_svf(t-moment_t0(n),momstf_time(m),momstf_freq(m),momstf_id,ntime)
 #ifdef VERBOSE
    if (n==1) then
       write(fid_out,'(i5,2es12.5)') ntime, t, rate
@@ -299,7 +301,7 @@ do n=1,num_force
 #endif
 
 do m=1,ntwin_force
-   disp=src_stf(t-force_t0(n),frcstf_time(m),frcstf_freq(m),frcstf_id)
+   disp=src_stf(t-force_t0(n),frcstf_time(m),frcstf_freq(m),frcstf_id,ntime)
 #ifdef VERBOSE
 if (n==1) then
    write(fid_out,'(i5,2es12.5)') ntime, t, disp
@@ -317,13 +319,16 @@ do Li=-LenFD,LenFD
    if (      i<=ni2 .and. i>=ni1  &
        .and. j<=nj2 .and. j>=nj1  &
        .and. k<=nk2 .and. k>=nk1 ) then
-      !if (freenode .and. k==nk2) cycle
        V=(x(i+1)-x(i-1))*(y(j+1)-y(j-1))*(z(k+1)-z(k-1))/8.0*z(k)**2*xsin(i)
        V=1.0/(V*rho(i,j,k))*d
        fx=fx0*V; fy=fy0*V; fz=fz0*V
+#ifdef SrcSurface
+       if (freenode .and. k==nk2) cycle
+#else
        if (freenode .and. k==nk2) then
           fx=2.0_SP*fx;fy=2.0_SP*fy;fz=2.0_SP*fz
        end if
+#endif
        Vx(i,j,k)=Vx(i,j,k)+fx
        Vy(i,j,k)=Vy(i,j,k)+fy
        Vz(i,j,k)=Vz(i,j,k)+fz
@@ -336,33 +341,77 @@ end do !Lk
 
 end do ! ntwin
 end do ! loop_of_npt
-!call src_charac(t)
+!call src_charac(t,ntime)
 end subroutine src_force
 
-subroutine src_charac(t)
-use macdrp_mod, only : TxSrc,TySrc,TzSrc
-real(SP),intent(in) :: t
+!subroutine src_charac(t,ntime)
+!use macdrp_mod, only : TxSrc,TySrc,TzSrc
+!real(SP),intent(in) :: t
+!integer,intent(in) :: ntime
+!
+!real(SP) :: disp,fx,fy,fz,area
+!integer :: n,m,si,sj,sk,nf
+!
+!if (.not. freenode) return
+!if (num_force<=0) return
+!
+!m=1 ! for ntwin
+!
+!do nf=1,num_force
+!   si=force_indx(1,nf); sj=force_indx(2,nf); sk=force_indx(3,nf)
+!   if (sk/=nk2) cycle
+!   disp=src_stf(t-force_t0(n),frcstf_time(m),frcstf_freq(m),frcstf_id,ntime)
+!   !area=z(sk)**2*xsin(si)*stepx*stepy*stepz
+!   area=z(sk)**2*xsin(si)*(x(si+1)-x(si-1))*(y(sj+1)-y(sj-1))/4.0
+!   fx=ForceX(m,nf); fy=ForceY(m,nf); fz=ForceZ(m,nf)
+!   TxSrc(si,sj)=disp*fx/area
+!   TySrc(si,sj)=disp*fy/area
+!   TzSrc(si,sj)=disp*fz/area
+!end do ! loop_of_npt_fault
+!end subroutine src_charac
 
-real(SP) :: disp,fx,fy,fz,area
-integer :: n,m,si,sj,sk,nf
+subroutine src_surface(ntime,tinc,stept)
+use macdrp_mod, only : &
+    TxSrc,TySrc,TzSrc
+use macdrp_mod, only : &
+    VxSrc,VySrc,VzSrc
+integer,intent(in) :: ntime
+real(SP),intent(in) :: tinc,stept
+
+integer :: n,m,i,j,k
+real(SP) :: t,disp,rate,S,fx0,fy0,fz0
 
 if (.not. freenode) return
-if (num_force<=0) return
+
+if ( num_force<=0 ) return
+
+t=(ntime+tinc)*stept
 
 m=1 ! for ntwin
 
-do nf=1,num_force
-   si=force_indx(1,nf); sj=force_indx(2,nf); sk=force_indx(3,nf)
-   if (sk/=nk2) cycle
-   disp=src_stf(t-force_t0(n),frcstf_time(m),frcstf_freq(m),frcstf_id)
-   !area=z(sk)**2*xsin(si)*stepx*stepy*stepz
-   area=z(sk)**2*xsin(si)*(x(si+1)-x(si-1))*(y(sj+1)-y(sj-1))/4.0
-   fx=ForceX(m,nf); fy=ForceY(m,nf); fz=ForceZ(m,nf)
-   TxSrc(si,sj)=disp*fx/area
-   TySrc(si,sj)=disp*fy/area
-   TzSrc(si,sj)=disp*fz/area
-end do ! loop_of_npt_fault
-end subroutine src_charac
+do n=1,num_force
+   i=force_indx(1,n); j=force_indx(2,n); k=force_indx(3,n)
+do m=1,ntwin_force
+   disp=src_stf(t-force_t0(n),frcstf_time(m),frcstf_freq(m),frcstf_id,ntime)
+   rate=src_svf(t-force_t0(n),frcstf_time(m),frcstf_freq(m),frcstf_id,ntime)
+   fx0=ForceX(m,n); fy0=ForceY(m,n); fz0=ForceZ(m,n)
+   if (      i<=ni2 .and. i>=ni1  &
+       .and. j<=nj2 .and. j>=nj1  &
+       .and. k==nk2  ) then
+
+       S=(x(i+1)-x(i-1))*(y(j+1)-y(j-1))/4.0*z(k)**2*xsin(i)
+
+       TxSrc(i,j)=fx0/S*disp
+       TySrc(i,j)=fy0/S*disp
+       TzSrc(i,j)=fz0/S*disp
+       VxSrc(i,j)=fx0/S*rate
+       VySrc(i,j)=fy0/S*rate
+       VzSrc(i,j)=fz0/S*rate
+    end if
+end do
+end do
+
+end subroutine src_surface
 
 !*************************************************************************
 !*                --- source signal generator --                         *
@@ -386,9 +435,10 @@ subroutine cal_norm_delt(delt,x0,y0,z0,rx0,ry0,rz0)
   if (sum(delt)<SEIS_ZERO) call swmpi_except('cal_norm_delt is zero')
   delt=delt/sum(delt)
 end subroutine cal_norm_delt
-function src_svf(t,t0,f0,flag_stf_type) result(rate)
+function src_svf(t,t0,f0,flag_stf_type,ntime) result(rate)
 real(SP),intent(in) :: t,t0,f0
 integer,intent(in) :: flag_stf_type
+integer,intent(in) :: ntime
 real(SP) :: rate
 select case(flag_stf_type)
 case (SIG_SVF_GAUSS)
@@ -403,15 +453,18 @@ case (SIG_STF_BELL)
    rate= fun_bell_deriv(t-t0,f0)
 case (SIG_SVF_TRIANGLE)
    rate= fun_triangle(t-t0,f0)
+case (SIG_STF_STEP)
+   rate= fun_delta(t,ntime)
 case default
    print *, "Have you told me how to generate the SVF of ", flag_stf_type
    stop 1
 end select
 if (abs(rate)<SEIS_ZERO) rate=0.0
 end function src_svf
-function src_stf(t,t0,f0,flag_stf_type) result(disp)
+function src_stf(t,t0,f0,flag_stf_type,ntime) result(disp)
 real(SP),intent(in) :: t,t0,f0
 integer,intent(in) :: flag_stf_type
+integer,intent(in) :: ntime
 real(SP) :: disp
 select case(flag_stf_type)
 case (SIG_STF_GAUSS)
@@ -424,6 +477,8 @@ case (SIG_SVF_BELL)
    disp= fun_bell_int(t-t0,f0)
 case (SIG_STF_STEP)
    disp=fun_step(t)
+case (SIG_STF_DELTA)
+   disp=fun_delta(t,ntime)
 case default
    print *, "Have you told me how to generate the STF of ", flag_stf_type
    stop 1
@@ -547,12 +602,24 @@ end function fun_bshift
 function fun_step(t) result(v)
     real(SP),intent(in) :: t
     real(SP) :: v
-    if (t>0.0 ) then
+    !if (t>=0.0 ) then
        v=1.0
+    !else
+    !   v=0.0
+    !end if
+end function fun_step
+!delta
+function fun_delta(t,ntime) result(v)
+    real(SP),intent(in) :: t
+    integer,intent(in) :: ntime
+    real(SP) :: v
+    !if (abs(t)<= stept ) then
+    if ( ntime == 0 ) then
+       v=1.0_SP/stept
     else
        v=0.0
     end if
-end function fun_step
+end function fun_delta
 
 function stf_name2id(stfname) result(id)
 character (len=*),intent(in) :: stfname
@@ -574,6 +641,8 @@ case ('B(shift)')
      id=SIG_STF_BSHIFT
 case ('step')
      id=SIG_STF_STEP
+case ('delta')
+     id=SIG_STF_DELTA
 case default
      print *, "Have you told me how to generate the STF of ", trim(stfname)
      stop 1
@@ -599,6 +668,8 @@ case (SIG_STF_BSHIFT)
      stfname='B(shift)'
 case (SIG_STF_STEP)
      stfname='step'
+case (SIG_STF_DELTA)
+     stfname='delta'
 case default
      print *, "Cann't find the stf name for ", id
      stop 1
