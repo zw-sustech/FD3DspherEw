@@ -33,6 +33,9 @@
 /**************************
  * 4-6 LDDRK coeffecients *
  **************************/
+#define DEFLDDRK2A real(SP),parameter :: RK2a2=1.0_SP
+#define DEFLDDRK2B real(SP),parameter :: RK2b1=1.0_SP/2.0_SP,RK2b2=1.0_SP/2.0_SP
+
 #define DEFLDDRK4A real(SP),parameter :: RK4a2=0.5_SP,RK4a3=0.5_SP,RK4a4=1.0_SP
 #define DEFLDDRK4B real(SP),parameter :: RK4b1=1.0_SP/6.0_SP,RK4b2=1.0_SP/3.0_SP,RK4b3=1.0_SP/3.0_SP,RK4b4=1.0_SP/6.0_SP
 
