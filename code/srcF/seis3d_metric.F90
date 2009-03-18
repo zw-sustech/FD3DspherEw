@@ -63,6 +63,7 @@ num_j=swmpi_globj(nj2,dims(2)-1)
 num_k=swmpi_globk(nk2,dims(3)-1)
 
 call alloc_local(num_x,num_y,num_z)
+call grid_alloc
 
 ! read to global coordinate
 do n_i=0,dims(1)-1
