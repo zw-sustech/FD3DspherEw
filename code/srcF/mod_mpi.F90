@@ -399,7 +399,7 @@ subroutine swmpi_time_end(filenm)
                      ',',str_t0(1:2),'/',str_t0(3:4),'/',str_t0(5:10)
      write(fid,*) '  finish at ',str_d1,  &
                      ',',str_t1(1:2),'/',str_t1(3:4),'/',str_t1(5:10)
-     write(fid, * )  'the totle run time is'
+     write(fid, * )  'the total run time is'
      write(fid,'(3(i10,a10))') d,'day',h,'hour',m,'minute'
    close(fid)
 end subroutine swmpi_time_end
