@@ -859,6 +859,7 @@ real(SP),dimension(2) :: lam, miu
 real(SP),dimension(2) :: Vp,Vs,Dp,dVp,dVs,dDp
 real(SP) :: rho0,mu0,lam0
 logical :: flag_water
+integer :: nwater
 
 real(SP) :: x0,y0,z0,d0,x1,y1,z1,z2
 integer :: nsamp
@@ -884,7 +885,7 @@ do j=nj1,nj2
 do i=ni1,ni2
 
    rho0=0.0;mu0=0.0;lam0=0.0
-   flag_water=.false.
+   flag_water=.false.; nwater=0
 
    xvec(0)=x(i); yvec(0)=y(j); zvec(0)=z(k)
 
@@ -1216,7 +1217,7 @@ end if
    !accumulate
    rho0=rho0+0.5*(Dp(1)+Dp(2))
    if (miu(1)<=SEIS_ZERO .or. miu(2)<=SEIS_ZERO) then
-      flag_water=.true.
+      flag_water=.true.; nwater=nwater+1
    else
       mu0 = mu0+0.5*(1.0/miu(1)+1.0/miu(2))
    end if
@@ -1229,7 +1230,11 @@ end do !mk
 
     rho(i,j,k)=rho0/nsamp
     if (flag_water) then
-       mu(i,j,k)=0.0
+       if (nwater>=nsamp/2) then
+          mu(i,j,k)=0.0
+       else
+          mu(i,j,k)=(nsamp-nwater)/mu0
+       end if
     else
        mu(i,j,k)=nsamp/mu0
     end if
