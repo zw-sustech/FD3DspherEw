@@ -934,17 +934,17 @@ do i=I1,I2
 
    E11=(DxVx+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy/xsin(i)+Vz(i,j,k))/z(k)
-   E12=(DxVy+DyVx/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)/2.0_SP
+   E12=(DxVy+DyVx/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)
 
    E33=DzVz
-   E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))/2.0_SP
-   E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))/2.0_SP
+   E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))
+   E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))
 #ifndef CondFreeCharac
 #ifndef CondFreeVHOC
    if (freenode .and. k==nk2) then
       E33=-lam/lam2mu*(E11+E22)+VzSrc(i,j)/lam2mu
-      E13=VxSrc(i,j)/miu/2.0_SP
-      E23=VySrc(i,j)/miu/2.0_SP
+      E13=VxSrc(i,j)/miu
+      E23=VySrc(i,j)/miu
    end if
 #endif
 #endif
@@ -952,9 +952,9 @@ do i=I1,I2
    hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
    hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
    hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
-   hTxy(i,j,k)=2.0_SP*miu*E12
-   hTxz(i,j,k)=2.0_SP*miu*E13
-   hTyz(i,j,k)=2.0_SP*miu*E23
+   hTxy(i,j,k)=miu*E12
+   hTxz(i,j,k)=miu*E13
+   hTyz(i,j,k)=miu*E23
 end do
 end do
 end do
@@ -1108,17 +1108,17 @@ do i=I1,I2
 
    E11=(DxVx+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy/xsin(i)+Vz(i,j,k))/z(k)
-   E12=(DxVy+DyVx/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)/2.0_SP
+   E12=(DxVy+DyVx/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)
 
    E33=DzVz
-   E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))/2.0_SP
-   E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))/2.0_SP
+   E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))
+   E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))
 #ifndef CondFreeCharac
 #ifndef CondFreeVHOC
    if (freenode .and. k==nk2) then
       E33=-lam/lam2mu*(E11+E22)+VzSrc(i,j)/lam2mu
-      E13=VxSrc(i,j)/miu/2.0_SP
-      E23=VySrc(i,j)/miu/2.0_SP
+      E13=VxSrc(i,j)/miu
+      E23=VySrc(i,j)/miu
    end if
 #endif
 #endif
@@ -1126,9 +1126,9 @@ do i=I1,I2
    hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
    hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
    hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
-   hTxy(i,j,k)=2.0_SP*miu*E12
-   hTxz(i,j,k)=2.0_SP*miu*E13
-   hTyz(i,j,k)=2.0_SP*miu*E23
+   hTxy(i,j,k)=miu*E12
+   hTxz(i,j,k)=miu*E13
+   hTyz(i,j,k)=miu*E23
 end do
 end do
 end do
@@ -1282,17 +1282,17 @@ do i=I1,I2
 
    E11=(DxVx+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy/xsin(i)+Vz(i,j,k))/z(k)
-   E12=(DxVy+DyVx/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)/2.0_SP
+   E12=(DxVy+DyVx/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)
 
    E33=DzVz
-   E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))/2.0_SP
-   E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))/2.0_SP
+   E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))
+   E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))
 #ifndef CondFreeCharac
 #ifndef CondFreeVHOC
    if (freenode .and. k==nk2) then
       E33=-lam/lam2mu*(E11+E22)+VzSrc(i,j)/lam2mu
-      E13=VxSrc(i,j)/miu/2.0_SP
-      E23=VySrc(i,j)/miu/2.0_SP
+      E13=VxSrc(i,j)/miu
+      E23=VySrc(i,j)/miu
    end if
 #endif
 #endif
@@ -1301,9 +1301,9 @@ do i=I1,I2
    hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
    hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
    hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
-   hTxy(i,j,k)=2.0_SP*miu*E12
-   hTxz(i,j,k)=2.0_SP*miu*E13
-   hTyz(i,j,k)=2.0_SP*miu*E23
+   hTxy(i,j,k)=miu*E12
+   hTxz(i,j,k)=miu*E13
+   hTyz(i,j,k)=miu*E23
 end do
 end do
 end do
@@ -1457,17 +1457,17 @@ do i=I1,I2
 
    E11=(DxVx+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy/xsin(i)+Vz(i,j,k))/z(k)
-   E12=(DxVy+DyVx/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)/2.0_SP
+   E12=(DxVy+DyVx/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)
 
    E33=DzVz
-   E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))/2.0_SP
-   E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))/2.0_SP
+   E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))
+   E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))
 #ifndef CondFreeCharac
 #ifndef CondFreeVHOC
    if (freenode .and. k==nk2) then
       E33=-lam/lam2mu*(E11+E22)+VzSrc(i,j)/lam2mu
-      E13=VxSrc(i,j)/miu/2.0_SP
-      E23=VySrc(i,j)/miu/2.0_SP
+      E13=VxSrc(i,j)/miu
+      E23=VySrc(i,j)/miu
    end if
 #endif
 #endif
@@ -1475,9 +1475,9 @@ do i=I1,I2
    hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
    hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
    hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
-   hTxy(i,j,k)=2.0_SP*miu*E12
-   hTxz(i,j,k)=2.0_SP*miu*E13
-   hTyz(i,j,k)=2.0_SP*miu*E23
+   hTxy(i,j,k)=miu*E12
+   hTxz(i,j,k)=miu*E13
+   hTyz(i,j,k)=miu*E23
 end do
 end do
 end do
@@ -1631,17 +1631,17 @@ do i=I1,I2
 
    E11=(DxVx+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy/xsin(i)+Vz(i,j,k))/z(k)
-   E12=(DxVy+DyVx/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)/2.0_SP
+   E12=(DxVy+DyVx/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)
 
    E33=DzVz
-   E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))/2.0_SP
-   E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))/2.0_SP
+   E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))
+   E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))
 #ifndef CondFreeCharac
 #ifndef CondFreeVHOC
    if (freenode .and. k==nk2) then
       E33=-lam/lam2mu*(E11+E22)+VzSrc(i,j)/lam2mu
-      E13=VxSrc(i,j)/miu/2.0_SP
-      E23=VySrc(i,j)/miu/2.0_SP
+      E13=VxSrc(i,j)/miu
+      E23=VySrc(i,j)/miu
    end if
 #endif
 #endif
@@ -1649,9 +1649,9 @@ do i=I1,I2
    hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
    hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
    hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
-   hTxy(i,j,k)=2.0_SP*miu*E12
-   hTxz(i,j,k)=2.0_SP*miu*E13
-   hTyz(i,j,k)=2.0_SP*miu*E23
+   hTxy(i,j,k)=miu*E12
+   hTxz(i,j,k)=miu*E13
+   hTyz(i,j,k)=miu*E23
 end do
 end do
 end do
@@ -1805,17 +1805,17 @@ do i=I1,I2
 
    E11=(DxVx+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy/xsin(i)+Vz(i,j,k))/z(k)
-   E12=(DxVy+DyVx/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)/2.0_SP
+   E12=(DxVy+DyVx/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)
 
    E33=DzVz
-   E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))/2.0_SP
-   E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))/2.0_SP
+   E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))
+   E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))
 #ifndef CondFreeCharac
 #ifndef CondFreeVHOC
    if (freenode .and. k==nk2) then
       E33=-lam/lam2mu*(E11+E22)+VzSrc(i,j)/lam2mu
-      E13=VxSrc(i,j)/miu/2.0_SP
-      E23=VySrc(i,j)/miu/2.0_SP
+      E13=VxSrc(i,j)/miu
+      E23=VySrc(i,j)/miu
    end if
 #endif
 #endif
@@ -1823,9 +1823,9 @@ do i=I1,I2
    hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
    hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
    hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
-   hTxy(i,j,k)=2.0_SP*miu*E12
-   hTxz(i,j,k)=2.0_SP*miu*E13
-   hTyz(i,j,k)=2.0_SP*miu*E23
+   hTxy(i,j,k)=miu*E12
+   hTxz(i,j,k)=miu*E13
+   hTyz(i,j,k)=miu*E23
 end do
 end do
 end do
@@ -1979,17 +1979,17 @@ do i=I1,I2
 
    E11=(DxVx+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy/xsin(i)+Vz(i,j,k))/z(k)
-   E12=(DxVy+DyVx/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)/2.0_SP
+   E12=(DxVy+DyVx/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)
 
    E33=DzVz
-   E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))/2.0_SP
-   E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))/2.0_SP
+   E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))
+   E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))
 #ifndef CondFreeCharac
 #ifndef CondFreeVHOC
    if (freenode .and. k==nk2) then
       E33=-lam/lam2mu*(E11+E22)+VzSrc(i,j)/lam2mu
-      E13=VxSrc(i,j)/miu/2.0_SP
-      E23=VySrc(i,j)/miu/2.0_SP
+      E13=VxSrc(i,j)/miu
+      E23=VySrc(i,j)/miu
    end if
 #endif
 #endif
@@ -1997,9 +1997,9 @@ do i=I1,I2
    hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
    hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
    hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
-   hTxy(i,j,k)=2.0_SP*miu*E12
-   hTxz(i,j,k)=2.0_SP*miu*E13
-   hTyz(i,j,k)=2.0_SP*miu*E23
+   hTxy(i,j,k)=miu*E12
+   hTxz(i,j,k)=miu*E13
+   hTyz(i,j,k)=miu*E23
 end do
 end do
 end do
@@ -2153,17 +2153,17 @@ do i=I1,I2
 
    E11=(DxVx+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy/xsin(i)+Vz(i,j,k))/z(k)
-   E12=(DxVy+DyVx/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)/2.0_SP
+   E12=(DxVy+DyVx/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)
 
    E33=DzVz
-   E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))/2.0_SP
-   E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))/2.0_SP
+   E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))
+   E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))
 #ifndef CondFreeCharac
 #ifndef CondFreeVHOC
    if (freenode .and. k==nk2) then
       E33=-lam/lam2mu*(E11+E22)+VzSrc(i,j)/lam2mu
-      E13=VxSrc(i,j)/miu/2.0_SP
-      E23=VySrc(i,j)/miu/2.0_SP
+      E13=VxSrc(i,j)/miu
+      E23=VySrc(i,j)/miu
    end if
 #endif
 #endif
@@ -2171,9 +2171,9 @@ do i=I1,I2
    hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
    hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
    hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
-   hTxy(i,j,k)=2.0_SP*miu*E12
-   hTxz(i,j,k)=2.0_SP*miu*E13
-   hTyz(i,j,k)=2.0_SP*miu*E23
+   hTxy(i,j,k)=miu*E12
+   hTxz(i,j,k)=miu*E13
+   hTyz(i,j,k)=miu*E23
 end do
 end do
 end do
@@ -2303,15 +2303,15 @@ do n=2,LenFD+1
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
    E33=DzVz(n)
-   E12=(DxVy(n)+DyVx(n)/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)/2.0_SP
-   E13=(DxVz(n)/z(k)+DzVx(n)-Vx(i,j,k)/z(k))/2.0_SP
-   E23=(DyVz(n)/z(k)/xsin(i)+DzVy(n)-Vy(i,j,k)/z(k))/2.0_SP
+   E12=(DxVy(n)+DyVx(n)/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)
+   E13=(DxVz(n)/z(k)+DzVx(n)-Vx(i,j,k)/z(k))
+   E23=(DyVz(n)/z(k)/xsin(i)+DzVy(n)-Vy(i,j,k)/z(k))
    hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
    hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
    hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
-   hTxy(i,j,k)=2.0_SP*miu*E12
-   hTxz(i,j,k)=2.0_SP*miu*E13
-   hTyz(i,j,k)=2.0_SP*miu*E23
+   hTxy(i,j,k)=miu*E12
+   hTxz(i,j,k)=miu*E13
+   hTyz(i,j,k)=miu*E23
    if (k==nk2) then
       hTxz(i,j,k)=VxSrc(i,j)
       hTyz(i,j,k)=VySrc(i,j)
@@ -2454,15 +2454,15 @@ do n=2,LenFD+1
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
    E33=DzVz(n)
-   E12=(DxVy(n)+DyVx(n)/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)/2.0_SP
-   E13=(DxVz(n)/z(k)+DzVx(n)-Vx(i,j,k)/z(k))/2.0_SP
-   E23=(DyVz(n)/z(k)/xsin(i)+DzVy(n)-Vy(i,j,k)/z(k))/2.0_SP
+   E12=(DxVy(n)+DyVx(n)/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)
+   E13=(DxVz(n)/z(k)+DzVx(n)-Vx(i,j,k)/z(k))
+   E23=(DyVz(n)/z(k)/xsin(i)+DzVy(n)-Vy(i,j,k)/z(k))
    hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
    hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
    hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
-   hTxy(i,j,k)=2.0_SP*miu*E12
-   hTxz(i,j,k)=2.0_SP*miu*E13
-   hTyz(i,j,k)=2.0_SP*miu*E23
+   hTxy(i,j,k)=miu*E12
+   hTxz(i,j,k)=miu*E13
+   hTyz(i,j,k)=miu*E23
    if (k==nk2) then
       hTxz(i,j,k)=VxSrc(i,j)
       hTyz(i,j,k)=VySrc(i,j)
@@ -2606,15 +2606,15 @@ do n=2,LenFD+1
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
    E33=DzVz(n)
-   E12=(DxVy(n)+DyVx(n)/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)/2.0_SP
-   E13=(DxVz(n)/z(k)+DzVx(n)-Vx(i,j,k)/z(k))/2.0_SP
-   E23=(DyVz(n)/z(k)/xsin(i)+DzVy(n)-Vy(i,j,k)/z(k))/2.0_SP
+   E12=(DxVy(n)+DyVx(n)/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)
+   E13=(DxVz(n)/z(k)+DzVx(n)-Vx(i,j,k)/z(k))
+   E23=(DyVz(n)/z(k)/xsin(i)+DzVy(n)-Vy(i,j,k)/z(k))
    hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
    hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
    hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
-   hTxy(i,j,k)=2.0_SP*miu*E12
-   hTxz(i,j,k)=2.0_SP*miu*E13
-   hTyz(i,j,k)=2.0_SP*miu*E23
+   hTxy(i,j,k)=miu*E12
+   hTxz(i,j,k)=miu*E13
+   hTyz(i,j,k)=miu*E23
    if (k==nk2) then
       hTxz(i,j,k)=VxSrc(i,j)
       hTyz(i,j,k)=VySrc(i,j)
@@ -2742,15 +2742,15 @@ do n=2,LenFD+1
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
    E33=DzVz(n)
-   E12=(DxVy(n)+DyVx(n)/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)/2.0_SP
-   E13=(DxVz(n)/z(k)+DzVx(n)-Vx(i,j,k)/z(k))/2.0_SP
-   E23=(DyVz(n)/z(k)/xsin(i)+DzVy(n)-Vy(i,j,k)/z(k))/2.0_SP
+   E12=(DxVy(n)+DyVx(n)/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)
+   E13=(DxVz(n)/z(k)+DzVx(n)-Vx(i,j,k)/z(k))
+   E23=(DyVz(n)/z(k)/xsin(i)+DzVy(n)-Vy(i,j,k)/z(k))
    hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
    hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
    hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
-   hTxy(i,j,k)=2.0_SP*miu*E12
-   hTxz(i,j,k)=2.0_SP*miu*E13
-   hTyz(i,j,k)=2.0_SP*miu*E23
+   hTxy(i,j,k)=miu*E12
+   hTxz(i,j,k)=miu*E13
+   hTyz(i,j,k)=miu*E23
    if (k==nk2) then
       hTxz(i,j,k)=VxSrc(i,j)
       hTyz(i,j,k)=VySrc(i,j)
@@ -2879,15 +2879,15 @@ do n=2,LenFD+1
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
    E33=DzVz(n)
-   E12=(DxVy(n)+DyVx(n)/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)/2.0_SP
-   E13=(DxVz(n)/z(k)+DzVx(n)-Vx(i,j,k)/z(k))/2.0_SP
-   E23=(DyVz(n)/z(k)/xsin(i)+DzVy(n)-Vy(i,j,k)/z(k))/2.0_SP
+   E12=(DxVy(n)+DyVx(n)/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)
+   E13=(DxVz(n)/z(k)+DzVx(n)-Vx(i,j,k)/z(k))
+   E23=(DyVz(n)/z(k)/xsin(i)+DzVy(n)-Vy(i,j,k)/z(k))
    hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
    hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
    hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
-   hTxy(i,j,k)=2.0_SP*miu*E12
-   hTxz(i,j,k)=2.0_SP*miu*E13
-   hTyz(i,j,k)=2.0_SP*miu*E23
+   hTxy(i,j,k)=miu*E12
+   hTxz(i,j,k)=miu*E13
+   hTyz(i,j,k)=miu*E23
    if (k==nk2) then
       hTxz(i,j,k)=VxSrc(i,j)
       hTyz(i,j,k)=VySrc(i,j)
@@ -3030,15 +3030,15 @@ do n=2,LenFD+1
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
    E33=DzVz(n)
-   E12=(DxVy(n)+DyVx(n)/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)/2.0_SP
-   E13=(DxVz(n)/z(k)+DzVx(n)-Vx(i,j,k)/z(k))/2.0_SP
-   E23=(DyVz(n)/z(k)/xsin(i)+DzVy(n)-Vy(i,j,k)/z(k))/2.0_SP
+   E12=(DxVy(n)+DyVx(n)/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)
+   E13=(DxVz(n)/z(k)+DzVx(n)-Vx(i,j,k)/z(k))
+   E23=(DyVz(n)/z(k)/xsin(i)+DzVy(n)-Vy(i,j,k)/z(k))
    hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
    hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
    hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
-   hTxy(i,j,k)=2.0_SP*miu*E12
-   hTxz(i,j,k)=2.0_SP*miu*E13
-   hTyz(i,j,k)=2.0_SP*miu*E23
+   hTxy(i,j,k)=miu*E12
+   hTxz(i,j,k)=miu*E13
+   hTyz(i,j,k)=miu*E23
    if (k==nk2) then
       hTxz(i,j,k)=VxSrc(i,j)
       hTyz(i,j,k)=VySrc(i,j)
@@ -3167,15 +3167,15 @@ do n=2,LenFD+1
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
    E33=DzVz(n)
-   E12=(DxVy(n)+DyVx(n)/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)/2.0_SP
-   E13=(DxVz(n)/z(k)+DzVx(n)-Vx(i,j,k)/z(k))/2.0_SP
-   E23=(DyVz(n)/z(k)/xsin(i)+DzVy(n)-Vy(i,j,k)/z(k))/2.0_SP
+   E12=(DxVy(n)+DyVx(n)/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)
+   E13=(DxVz(n)/z(k)+DzVx(n)-Vx(i,j,k)/z(k))
+   E23=(DyVz(n)/z(k)/xsin(i)+DzVy(n)-Vy(i,j,k)/z(k))
    hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
    hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
    hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
-   hTxy(i,j,k)=2.0_SP*miu*E12
-   hTxz(i,j,k)=2.0_SP*miu*E13
-   hTyz(i,j,k)=2.0_SP*miu*E23
+   hTxy(i,j,k)=miu*E12
+   hTxz(i,j,k)=miu*E13
+   hTyz(i,j,k)=miu*E23
    if (k==nk2) then
       hTxz(i,j,k)=VxSrc(i,j)
       hTyz(i,j,k)=VySrc(i,j)
@@ -3318,15 +3318,15 @@ do n=2,LenFD+1
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
    E33=DzVz(n)
-   E12=(DxVy(n)+DyVx(n)/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)/2.0_SP
-   E13=(DxVz(n)/z(k)+DzVx(n)-Vx(i,j,k)/z(k))/2.0_SP
-   E23=(DyVz(n)/z(k)/xsin(i)+DzVy(n)-Vy(i,j,k)/z(k))/2.0_SP
+   E12=(DxVy(n)+DyVx(n)/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)
+   E13=(DxVz(n)/z(k)+DzVx(n)-Vx(i,j,k)/z(k))
+   E23=(DyVz(n)/z(k)/xsin(i)+DzVy(n)-Vy(i,j,k)/z(k))
    hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
    hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
    hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
-   hTxy(i,j,k)=2.0_SP*miu*E12
-   hTxz(i,j,k)=2.0_SP*miu*E13
-   hTyz(i,j,k)=2.0_SP*miu*E23
+   hTxy(i,j,k)=miu*E12
+   hTxz(i,j,k)=miu*E13
+   hTyz(i,j,k)=miu*E23
    if (k==nk2) then
       hTxz(i,j,k)=VxSrc(i,j)
       hTyz(i,j,k)=VySrc(i,j)
