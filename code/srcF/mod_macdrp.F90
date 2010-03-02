@@ -1,78 +1,106 @@
 module macdrp_mod
 
+!-------------------------------------------------------------------------------
+! Description:
+!-------------------------------------------------------------------------------
+!
 ! This module contains the variables and subroutines
 ! used in the DRP/opt MacCormack fd operator
 !
-! Author: Wei ZHANG     Email: zhangwei.zw@gmail.com
-! Copyright (C) 2006 Wei ZHANG
-
-!*****************************************************************************
+!    Author: Wei ZHANG     Email: zhangwei.zw@gmail.com
+!    Copyright (C) 2006 Wei ZHANG
+!
+!-------------------------------------------------------------------------------
+! Time stamp, log, version:
+!-------------------------------------------------------------------------------
 !
 ! $Date$
 ! $Revision$
 ! $LastChangedBy$
 !
-!*****************************************************************************
+!-------------------------------------------------------------------------------
 
+!-------------------------------------------------------------------------------
+! Include file:
+!-------------------------------------------------------------------------------
 #include "mod_macdrp.h"
 !#define WATER
 
-use constants_mod, only : SEIS_GEO
-use math_mod
-use para_mod
-use mpi
-use mpi_mod
-use media_mod
-use grid_mod
+!-------------------------------------------------------------------------------
+! Dependent modules:
+!-------------------------------------------------------------------------------
+    use constants_mod, only : SEIS_GEO
+    use math_mod
+    use para_mod
+    use mpi
+    use mpi_mod
+    use media_mod
+    use grid_mod
 
-implicit none
-private
-public ::                                      &
-    Txx, Tyy, Txy, Vx, Vy, Tzz, Txz, Tyz, Vz,  &
-    hTxx,hTyy,hTxy,hVx,hVy,hTzz,hTxz,hTyz,hVz, &
-    macdrp_init,                               &
-    macdrp_syn,                                &
-    macdrp_mesg_init,                          &
-    macdrp_destroy,                            &
-    macdrp_LxF_LyF_LzF,                        &
-    macdrp_LxB_LyB_LzB,                        &
-    macdrp_LxB_LyB_LzF,                        &
-    macdrp_LxF_LyF_LzB,                        &
-    macdrp_LxB_LyF_LzF,                        &
-    macdrp_LxF_LyB_LzB,                        &
-    macdrp_LxF_LyB_LzF,                        &
-    macdrp_LxB_LyF_LzB,                        &
-    macdrp_RK_beg,                             &
-    macdrp_RK_inn,                             &
-    macdrp_RK_fin,                             &
-    macdrp_check,                              &
-    atten_graves
+!-------------------------------------------------------------------------------
+! Public interface and variables:
+!-------------------------------------------------------------------------------
+    implicit none
 
-interface macdrp_LxF_LyF_LzF
-  module procedure in_LxF_LyF_LzF
-end interface
-interface macdrp_LxB_LyB_LzB
-  module procedure in_LxB_LyB_LzB
-end interface
-interface macdrp_LxF_LyF_LzB
-  module procedure in_LxF_LyF_LzB
-end interface
-interface macdrp_LxB_LyB_LzF
-  module procedure in_LxB_LyB_LzF
-end interface
-interface macdrp_LxB_LyF_LzF
-  module procedure in_LxB_LyF_LzF
-end interface
-interface macdrp_LxF_LyB_LzB
-  module procedure in_LxF_LyB_LzB
-end interface
-interface macdrp_LxF_LyB_LzF
-  module procedure in_LxF_LyB_LzF
-end interface
-interface macdrp_LxB_LyF_LzB
-  module procedure in_LxB_LyF_LzB
-end interface
+    private
 
+    !--- variables ---
+    public ::                                      &
+        Txx, Tyy, Txy, Vx, Vy, Tzz, Txz, Tyz, Vz,  &
+        hTxx,hTyy,hTxy,hVx,hVy,hTzz,hTxz,hTyz,hVz
+
+    !-- subroutine and function
+    public ::                                      &
+        macdrp_init,                               &
+        macdrp_syn,                                &
+        macdrp_mesg_init,                          &
+        macdrp_destroy,                            &
+        macdrp_LxF_LyF_LzF,                        &
+        macdrp_LxB_LyB_LzB,                        &
+        macdrp_LxB_LyB_LzF,                        &
+        macdrp_LxF_LyF_LzB,                        &
+        macdrp_LxB_LyF_LzF,                        &
+        macdrp_LxF_LyB_LzB,                        &
+        macdrp_LxF_LyB_LzF,                        &
+        macdrp_LxB_LyF_LzB,                        &
+        macdrp_RK_beg,                             &
+        macdrp_RK_inn,                             &
+        macdrp_RK_fin,                             &
+        macdrp_check,                              &
+        atten_graves,                              &
+        macdrp_print_info
+
+!-------------------------------------------------------------------------------
+! Local interface
+!-------------------------------------------------------------------------------
+    interface macdrp_LxF_LyF_LzF
+      module procedure in_LxF_LyF_LzF
+    end interface
+    interface macdrp_LxB_LyB_LzB
+      module procedure in_LxB_LyB_LzB
+    end interface
+    interface macdrp_LxF_LyF_LzB
+      module procedure in_LxF_LyF_LzB
+    end interface
+    interface macdrp_LxB_LyB_LzF
+      module procedure in_LxB_LyB_LzF
+    end interface
+    interface macdrp_LxB_LyF_LzF
+      module procedure in_LxB_LyF_LzF
+    end interface
+    interface macdrp_LxF_LyB_LzB
+      module procedure in_LxF_LyB_LzB
+    end interface
+    interface macdrp_LxF_LyB_LzF
+      module procedure in_LxF_LyB_LzF
+    end interface
+    interface macdrp_LxB_LyF_LzB
+      module procedure in_LxB_LyF_LzB
+    end interface
+
+!-------------------------------------------------------------------------------
+! Constant parameters in the include file:
+!-------------------------------------------------------------------------------
 DEFFDWET
 DEFFDWET24
 DEFFDWET22
@@ -83,131 +111,169 @@ DEFLDDRK4B
 HOCWETL
 HOCWETR
 
+!-------------------------------------------------------------------------------
+! Module variables:
+!-------------------------------------------------------------------------------
 #ifdef MPIBuffered
-real(SP),dimension(:),allocatable ::        &
-     BufX1,BufX2,BufY1,BufY2,BufZ1,BufZ2,   &
-     RevX1,RevX2,RevY1,RevY2,RevZ1,RevZ2
-integer,parameter,private :: NREQ=4
-integer,private :: &
-     NBufXL, NBufXS, &
-     NBufYL, NBufYS, &
-     NBufZL, NBufZS
+    real(SP),dimension(:),allocatable ::        &
+         BufX1,BufX2,BufY1,BufY2,BufZ1,BufZ2,   &
+         RevX1,RevX2,RevY1,RevY2,RevZ1,RevZ2
+    integer,parameter,private :: NREQ=4
+    integer,private :: &
+         NBufXL, NBufXS, &
+         NBufYL, NBufYS, &
+         NBufZL, NBufZS
 #else
-!integer,parameter,private :: NREQ=36
-integer,parameter,private :: NREQ=24
+    !integer,parameter,private :: NREQ=36
+    integer,parameter,private :: NREQ=24
 #endif
 
-real(SP),dimension(:,:,:),allocatable ::        &
-      Txx, Tyy, Txy, Vx, Vy, Tzz, Txz, Tyz, Vz, &
-     hTxx,hTyy,hTxy,hVx,hVy,hTzz,hTxz,hTyz,hVz, &
-     mTxx,mTyy,mTxy,mVx,mVy,mTzz,mTxz,mTyz,mVz, &
-     tTxx,tTyy,tTxy,tVx,tVy,tTzz,tTxz,tTyz,tVz
-real(SP),dimension(:,:,:,:),allocatable,public :: &
-     matVx2Vz,matVy2Vz
-real(SP),dimension(:,:),allocatable,public :: &
-     TxSrc,TySrc,TzSrc,                       &
-     VxSrc,VySrc,VzSrc
-real(SP),dimension(4),public :: firRKa,firRKb, secRKa,secRKb
-integer,dimension(SEIS_GEO*2,SEIS_GEO*2+1),public :: indx
-integer ierr
-integer,dimension(MPI_STATUS_SIZE) :: istatus
-integer,dimension(NREQ) :: reqXB, reqXF, reqYB, reqYF, reqZB, reqZF
-integer,dimension(MPI_STATUS_SIZE,NREQ) :: reqstat
+    real(SP),dimension(:,:,:),allocatable ::        &
+          Txx, Tyy, Txy, Vx, Vy, Tzz, Txz, Tyz, Vz, &
+         hTxx,hTyy,hTxy,hVx,hVy,hTzz,hTxz,hTyz,hVz, &
+         mTxx,mTyy,mTxy,mVx,mVy,mTzz,mTxz,mTyz,mVz, &
+         tTxx,tTyy,tTxy,tVx,tVy,tTzz,tTxz,tTyz,tVz
+
+#ifdef AnisGene
+    real(SP),allocatable,public :: &
+         matEh2Ev(:,:,:,:), matF2Ev(:,:,:,:)
+#endif
+
+    real(SP),dimension(:,:),allocatable,public :: &
+         TxSrc,TySrc,TzSrc,                       &
+         VxSrc,VySrc,VzSrc
+    real(SP),dimension(4),public :: firRKa,firRKb, secRKa,secRKb
+    integer,dimension(SEIS_GEO*2,SEIS_GEO*2+1),public :: indx
+    integer ierr
+    integer,dimension(MPI_STATUS_SIZE) :: istatus
+    integer,dimension(NREQ) :: reqXB, reqXF, reqYB, reqYF, reqZB, reqZF
+    integer,dimension(MPI_STATUS_SIZE,NREQ) :: reqstat
+
 #ifdef VERBOSE
-integer fid_out
+    integer fid_out
 #endif
 
-!-----------------------------------------------------------------------------
+!===============================================================================
+! subroutine and functions in this module
+!===============================================================================
+
 contains
-!-----------------------------------------------------------------------------
 
-subroutine macdrp_init
-integer ierr
-allocate( Txx(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr);  Txx=0.0_SP
-allocate( Tyy(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr);  Tyy=0.0_SP
-allocate( Txy(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr);  Txy=0.0_SP
-allocate( Vx (nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr);  Vx =0.0_SP
-allocate( Vy (nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr);  Vy =0.0_SP
-allocate( Tzz(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr);  Tzz=0.0_SP
-allocate( Txz(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr);  Txz=0.0_SP
-allocate( Tyz(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr);  Tyz=0.0_SP
-allocate( Vz (nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr);  Vz =0.0_SP
-allocate(hTxx(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); hTxx=0.0_SP
-allocate(hTyy(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); hTyy=0.0_SP
-allocate(hTxy(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); hTxy=0.0_SP
-allocate(hVx (nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); hVx =0.0_SP
-allocate(hVy (nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); hVy =0.0_SP
-allocate(hTzz(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); hTzz=0.0_SP
-allocate(hTxz(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); hTxz=0.0_SP
-allocate(hTyz(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); hTyz=0.0_SP
-allocate(hVz (nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); hVz =0.0_SP
-allocate(mTxx(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); mTxx=0.0_SP
-allocate(mTyy(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); mTyy=0.0_SP
-allocate(mTxy(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); mTxy=0.0_SP
-allocate(mVx (nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); mVx =0.0_SP
-allocate(mVy (nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); mVy =0.0_SP
-allocate(mTzz(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); mTzz=0.0_SP
-allocate(mTxz(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); mTxz=0.0_SP
-allocate(mTyz(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); mTyz=0.0_SP
-allocate(mVz (nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); mVz =0.0_SP
-allocate(tTxx(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); tTxx=0.0_SP
-allocate(tTyy(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); tTyy=0.0_SP
-allocate(tTxy(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); tTxy=0.0_SP
-allocate(tVx (nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); tVx =0.0_SP
-allocate(tVy (nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); tVy =0.0_SP
-allocate(tTzz(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); tTzz=0.0_SP
-allocate(tTxz(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); tTxz=0.0_SP
-allocate(tTyz(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); tTyz=0.0_SP
-allocate(tVz (nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); tVz =0.0_SP
-if (ierr>0) then
-   print *, "can't allocate variable in macdrp_init"
-   stop 1
-end if
-allocate(matVx2Vz(SEIS_GEO,SEIS_GEO,nx,ny),stat=ierr); matVx2Vz=0.0_SP
-allocate(matVy2Vz(SEIS_GEO,SEIS_GEO,nx,ny),stat=ierr); matVy2Vz=0.0_SP
-allocate(TxSrc(nx1:nx2,ny1:ny2),stat=ierr); TxSrc=0.0_SP
-allocate(TySrc(nx1:nx2,ny1:ny2),stat=ierr); TySrc=0.0_SP
-allocate(TzSrc(nx1:nx2,ny1:ny2),stat=ierr); TzSrc=0.0_SP
-allocate(VxSrc(nx1:nx2,ny1:ny2),stat=ierr); VxSrc=0.0_SP
-allocate(VySrc(nx1:nx2,ny1:ny2),stat=ierr); VySrc=0.0_SP
-allocate(VzSrc(nx1:nx2,ny1:ny2),stat=ierr); VzSrc=0.0_SP
+!===============================================================================
+subroutine macdrp_init 
+!===============================================================================
+
+!-------------------------------------------------------------------------------
+!-- Description:
+!-------------------------------------------------------------------------------
+!--   Allocate module variables
+
+!-------------------------------------------------------------------------------
+!-- ToDo:
+!-------------------------------------------------------------------------------
+!--   Error handler
+
+!-------------------------------------------------------------------------------
+!-- Input arguments:
+!-------------------------------------------------------------------------------
+
+!-------------------------------------------------------------------------------
+!-- Output arguments:
+!-------------------------------------------------------------------------------
+
+!-------------------------------------------------------------------------------
+!-- Local variables:
+!-------------------------------------------------------------------------------
+    integer :: ierr  !-- stat of allocate
+
+!-------------------------------------------------------------------------------
+!-- Entry point: 
+!-------------------------------------------------------------------------------
+!-
+  allocate( Txx(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr);  Txx=0.0_SP
+  allocate( Tyy(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr);  Tyy=0.0_SP
+  allocate( Txy(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr);  Txy=0.0_SP
+  allocate( Vx (nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr);  Vx =0.0_SP
+  allocate( Vy (nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr);  Vy =0.0_SP
+  allocate( Tzz(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr);  Tzz=0.0_SP
+  allocate( Txz(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr);  Txz=0.0_SP
+  allocate( Tyz(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr);  Tyz=0.0_SP
+  allocate( Vz (nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr);  Vz =0.0_SP
+  allocate(hTxx(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); hTxx=0.0_SP
+  allocate(hTyy(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); hTyy=0.0_SP
+  allocate(hTxy(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); hTxy=0.0_SP
+  allocate(hVx (nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); hVx =0.0_SP
+  allocate(hVy (nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); hVy =0.0_SP
+  allocate(hTzz(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); hTzz=0.0_SP
+  allocate(hTxz(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); hTxz=0.0_SP
+  allocate(hTyz(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); hTyz=0.0_SP
+  allocate(hVz (nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); hVz =0.0_SP
+  allocate(mTxx(ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); mTxx=0.0_SP
+  allocate(mTyy(ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); mTyy=0.0_SP
+  allocate(mTxy(ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); mTxy=0.0_SP
+  allocate(mVx (ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); mVx =0.0_SP
+  allocate(mVy (ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); mVy =0.0_SP
+  allocate(mTzz(ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); mTzz=0.0_SP
+  allocate(mTxz(ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); mTxz=0.0_SP
+  allocate(mTyz(ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); mTyz=0.0_SP
+  allocate(mVz (ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); mVz =0.0_SP
+  allocate(tTxx(ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); tTxx=0.0_SP
+  allocate(tTyy(ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); tTyy=0.0_SP
+  allocate(tTxy(ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); tTxy=0.0_SP
+  allocate(tVx (ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); tVx =0.0_SP
+  allocate(tVy (ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); tVy =0.0_SP
+  allocate(tTzz(ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); tTzz=0.0_SP
+  allocate(tTxz(ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); tTxz=0.0_SP
+  allocate(tTyz(ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); tTyz=0.0_SP
+  allocate(tVz (ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); tVz =0.0_SP
+  if (ierr>0) then
+     print *, "can't allocate variable in macdrp_init"
+     stop 1
+  end if
+  allocate(TxSrc(nx1:nx2,ny1:ny2),stat=ierr); TxSrc=0.0_SP
+  allocate(TySrc(nx1:nx2,ny1:ny2),stat=ierr); TySrc=0.0_SP
+  allocate(TzSrc(nx1:nx2,ny1:ny2),stat=ierr); TzSrc=0.0_SP
+  allocate(VxSrc(nx1:nx2,ny1:ny2),stat=ierr); VxSrc=0.0_SP
+  allocate(VySrc(nx1:nx2,ny1:ny2),stat=ierr); VySrc=0.0_SP
+  allocate(VzSrc(nx1:nx2,ny1:ny2),stat=ierr); VzSrc=0.0_SP
 #ifdef MPIBuffered
-allocate(BufX1(LenFD*nj*nk*6),stat=ierr); BufX1=0.0_SP
-allocate(BufX2(LenFD*nj*nk*6),stat=ierr); BufX2=0.0_SP
-allocate(BufY1(LenFD*ni*nk*6),stat=ierr); BufY1=0.0_SP
-allocate(BufY2(LenFD*ni*nk*6),stat=ierr); BufY2=0.0_SP
-allocate(BufZ1(LenFD*ni*nj*6),stat=ierr); BufZ1=0.0_SP
-allocate(BufZ2(LenFD*ni*nj*6),stat=ierr); BufZ2=0.0_SP
-allocate(RevX1(LenFD*nj*nk*6),stat=ierr); RevX1=0.0_SP
-allocate(RevX2(LenFD*nj*nk*6),stat=ierr); RevX2=0.0_SP
-allocate(RevY1(LenFD*ni*nk*6),stat=ierr); RevY1=0.0_SP
-allocate(RevY2(LenFD*ni*nk*6),stat=ierr); RevY2=0.0_SP
-allocate(RevZ1(LenFD*ni*nj*6),stat=ierr); RevZ1=0.0_SP
-allocate(RevZ2(LenFD*ni*nj*6),stat=ierr); RevZ2=0.0_SP
-NBufXL=nj*nk*LenFDL*6
-NBufXS=nj*nk*LenFDS*6
-NBufYL=ni*nk*LenFDL*6
-NBufYS=ni*nk*LenFDS*6
-NBufZL=ni*nj*LenFDL*6
-NBufZS=ni*nj*LenFDS*6
+  allocate(BufX1(LenFD*nj*nk*6),stat=ierr); BufX1=0.0_SP
+  allocate(BufX2(LenFD*nj*nk*6),stat=ierr); BufX2=0.0_SP
+  allocate(BufY1(LenFD*ni*nk*6),stat=ierr); BufY1=0.0_SP
+  allocate(BufY2(LenFD*ni*nk*6),stat=ierr); BufY2=0.0_SP
+  allocate(BufZ1(LenFD*ni*nj*6),stat=ierr); BufZ1=0.0_SP
+  allocate(BufZ2(LenFD*ni*nj*6),stat=ierr); BufZ2=0.0_SP
+  allocate(RevX1(LenFD*nj*nk*6),stat=ierr); RevX1=0.0_SP
+  allocate(RevX2(LenFD*nj*nk*6),stat=ierr); RevX2=0.0_SP
+  allocate(RevY1(LenFD*ni*nk*6),stat=ierr); RevY1=0.0_SP
+  allocate(RevY2(LenFD*ni*nk*6),stat=ierr); RevY2=0.0_SP
+  allocate(RevZ1(LenFD*ni*nj*6),stat=ierr); RevZ1=0.0_SP
+  allocate(RevZ2(LenFD*ni*nj*6),stat=ierr); RevZ2=0.0_SP
+  NBufXL=nj*nk*LenFDL*6
+  NBufXS=nj*nk*LenFDS*6
+  NBufYL=ni*nk*LenFDL*6
+  NBufYS=ni*nk*LenFDS*6
+  NBufZL=ni*nj*LenFDL*6
+  NBufZS=ni*nj*LenFDS*6
 #endif
+
 ! main
-indx(:,SEIS_GEO*2+1)=(/ ni1+LenFD,ni2-LenFD, &
-                        nj1+LenFD,nj2-LenFD, &
-                        nk1+LenFD,nk2-LenFD /)
-indx(:,SEIS_GEO*2  )=(/ ni1,ni2,nj1,nj2,nk2-LenFD+1,nk2 /) ! z2
-indx(:,SEIS_GEO*2-1)=(/ ni1,ni2,nj1,nj2,nk1,nk1+LenFD-1 /) ! z1
-indx(:,1)=(/ ni1,ni2,nj1,nj1+LenFD-1,nk1+LenFD,nk2-LenFD /) ! y1
-indx(:,2)=(/ ni1,ni2,nj2-LenFD+1,nj2,nk1+LenFD,nk2-LenFD /) ! y2
-indx(:,3)=(/ ni1,ni1+LenFD-1,nj1+LenFD,nj2-LenFD,nk1+LenFD,nk2-LenFD /) ! x1
-indx(:,4)=(/ ni2-LenFD+1,ni2,nj1+LenFD,nj2-LenFD,nk1+LenFD,nk2-LenFD /) ! x2
+  indx(:,SEIS_GEO*2+1)=(/ ni1+LenFD,ni2-LenFD, &
+                          nj1+LenFD,nj2-LenFD, &
+                          nk1+LenFD,nk2-LenFD /)
+  indx(:,SEIS_GEO*2  )=(/ ni1,ni2,nj1,nj2,nk2-LenFD+1,nk2 /) ! z2
+  indx(:,SEIS_GEO*2-1)=(/ ni1,ni2,nj1,nj2,nk1,nk1+LenFD-1 /) ! z1
+  indx(:,1)=(/ ni1,ni2,nj1,nj1+LenFD-1,nk1+LenFD,nk2-LenFD /) ! y1
+  indx(:,2)=(/ ni1,ni2,nj2-LenFD+1,nj2,nk1+LenFD,nk2-LenFD /) ! y2
+  indx(:,3)=(/ ni1,ni1+LenFD-1,nj1+LenFD,nj2-LenFD,nk1+LenFD,nk2-LenFD /) ! x1
+  indx(:,4)=(/ ni2-LenFD+1,ni2,nj1+LenFD,nj2-LenFD,nk1+LenFD,nk2-LenFD /) ! x2
 ! rk coefficient
-firRKa=(/ RK4a2, RK4a3, RK4a4, 0.0 /)
-firRKb=(/ RK4b1, RK4b2, RK4b3, RK4b4 /)
-!secRKa=(/ RK4a2, RK4a3, RK4a4, 0.0 /)
-!secRKb=(/ RK4b1, RK4b2, RK4b3, RK4b4 /)
-secRKa=(/ RK2a2, 0.0, 0.0, 0.0 /)
-secRKb=(/ RK2b1, RK2b2, 0.0, 0.0 /)
+  firRKa=(/ RK4a2, RK4a3, RK4a4, 0.0 /)
+  firRKb=(/ RK4b1, RK4b2, RK4b3, RK4b4 /)
+  !secRKa=(/ RK4a2, RK4a3, RK4a4, 0.0 /)
+  !secRKb=(/ RK4b1, RK4b2, RK4b3, RK4b4 /)
+  secRKa=(/ RK2a2, 0.0, 0.0, 0.0 /)
+  secRKb=(/ RK2b1, RK2b2, 0.0, 0.0 /)
 ! mat to convert V,z
 #ifdef VERBOSE
   fid_out=9050
@@ -215,8 +281,92 @@ secRKb=(/ RK2b1, RK2b2, 0.0, 0.0 /)
        file='log_maxval_'//trim(set_mpi_subfix(thisid(1),thisid(2),thisid(3)))//'.dat', &
        status='unknown')
 #endif
+
+#ifdef AnisGene
+  call coef_Eh2Ev
+#endif
+!===============================================================================
 end subroutine macdrp_init
-subroutine macdrp_destroy
+!===============================================================================
+
+#ifdef AnisGene
+!===============================================================================
+subroutine coef_Eh2Ev
+!===============================================================================
+
+!-------------------------------------------------------------------------------
+!-- Description:
+!-------------------------------------------------------------------------------
+!--   Coefficent to convert strain at the surface
+
+!-------------------------------------------------------------------------------
+!-- ToDo:
+!-------------------------------------------------------------------------------
+!--
+
+!-------------------------------------------------------------------------------
+!-- Input arguments:
+!-------------------------------------------------------------------------------
+!--
+
+!-------------------------------------------------------------------------------
+!-- Output arguments:
+!-------------------------------------------------------------------------------
+!--
+
+!-------------------------------------------------------------------------------
+!-- Global variables or function need:
+!-------------------------------------------------------------------------------
+    use math_mod, only : invert
+
+!-------------------------------------------------------------------------------
+!-- Local variables:
+!-------------------------------------------------------------------------------
+    real(SP),dimension(SEIS_GEO,SEIS_GEO) :: A,B     !-- for invert
+    integer :: i,j,k                                 !-- loop variable
+    integer :: ierr                                  !-- stat of allocate
+
+!-------------------------------------------------------------------------------
+!-- Entry point: 
+!-------------------------------------------------------------------------------
+!-
+
+  !---- only needed for free surface ----
+  if ( .not. freenode ) return
+
+  allocate(matEh2Ev(SEIS_GEO,SEIS_GEO,ni1:ni2,nj1:nj2),stat=ierr); matEh2Ev=0.0_SP
+  allocate(matF2Ev(SEIS_GEO,SEIS_GEO,ni1:ni2,nj1:nj2),stat=ierr); matF2Ev=0.0_SP
+
+  k=nk2
+  do j=nj1,nj2
+  do i=ni1,ni2
+     !----
+     A(1,:)=(/ C33(i,j,k),C34(i,j,k),C35(i,j,k) /)
+     A(2,:)=(/ C34(i,j,k),C44(i,j,k),C45(i,j,k) /)
+     A(3,:)=(/ C35(i,j,k),C45(i,j,k),C55(i,j,k) /)
+     call invert(A)
+     !----
+     B(1,:)=(/ C13(i,j,k),C23(i,j,k),C36(i,j,k) /)
+     B(2,:)=(/ C14(i,j,k),C24(i,j,k),C46(i,j,k) /)
+     B(3,:)=(/ C15(i,j,k),C25(i,j,k),C56(i,j,k) /)
+     B=-B
+     !----
+     matEh2Ev(1:SEIS_GEO,1:SEIS_GEO,i,j)=matmul(A,B)
+     matF2Ev (1,1:SEIS_GEO,i,j) = (/ A(1,1),A(1,2),A(1,3) /)
+     matF2Ev (2,1:SEIS_GEO,i,j) = (/ A(2,1),A(2,2),A(2,3) /)
+     matF2Ev (3,1:SEIS_GEO,i,j) = (/ A(3,1),A(3,2),A(3,3) /)
+  end do
+  end do
+
+!===============================================================================
+end subroutine coef_Eh2Ev
+!===============================================================================
+#endif
+
+!===============================================================================
+subroutine macdrp_destroy  !-- deallocate module variable, not complete
+!===============================================================================
+
 deallocate( Txx, Tyy, Txy, Vx, Vy)
 deallocate(hTxx,hTyy,hTxy,hVx,hVy)
 deallocate(mTxx,mTyy,mTxy,mVx,mVy)
@@ -224,8 +374,13 @@ deallocate(tTxx,tTyy,tTxy,tVx,tVy)
 #ifdef VERBOSE
   close(fid_out)
 #endif
+!-------------------------------------------------------------------------------
 end subroutine macdrp_destroy
-subroutine macdrp_check(ntime)
+!-------------------------------------------------------------------------------
+
+!-------------------------------------------------------------------------------
+subroutine macdrp_check(ntime)  !-- check overflow at ntime step
+!-------------------------------------------------------------------------------
 integer,intent(in) :: ntime
 real(SP) :: V1,V2,V3,T11,T22,T33,T12,T13,T23,W
 integer ierr
@@ -261,11 +416,14 @@ if (mod(ntime,1)==0) then
       call MPI_ABORT(SWMPI_COMM,1,ierr)
    end if
 end if
+!-------------------------------------------------------------------------------
 end subroutine macdrp_check
+!-------------------------------------------------------------------------------
 
-!{----------- 4-6 LDDRK stages ----------------
 
+!-------------------------------------------------------------------------------
 subroutine macdrp_syn
+!-------------------------------------------------------------------------------
 
  integer i,j,k
 !$OMP PARALLEL DO DEFAULT(shared) PRIVATE(i,j,k)
@@ -285,10 +443,13 @@ subroutine macdrp_syn
  end do
  end do
 !$OMP END PARALLEL DO
+!-------------------------------------------------------------------------------
 end subroutine macdrp_syn
+!-------------------------------------------------------------------------------
 
-!-- Generic RK --
-subroutine macdrp_RK_beg(rka,rkb)
+!-------------------------------------------------------------------------------
+subroutine macdrp_RK_beg(rka,rkb)  !--- first step of RK scheme
+!-------------------------------------------------------------------------------
  real(SP),intent(in) :: rka,rkb
  real(SP) :: a,b
  integer i,j,k
@@ -324,9 +485,13 @@ subroutine macdrp_RK_beg(rka,rkb)
 call free_charac
 call free_extrap
 #endif
+!-------------------------------------------------------------------------------
 end subroutine macdrp_RK_beg
+!-------------------------------------------------------------------------------
 
-subroutine macdrp_RK_inn(rka,rkb)
+!-------------------------------------------------------------------------------
+subroutine macdrp_RK_inn(rka,rkb)  !-- inner step of RK scheme
+!-------------------------------------------------------------------------------
  real(SP),intent(in) :: rka,rkb
  real(SP) :: a,b
  integer i,j,k
@@ -362,9 +527,13 @@ subroutine macdrp_RK_inn(rka,rkb)
 call free_charac
 call free_extrap
 #endif
+!-------------------------------------------------------------------------------
 end subroutine macdrp_RK_inn
+!-------------------------------------------------------------------------------
 
-subroutine macdrp_RK_fin(rkb)
+!-------------------------------------------------------------------------------
+subroutine macdrp_RK_fin(rkb)  !-- final step of RK scheme
+!-------------------------------------------------------------------------------
  real(SP),intent(in) :: rkb
  real(SP) :: b
  integer i,j,k
@@ -390,9 +559,13 @@ subroutine macdrp_RK_fin(rkb)
 call free_charac
 call free_extrap
 #endif
+!-------------------------------------------------------------------------------
 end subroutine macdrp_RK_fin
+!-------------------------------------------------------------------------------
 
-subroutine atten_graves
+!-------------------------------------------------------------------------------
+subroutine atten_graves  !-- attenuation effect
+!-------------------------------------------------------------------------------
  integer :: i,j,k
  real(SP) :: Qatt
 !$OMP PARALLEL DO DEFAULT(shared) PRIVATE(i,j,k)
@@ -416,12 +589,13 @@ subroutine atten_graves
  end do
  end do
 !$OMP END PARALLEL DO
+!-------------------------------------------------------------------------------
 end subroutine atten_graves
-!---------------------------------------------------}
+!-------------------------------------------------------------------------------
 
-!{------------------------ DRP/opt macdrp --------------------------------
-
-!{----- wrapper of LxF_LyF_LzF ---------
+!-------------------------------------------------------------------------------
+!--- 3D bias FD of the MacCormack scheme
+!-------------------------------------------------------------------------------
 subroutine in_LxF_LyF_LzF
   integer n
 #ifdef MPIBARRIER
@@ -467,6 +641,7 @@ subroutine in_LxF_LyF_LzF
 #endif
 
 end subroutine in_LxF_LyF_LzF
+!-------------------------------------------------------------------------------
 subroutine in_LxB_LyB_LzB
   integer n
 #ifdef MPIBARRIER
@@ -516,6 +691,7 @@ subroutine in_LxB_LyB_LzB
    if (freenode)  call LxB_LyB_LzB_VHOC
 #endif
 end subroutine in_LxB_LyB_LzB
+!-------------------------------------------------------------------------------
 subroutine in_LxB_LyB_LzF
   integer n
 #ifdef MPIBARRIER
@@ -561,6 +737,7 @@ subroutine in_LxB_LyB_LzF
    if (freenode)  call LxB_LyB_LzF_VHOC
 #endif
 end subroutine in_LxB_LyB_LzF
+!-------------------------------------------------------------------------------
 subroutine in_LxF_LyF_LzB
   integer n
 #ifdef MPIBARRIER
@@ -606,6 +783,7 @@ subroutine in_LxF_LyF_LzB
    if (freenode)  call LxF_LyF_LzB_VHOC
 #endif
 end subroutine in_LxF_LyF_LzB
+!-------------------------------------------------------------------------------
 subroutine in_LxB_LyF_LzF
   integer n
 #ifdef MPIBARRIER
@@ -651,6 +829,7 @@ subroutine in_LxB_LyF_LzF
    if (freenode)  call LxB_LyF_LzF_VHOC
 #endif
 end subroutine in_LxB_LyF_LzF
+!-------------------------------------------------------------------------------
 subroutine in_LxF_LyB_LzB
   integer n
 #ifdef MPIBARRIER
@@ -696,6 +875,7 @@ subroutine in_LxF_LyB_LzB
    if (freenode)  call LxF_LyB_LzB_VHOC
 #endif
 end subroutine in_LxF_LyB_LzB
+!-------------------------------------------------------------------------------
 subroutine in_LxF_LyB_LzF
   integer n
 #ifdef MPIBARRIER
@@ -741,6 +921,7 @@ subroutine in_LxF_LyB_LzF
    if (freenode)  call LxF_LyB_LzF_VHOC
 #endif
 end subroutine in_LxF_LyB_LzF
+!-------------------------------------------------------------------------------
 subroutine in_LxB_LyF_LzB
   integer n
 #ifdef MPIBARRIER
@@ -786,14 +967,19 @@ subroutine in_LxB_LyF_LzB
    if (freenode)  call LxB_LyF_LzB_VHOC
 #endif
 end subroutine in_LxB_LyF_LzB
-!-- private subroutine --
+!-------------------------------------------------------------------------------
 subroutine LxF_LyF_LzF(I1,I2,J1,J2,K1,K2)
 integer,intent(in) :: I1,I2,J1,J2,K1,K2
 integer :: i,j,k
 real(SP) :: DxTxx,DxTxy,DxTxz,DxVx,DxVy,DxVz
 real(SP) :: DyTyy,DyTxy,DyTyz,DyVx,DyVy,DyVz
 real(SP) :: DzTzz,DzTxz,DzTyz,DzVx,DzVy,DzVz
-real(SP) :: lam,miu,lam2mu,rrho
+real(SP) :: rrho
+real(SP) :: tc11,tc12,tc13,tc22,tc23,tc33,tc44,tc55,tc66
+#ifdef AnisGene
+real(SP) :: tc14,tc15,tc16,tc24,tc25,tc26,tc34,tc35,tc36
+real(SP) :: tc45,tc46,tc56
+#endif
 real(SP) :: E11,E22,E33,E12,E13,E23
 ! curvilinear
 !$OMP PARALLEL DO DEFAULT(shared)  &
@@ -806,7 +992,6 @@ real(SP) :: E11,E22,E33,E12,E13,E23
 do k=K1,K2
 do j=J1,J2
 do i=I1,I2
-   lam=lambda(i,j,k);miu=mu(i,j,k);lam2mu=lam+2.0*miu;rrho=1.0/rho(i,j,k)
    DxTxx = (              &
      m3d_FDxF1(Txx,i,j,k) &
      m3d_FDxF2(Txx,i,j,k) &
@@ -915,7 +1100,7 @@ do i=I1,I2
 #endif
 
 #ifdef WATER
-   if (miu<=SEIS_ZERO) then
+   if (C66(i,j,k)<=SEIS_ZERO) then
       DxTxy=0.0
       DxTxz=0.0
       DyTxy=0.0
@@ -925,12 +1110,60 @@ do i=I1,I2
    end if
 #endif
 
+   rrho=1.0/rho(i,j,k)
+
    hVx(i,j,k)= rrho*( DxTxx/z(k)+DyTxy/z(k)/xsin(i)+DzTxz                    &
         +(3.0_SP*Txz(i,j,k)+Txx(i,j,k)*xcot(i)-Tyy(i,j,k)*xcot(i))/z(k) )
    hVy(i,j,k)= rrho*( DxTxy/z(k)+DyTyy/z(k)/xsin(i)+DzTyz                    &
         +(2.0_SP*Txy(i,j,k)*xcot(i)+3.0_SP*Tyz(i,j,k))/z(k) )
    hVz(i,j,k)= rrho*( DxTxz/z(k)+DyTyz/z(k)/xsin(i)+DzTzz                    &
         +(2.0_SP*Tzz(i,j,k)-Txx(i,j,k)-Tyy(i,j,k)+Txz(i,j,k)*xcot(i))/z(k) )
+
+#if defined AnisGene
+   tc11=C11(i,j,k)
+   tc12=C12(i,j,k)
+   tc13=C13(i,j,k)
+   tc14=C14(i,j,k)
+   tc15=C15(i,j,k)
+   tc16=C16(i,j,k)
+   tc22=C22(i,j,k)
+   tc23=C23(i,j,k)
+   tc24=C24(i,j,k)
+   tc25=C25(i,j,k)
+   tc26=C26(i,j,k)
+   tc33=C33(i,j,k)
+   tc34=C34(i,j,k)
+   tc35=C35(i,j,k)
+   tc36=C36(i,j,k)
+   tc44=C44(i,j,k)
+   tc45=C45(i,j,k)
+   tc46=C46(i,j,k)
+   tc55=C55(i,j,k)
+   tc56=C56(i,j,k)
+   tc66=C66(i,j,k)
+#elif defined AnisVTI
+   tc11=C11(i,j,k)
+   tc13=C13(i,j,k)
+   tc33=C33(i,j,k)
+   tc44=C44(i,j,k)
+   tc66=C66(i,j,k)
+
+   tc12=tc11-2.0_SP*tc66
+   tc22=tc11
+   tc23=tc13
+   tc55=tc44
+#else
+   tc13=C13(i,j,k)
+   tc66=C66(i,j,k)
+
+   tc11=tc13+2.0_SP*tc66
+   tc12=tc13
+   tc22=tc11
+   tc23=tc13
+   tc33=tc11
+   tc44=tc66
+   tc55=tc66
+#endif
 
    E11=(DxVx+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy/xsin(i)+Vz(i,j,k))/z(k)
@@ -939,35 +1172,64 @@ do i=I1,I2
    E33=DzVz
    E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))
    E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))
-#ifndef CondFreeCharac
-#ifndef CondFreeVHOC
+
+#if ! ( defined CondFreeCharac || defined CondFreeVHOC )
    if (freenode .and. k==nk2) then
-      E33=-lam/lam2mu*(E11+E22)+VzSrc(i,j)/lam2mu
-      E13=VxSrc(i,j)/miu
-      E23=VySrc(i,j)/miu
+#ifdef AnisGene
+      E33= matEh2Ev(1,1,i,j)*E11+matEh2Ev(1,2,i,j)*E22+matEh2Ev(1,3,i,j)*E12 &
+          +matF2Ev(1,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(1,2,i,j)*VySrc(i,j), &
+          +matF2Ev(1,3,i,j)*VxSrc(i,j)
+      E23= matEh2Ev(2,1,i,j)*E11+matEh2Ev(2,2,i,j)*E22+matEh2Ev(2,3,i,j)*E12 &
+          +matF2Ev(2,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(2,2,i,j)*VySrc(i,j), &
+          +matF2Ev(2,3,i,j)*VxSrc(i,j)
+      E13= matEh2Ev(3,1,i,j)*E11+matEh2Ev(3,2,i,j)*E22+matEh2Ev(3,3,i,j)*E12 &
+          +matF2Ev(3,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(3,2,i,j)*VySrc(i,j), &
+          +matF2Ev(3,3,i,j)*VxSrc(i,j)
+#else
+      E33=(-tc13*E11-tc23*E22+VzSrc(i,j))/tc33
+      E23=VySrc(i,j)/tc44
+      E13=VxSrc(i,j)/tc55
+#endif
    end if
 #endif
+
+#ifdef AnisGene
+   hTxx(i,j,k)=tc11*E11+tc12*E22+tc13*E33+tc14*E23+tc15*E13+tc16*E12
+   hTyy(i,j,k)=tc12*E11+tc22*E22+tc23*E33+tc24*E23+tc25*E13+tc26*E12
+   hTzz(i,j,k)=tc13*E11+tc23*E22+tc33*E33+tc34*E23+tc35*E13+tc36*E12
+   hTyz(i,j,k)=tc14*E11+tc24*E22+tc34*E33+tc44*E23+tc45*E13+tc46*E12
+   hTxz(i,j,k)=tc15*E11+tc25*E22+tc35*E33+tc45*E23+tc55*E13+tc56*E12
+   hTxy(i,j,k)=tc16*E11+tc26*E22+tc36*E33+tc46*E23+tc56*E13+tc66*E12
+#else
+   hTxx(i,j,k)=tc11*E11+tc12*E22+tc13*E33
+   hTyy(i,j,k)=tc12*E11+tc22*E22+tc23*E33
+   hTzz(i,j,k)=tc13*E11+tc23*E22+tc33*E33
+   hTyz(i,j,k)=tc44*E23
+   hTxz(i,j,k)=         tc55*E13
+   hTxy(i,j,k)=                  tc66*E12
 #endif
 
-   hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
-   hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
-   hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
-   hTxy(i,j,k)=miu*E12
-   hTxz(i,j,k)=miu*E13
-   hTyz(i,j,k)=miu*E23
 end do
 end do
 end do
 !$OMP END PARALLEL DO
 end subroutine LxF_LyF_LzF
-
+!-------------------------------------------------------------------------------
 subroutine LxB_LyB_LzB(I1,I2,J1,J2,K1,K2)
 integer,intent(in) :: I1,I2,J1,J2,K1,K2
 integer :: i,j,k
 real(SP) :: DxTxx,DxTxy,DxTxz,DxVx,DxVy,DxVz
 real(SP) :: DyTyy,DyTxy,DyTyz,DyVx,DyVy,DyVz
 real(SP) :: DzTzz,DzTxz,DzTyz,DzVx,DzVy,DzVz
-real(SP) :: lam,miu,lam2mu,rrho
+real(SP) :: rrho
+real(SP) :: tc11,tc12,tc13,tc22,tc23,tc33,tc44,tc55,tc66
+#ifdef AnisGene
+real(SP) :: tc14,tc15,tc16,tc24,tc25,tc26,tc34,tc35,tc36
+real(SP) :: tc45,tc46,tc56
+#endif
 real(SP) :: E11,E22,E33,E12,E13,E23
 ! curvilinear
 !$OMP PARALLEL DO DEFAULT(shared)  &
@@ -980,7 +1242,6 @@ real(SP) :: E11,E22,E33,E12,E13,E23
 do k=K1,K2
 do j=J1,J2
 do i=I1,I2
-   lam=lambda(i,j,k);miu=mu(i,j,k);lam2mu=lam+2.0*miu;rrho=1.0/rho(i,j,k)
    DxTxx = (              &
      m3d_FDxB1(Txx,i,j,k) &
      m3d_FDxB2(Txx,i,j,k) &
@@ -1089,7 +1350,7 @@ do i=I1,I2
 #endif
 
 #ifdef WATER
-   if (miu<=SEIS_ZERO) then
+   if (C66(i,j,k)<=SEIS_ZERO) then
       DxTxy=0.0
       DxTxz=0.0
       DyTxy=0.0
@@ -1099,12 +1360,60 @@ do i=I1,I2
    end if
 #endif
 
+   rrho=1.0/rho(i,j,k)
+
    hVx(i,j,k)= rrho*( DxTxx/z(k)+DyTxy/z(k)/xsin(i)+DzTxz                    &
         +(3.0_SP*Txz(i,j,k)+Txx(i,j,k)*xcot(i)-Tyy(i,j,k)*xcot(i))/z(k) )
    hVy(i,j,k)= rrho*( DxTxy/z(k)+DyTyy/z(k)/xsin(i)+DzTyz                    &
         +(2.0_SP*Txy(i,j,k)*xcot(i)+3.0_SP*Tyz(i,j,k))/z(k) )
    hVz(i,j,k)= rrho*( DxTxz/z(k)+DyTyz/z(k)/xsin(i)+DzTzz                    &
         +(2.0_SP*Tzz(i,j,k)-Txx(i,j,k)-Tyy(i,j,k)+Txz(i,j,k)*xcot(i))/z(k) )
+
+#if defined AnisGene
+   tc11=C11(i,j,k)
+   tc12=C12(i,j,k)
+   tc13=C13(i,j,k)
+   tc14=C14(i,j,k)
+   tc15=C15(i,j,k)
+   tc16=C16(i,j,k)
+   tc22=C22(i,j,k)
+   tc23=C23(i,j,k)
+   tc24=C24(i,j,k)
+   tc25=C25(i,j,k)
+   tc26=C26(i,j,k)
+   tc33=C33(i,j,k)
+   tc34=C34(i,j,k)
+   tc35=C35(i,j,k)
+   tc36=C36(i,j,k)
+   tc44=C44(i,j,k)
+   tc45=C45(i,j,k)
+   tc46=C46(i,j,k)
+   tc55=C55(i,j,k)
+   tc56=C56(i,j,k)
+   tc66=C66(i,j,k)
+#elif defined AnisVTI
+   tc11=C11(i,j,k)
+   tc13=C13(i,j,k)
+   tc33=C33(i,j,k)
+   tc44=C44(i,j,k)
+   tc66=C66(i,j,k)
+
+   tc12=tc11-2.0_SP*tc66
+   tc22=tc11
+   tc23=tc13
+   tc55=tc44
+#else
+   tc13=C13(i,j,k)
+   tc66=C66(i,j,k)
+
+   tc11=tc13+2.0_SP*tc66
+   tc12=tc13
+   tc22=tc11
+   tc23=tc13
+   tc33=tc11
+   tc44=tc66
+   tc55=tc66
+#endif
 
    E11=(DxVx+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy/xsin(i)+Vz(i,j,k))/z(k)
@@ -1113,35 +1422,64 @@ do i=I1,I2
    E33=DzVz
    E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))
    E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))
-#ifndef CondFreeCharac
-#ifndef CondFreeVHOC
+
+#if ! ( defined CondFreeCharac || defined CondFreeVHOC )
    if (freenode .and. k==nk2) then
-      E33=-lam/lam2mu*(E11+E22)+VzSrc(i,j)/lam2mu
-      E13=VxSrc(i,j)/miu
-      E23=VySrc(i,j)/miu
+#ifdef AnisGene
+      E33= matEh2Ev(1,1,i,j)*E11+matEh2Ev(1,2,i,j)*E22+matEh2Ev(1,3,i,j)*E12 &
+          +matF2Ev(1,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(1,2,i,j)*VySrc(i,j), &
+          +matF2Ev(1,3,i,j)*VxSrc(i,j)
+      E23= matEh2Ev(2,1,i,j)*E11+matEh2Ev(2,2,i,j)*E22+matEh2Ev(2,3,i,j)*E12 &
+          +matF2Ev(2,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(2,2,i,j)*VySrc(i,j), &
+          +matF2Ev(2,3,i,j)*VxSrc(i,j)
+      E13= matEh2Ev(3,1,i,j)*E11+matEh2Ev(3,2,i,j)*E22+matEh2Ev(3,3,i,j)*E12 &
+          +matF2Ev(3,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(3,2,i,j)*VySrc(i,j), &
+          +matF2Ev(3,3,i,j)*VxSrc(i,j)
+#else
+      E33=(-tc13*E11-tc23*E22+VzSrc(i,j))/tc33
+      E23=VySrc(i,j)/tc44
+      E13=VxSrc(i,j)/tc55
+#endif
    end if
 #endif
+
+#ifdef AnisGene
+   hTxx(i,j,k)=tc11*E11+tc12*E22+tc13*E33+tc14*E23+tc15*E13+tc16*E12
+   hTyy(i,j,k)=tc12*E11+tc22*E22+tc23*E33+tc24*E23+tc25*E13+tc26*E12
+   hTzz(i,j,k)=tc13*E11+tc23*E22+tc33*E33+tc34*E23+tc35*E13+tc36*E12
+   hTyz(i,j,k)=tc14*E11+tc24*E22+tc34*E33+tc44*E23+tc45*E13+tc46*E12
+   hTxz(i,j,k)=tc15*E11+tc25*E22+tc35*E33+tc45*E23+tc55*E13+tc56*E12
+   hTxy(i,j,k)=tc16*E11+tc26*E22+tc36*E33+tc46*E23+tc56*E13+tc66*E12
+#else
+   hTxx(i,j,k)=tc11*E11+tc12*E22+tc13*E33
+   hTyy(i,j,k)=tc12*E11+tc22*E22+tc23*E33
+   hTzz(i,j,k)=tc13*E11+tc23*E22+tc33*E33
+   hTyz(i,j,k)=tc44*E23
+   hTxz(i,j,k)=         tc55*E13
+   hTxy(i,j,k)=                  tc66*E12
 #endif
 
-   hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
-   hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
-   hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
-   hTxy(i,j,k)=miu*E12
-   hTxz(i,j,k)=miu*E13
-   hTyz(i,j,k)=miu*E23
 end do
 end do
 end do
 !$OMP END PARALLEL DO
 end subroutine LxB_LyB_LzB
-
+!-------------------------------------------------------------------------------
 subroutine LxF_LyF_LzB(I1,I2,J1,J2,K1,K2)
 integer,intent(in) :: I1,I2,J1,J2,K1,K2
 integer :: i,j,k
 real(SP) :: DxTxx,DxTxy,DxTxz,DxVx,DxVy,DxVz
 real(SP) :: DyTyy,DyTxy,DyTyz,DyVx,DyVy,DyVz
 real(SP) :: DzTzz,DzTxz,DzTyz,DzVx,DzVy,DzVz
-real(SP) :: lam,miu,lam2mu,rrho
+real(SP) :: rrho
+real(SP) :: tc11,tc12,tc13,tc22,tc23,tc33,tc44,tc55,tc66
+#ifdef AnisGene
+real(SP) :: tc14,tc15,tc16,tc24,tc25,tc26,tc34,tc35,tc36
+real(SP) :: tc45,tc46,tc56
+#endif
 real(SP) :: E11,E22,E33,E12,E13,E23
 ! curvilinear
 !$OMP PARALLEL DO DEFAULT(shared)  &
@@ -1154,7 +1492,6 @@ real(SP) :: E11,E22,E33,E12,E13,E23
 do k=K1,K2
 do j=J1,J2
 do i=I1,I2
-   lam=lambda(i,j,k);miu=mu(i,j,k);lam2mu=lam+2.0*miu;rrho=1.0/rho(i,j,k)
    DxTxx = (              &
      m3d_FDxF1(Txx,i,j,k) &
      m3d_FDxF2(Txx,i,j,k) &
@@ -1263,7 +1600,7 @@ do i=I1,I2
 #endif
 
 #ifdef WATER
-   if (miu<=SEIS_ZERO) then
+   if (C66(i,j,k)<=SEIS_ZERO) then
       DxTxy=0.0
       DxTxz=0.0
       DyTxy=0.0
@@ -1273,12 +1610,60 @@ do i=I1,I2
    end if
 #endif
 
+   rrho=1.0/rho(i,j,k)
+
    hVx(i,j,k)= rrho*( DxTxx/z(k)+DyTxy/z(k)/xsin(i)+DzTxz                    &
         +(3.0_SP*Txz(i,j,k)+Txx(i,j,k)*xcot(i)-Tyy(i,j,k)*xcot(i))/z(k) )
    hVy(i,j,k)= rrho*( DxTxy/z(k)+DyTyy/z(k)/xsin(i)+DzTyz                    &
         +(2.0_SP*Txy(i,j,k)*xcot(i)+3.0_SP*Tyz(i,j,k))/z(k) )
    hVz(i,j,k)= rrho*( DxTxz/z(k)+DyTyz/z(k)/xsin(i)+DzTzz                    &
         +(2.0_SP*Tzz(i,j,k)-Txx(i,j,k)-Tyy(i,j,k)+Txz(i,j,k)*xcot(i))/z(k) )
+
+#if defined AnisGene
+   tc11=C11(i,j,k)
+   tc12=C12(i,j,k)
+   tc13=C13(i,j,k)
+   tc14=C14(i,j,k)
+   tc15=C15(i,j,k)
+   tc16=C16(i,j,k)
+   tc22=C22(i,j,k)
+   tc23=C23(i,j,k)
+   tc24=C24(i,j,k)
+   tc25=C25(i,j,k)
+   tc26=C26(i,j,k)
+   tc33=C33(i,j,k)
+   tc34=C34(i,j,k)
+   tc35=C35(i,j,k)
+   tc36=C36(i,j,k)
+   tc44=C44(i,j,k)
+   tc45=C45(i,j,k)
+   tc46=C46(i,j,k)
+   tc55=C55(i,j,k)
+   tc56=C56(i,j,k)
+   tc66=C66(i,j,k)
+#elif defined AnisVTI
+   tc11=C11(i,j,k)
+   tc13=C13(i,j,k)
+   tc33=C33(i,j,k)
+   tc44=C44(i,j,k)
+   tc66=C66(i,j,k)
+
+   tc12=tc11-2.0_SP*tc66
+   tc22=tc11
+   tc23=tc13
+   tc55=tc44
+#else
+   tc13=C13(i,j,k)
+   tc66=C66(i,j,k)
+
+   tc11=tc13+2.0_SP*tc66
+   tc12=tc13
+   tc22=tc11
+   tc23=tc13
+   tc33=tc11
+   tc44=tc66
+   tc55=tc66
+#endif
 
    E11=(DxVx+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy/xsin(i)+Vz(i,j,k))/z(k)
@@ -1287,36 +1672,64 @@ do i=I1,I2
    E33=DzVz
    E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))
    E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))
-#ifndef CondFreeCharac
-#ifndef CondFreeVHOC
+
+#if ! ( defined CondFreeCharac || defined CondFreeVHOC )
    if (freenode .and. k==nk2) then
-      E33=-lam/lam2mu*(E11+E22)+VzSrc(i,j)/lam2mu
-      E13=VxSrc(i,j)/miu
-      E23=VySrc(i,j)/miu
+#ifdef AnisGene
+      E33= matEh2Ev(1,1,i,j)*E11+matEh2Ev(1,2,i,j)*E22+matEh2Ev(1,3,i,j)*E12 &
+          +matF2Ev(1,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(1,2,i,j)*VySrc(i,j), &
+          +matF2Ev(1,3,i,j)*VxSrc(i,j)
+      E23= matEh2Ev(2,1,i,j)*E11+matEh2Ev(2,2,i,j)*E22+matEh2Ev(2,3,i,j)*E12 &
+          +matF2Ev(2,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(2,2,i,j)*VySrc(i,j), &
+          +matF2Ev(2,3,i,j)*VxSrc(i,j)
+      E13= matEh2Ev(3,1,i,j)*E11+matEh2Ev(3,2,i,j)*E22+matEh2Ev(3,3,i,j)*E12 &
+          +matF2Ev(3,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(3,2,i,j)*VySrc(i,j), &
+          +matF2Ev(3,3,i,j)*VxSrc(i,j)
+#else
+      E33=(-tc13*E11-tc23*E22+VzSrc(i,j))/tc33
+      E23=VySrc(i,j)/tc44
+      E13=VxSrc(i,j)/tc55
+#endif
    end if
 #endif
+
+#ifdef AnisGene
+   hTxx(i,j,k)=tc11*E11+tc12*E22+tc13*E33+tc14*E23+tc15*E13+tc16*E12
+   hTyy(i,j,k)=tc12*E11+tc22*E22+tc23*E33+tc24*E23+tc25*E13+tc26*E12
+   hTzz(i,j,k)=tc13*E11+tc23*E22+tc33*E33+tc34*E23+tc35*E13+tc36*E12
+   hTyz(i,j,k)=tc14*E11+tc24*E22+tc34*E33+tc44*E23+tc45*E13+tc46*E12
+   hTxz(i,j,k)=tc15*E11+tc25*E22+tc35*E33+tc45*E23+tc55*E13+tc56*E12
+   hTxy(i,j,k)=tc16*E11+tc26*E22+tc36*E33+tc46*E23+tc56*E13+tc66*E12
+#else
+   hTxx(i,j,k)=tc11*E11+tc12*E22+tc13*E33
+   hTyy(i,j,k)=tc12*E11+tc22*E22+tc23*E33
+   hTzz(i,j,k)=tc13*E11+tc23*E22+tc33*E33
+   hTyz(i,j,k)=tc44*E23
+   hTxz(i,j,k)=         tc55*E13
+   hTxy(i,j,k)=                  tc66*E12
 #endif
 
-
-   hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
-   hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
-   hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
-   hTxy(i,j,k)=miu*E12
-   hTxz(i,j,k)=miu*E13
-   hTyz(i,j,k)=miu*E23
 end do
 end do
 end do
 !$OMP END PARALLEL DO
 end subroutine LxF_LyF_LzB
-
+!-------------------------------------------------------------------------------
 subroutine LxB_LyB_LzF(I1,I2,J1,J2,K1,K2)
 integer,intent(in) :: I1,I2,J1,J2,K1,K2
 integer :: i,j,k
 real(SP) :: DxTxx,DxTxy,DxTxz,DxVx,DxVy,DxVz
 real(SP) :: DyTyy,DyTxy,DyTyz,DyVx,DyVy,DyVz
 real(SP) :: DzTzz,DzTxz,DzTyz,DzVx,DzVy,DzVz
-real(SP) :: lam,miu,lam2mu,rrho
+real(SP) :: rrho
+real(SP) :: tc11,tc12,tc13,tc22,tc23,tc33,tc44,tc55,tc66
+#ifdef AnisGene
+real(SP) :: tc14,tc15,tc16,tc24,tc25,tc26,tc34,tc35,tc36
+real(SP) :: tc45,tc46,tc56
+#endif
 real(SP) :: E11,E22,E33,E12,E13,E23
 ! curvilinear
 !$OMP PARALLEL DO DEFAULT(shared)  &
@@ -1329,7 +1742,6 @@ real(SP) :: E11,E22,E33,E12,E13,E23
 do k=K1,K2
 do j=J1,J2
 do i=I1,I2
-   lam=lambda(i,j,k);miu=mu(i,j,k);lam2mu=lam+2.0*miu;rrho=1.0/rho(i,j,k)
    DxTxx = (              &
      m3d_FDxB1(Txx,i,j,k) &
      m3d_FDxB2(Txx,i,j,k) &
@@ -1438,7 +1850,7 @@ do i=I1,I2
 #endif
 
 #ifdef WATER
-   if (miu<=SEIS_ZERO) then
+   if (C66(i,j,k)<=SEIS_ZERO) then
       DxTxy=0.0
       DxTxz=0.0
       DyTxy=0.0
@@ -1448,12 +1860,60 @@ do i=I1,I2
    end if
 #endif
 
+   rrho=1.0/rho(i,j,k)
+
    hVx(i,j,k)= rrho*( DxTxx/z(k)+DyTxy/z(k)/xsin(i)+DzTxz                    &
         +(3.0_SP*Txz(i,j,k)+Txx(i,j,k)*xcot(i)-Tyy(i,j,k)*xcot(i))/z(k) )
    hVy(i,j,k)= rrho*( DxTxy/z(k)+DyTyy/z(k)/xsin(i)+DzTyz                    &
         +(2.0_SP*Txy(i,j,k)*xcot(i)+3.0_SP*Tyz(i,j,k))/z(k) )
    hVz(i,j,k)= rrho*( DxTxz/z(k)+DyTyz/z(k)/xsin(i)+DzTzz                    &
         +(2.0_SP*Tzz(i,j,k)-Txx(i,j,k)-Tyy(i,j,k)+Txz(i,j,k)*xcot(i))/z(k) )
+
+#if defined AnisGene
+   tc11=C11(i,j,k)
+   tc12=C12(i,j,k)
+   tc13=C13(i,j,k)
+   tc14=C14(i,j,k)
+   tc15=C15(i,j,k)
+   tc16=C16(i,j,k)
+   tc22=C22(i,j,k)
+   tc23=C23(i,j,k)
+   tc24=C24(i,j,k)
+   tc25=C25(i,j,k)
+   tc26=C26(i,j,k)
+   tc33=C33(i,j,k)
+   tc34=C34(i,j,k)
+   tc35=C35(i,j,k)
+   tc36=C36(i,j,k)
+   tc44=C44(i,j,k)
+   tc45=C45(i,j,k)
+   tc46=C46(i,j,k)
+   tc55=C55(i,j,k)
+   tc56=C56(i,j,k)
+   tc66=C66(i,j,k)
+#elif defined AnisVTI
+   tc11=C11(i,j,k)
+   tc13=C13(i,j,k)
+   tc33=C33(i,j,k)
+   tc44=C44(i,j,k)
+   tc66=C66(i,j,k)
+
+   tc12=tc11-2.0_SP*tc66
+   tc22=tc11
+   tc23=tc13
+   tc55=tc44
+#else
+   tc13=C13(i,j,k)
+   tc66=C66(i,j,k)
+
+   tc11=tc13+2.0_SP*tc66
+   tc12=tc13
+   tc22=tc11
+   tc23=tc13
+   tc33=tc11
+   tc44=tc66
+   tc55=tc66
+#endif
 
    E11=(DxVx+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy/xsin(i)+Vz(i,j,k))/z(k)
@@ -1462,35 +1922,64 @@ do i=I1,I2
    E33=DzVz
    E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))
    E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))
-#ifndef CondFreeCharac
-#ifndef CondFreeVHOC
+
+#if ! ( defined CondFreeCharac || defined CondFreeVHOC )
    if (freenode .and. k==nk2) then
-      E33=-lam/lam2mu*(E11+E22)+VzSrc(i,j)/lam2mu
-      E13=VxSrc(i,j)/miu
-      E23=VySrc(i,j)/miu
+#ifdef AnisGene
+      E33= matEh2Ev(1,1,i,j)*E11+matEh2Ev(1,2,i,j)*E22+matEh2Ev(1,3,i,j)*E12 &
+          +matF2Ev(1,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(1,2,i,j)*VySrc(i,j), &
+          +matF2Ev(1,3,i,j)*VxSrc(i,j)
+      E23= matEh2Ev(2,1,i,j)*E11+matEh2Ev(2,2,i,j)*E22+matEh2Ev(2,3,i,j)*E12 &
+          +matF2Ev(2,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(2,2,i,j)*VySrc(i,j), &
+          +matF2Ev(2,3,i,j)*VxSrc(i,j)
+      E13= matEh2Ev(3,1,i,j)*E11+matEh2Ev(3,2,i,j)*E22+matEh2Ev(3,3,i,j)*E12 &
+          +matF2Ev(3,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(3,2,i,j)*VySrc(i,j), &
+          +matF2Ev(3,3,i,j)*VxSrc(i,j)
+#else
+      E33=(-tc13*E11-tc23*E22+VzSrc(i,j))/tc33
+      E23=VySrc(i,j)/tc44
+      E13=VxSrc(i,j)/tc55
+#endif
    end if
 #endif
+
+#ifdef AnisGene
+   hTxx(i,j,k)=tc11*E11+tc12*E22+tc13*E33+tc14*E23+tc15*E13+tc16*E12
+   hTyy(i,j,k)=tc12*E11+tc22*E22+tc23*E33+tc24*E23+tc25*E13+tc26*E12
+   hTzz(i,j,k)=tc13*E11+tc23*E22+tc33*E33+tc34*E23+tc35*E13+tc36*E12
+   hTyz(i,j,k)=tc14*E11+tc24*E22+tc34*E33+tc44*E23+tc45*E13+tc46*E12
+   hTxz(i,j,k)=tc15*E11+tc25*E22+tc35*E33+tc45*E23+tc55*E13+tc56*E12
+   hTxy(i,j,k)=tc16*E11+tc26*E22+tc36*E33+tc46*E23+tc56*E13+tc66*E12
+#else
+   hTxx(i,j,k)=tc11*E11+tc12*E22+tc13*E33
+   hTyy(i,j,k)=tc12*E11+tc22*E22+tc23*E33
+   hTzz(i,j,k)=tc13*E11+tc23*E22+tc33*E33
+   hTyz(i,j,k)=tc44*E23
+   hTxz(i,j,k)=         tc55*E13
+   hTxy(i,j,k)=                  tc66*E12
 #endif
 
-   hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
-   hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
-   hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
-   hTxy(i,j,k)=miu*E12
-   hTxz(i,j,k)=miu*E13
-   hTyz(i,j,k)=miu*E23
 end do
 end do
 end do
 !$OMP END PARALLEL DO
 end subroutine LxB_LyB_LzF
-
+!-------------------------------------------------------------------------------
 subroutine LxB_LyF_LzF(I1,I2,J1,J2,K1,K2)
 integer,intent(in) :: I1,I2,J1,J2,K1,K2
 integer :: i,j,k
 real(SP) :: DxTxx,DxTxy,DxTxz,DxVx,DxVy,DxVz
 real(SP) :: DyTyy,DyTxy,DyTyz,DyVx,DyVy,DyVz
 real(SP) :: DzTzz,DzTxz,DzTyz,DzVx,DzVy,DzVz
-real(SP) :: lam,miu,lam2mu,rrho
+real(SP) :: rrho
+real(SP) :: tc11,tc12,tc13,tc22,tc23,tc33,tc44,tc55,tc66
+#ifdef AnisGene
+real(SP) :: tc14,tc15,tc16,tc24,tc25,tc26,tc34,tc35,tc36
+real(SP) :: tc45,tc46,tc56
+#endif
 real(SP) :: E11,E22,E33,E12,E13,E23
 ! curvilinear
 !$OMP PARALLEL DO DEFAULT(shared)  &
@@ -1503,7 +1992,6 @@ real(SP) :: E11,E22,E33,E12,E13,E23
 do k=K1,K2
 do j=J1,J2
 do i=I1,I2
-   lam=lambda(i,j,k);miu=mu(i,j,k);lam2mu=lam+2.0*miu;rrho=1.0/rho(i,j,k)
    DxTxx = (              &
      m3d_FDxB1(Txx,i,j,k) &
      m3d_FDxB2(Txx,i,j,k) &
@@ -1612,7 +2100,7 @@ do i=I1,I2
 #endif
 
 #ifdef WATER
-   if (miu<=SEIS_ZERO) then
+   if (C66(i,j,k)<=SEIS_ZERO) then
       DxTxy=0.0
       DxTxz=0.0
       DyTxy=0.0
@@ -1622,12 +2110,60 @@ do i=I1,I2
    end if
 #endif
 
+   rrho=1.0/rho(i,j,k)
+
    hVx(i,j,k)= rrho*( DxTxx/z(k)+DyTxy/z(k)/xsin(i)+DzTxz                    &
         +(3.0_SP*Txz(i,j,k)+Txx(i,j,k)*xcot(i)-Tyy(i,j,k)*xcot(i))/z(k) )
    hVy(i,j,k)= rrho*( DxTxy/z(k)+DyTyy/z(k)/xsin(i)+DzTyz                    &
         +(2.0_SP*Txy(i,j,k)*xcot(i)+3.0_SP*Tyz(i,j,k))/z(k) )
    hVz(i,j,k)= rrho*( DxTxz/z(k)+DyTyz/z(k)/xsin(i)+DzTzz                    &
         +(2.0_SP*Tzz(i,j,k)-Txx(i,j,k)-Tyy(i,j,k)+Txz(i,j,k)*xcot(i))/z(k) )
+
+#if defined AnisGene
+   tc11=C11(i,j,k)
+   tc12=C12(i,j,k)
+   tc13=C13(i,j,k)
+   tc14=C14(i,j,k)
+   tc15=C15(i,j,k)
+   tc16=C16(i,j,k)
+   tc22=C22(i,j,k)
+   tc23=C23(i,j,k)
+   tc24=C24(i,j,k)
+   tc25=C25(i,j,k)
+   tc26=C26(i,j,k)
+   tc33=C33(i,j,k)
+   tc34=C34(i,j,k)
+   tc35=C35(i,j,k)
+   tc36=C36(i,j,k)
+   tc44=C44(i,j,k)
+   tc45=C45(i,j,k)
+   tc46=C46(i,j,k)
+   tc55=C55(i,j,k)
+   tc56=C56(i,j,k)
+   tc66=C66(i,j,k)
+#elif defined AnisVTI
+   tc11=C11(i,j,k)
+   tc13=C13(i,j,k)
+   tc33=C33(i,j,k)
+   tc44=C44(i,j,k)
+   tc66=C66(i,j,k)
+
+   tc12=tc11-2.0_SP*tc66
+   tc22=tc11
+   tc23=tc13
+   tc55=tc44
+#else
+   tc13=C13(i,j,k)
+   tc66=C66(i,j,k)
+
+   tc11=tc13+2.0_SP*tc66
+   tc12=tc13
+   tc22=tc11
+   tc23=tc13
+   tc33=tc11
+   tc44=tc66
+   tc55=tc66
+#endif
 
    E11=(DxVx+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy/xsin(i)+Vz(i,j,k))/z(k)
@@ -1636,35 +2172,64 @@ do i=I1,I2
    E33=DzVz
    E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))
    E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))
-#ifndef CondFreeCharac
-#ifndef CondFreeVHOC
+
+#if ! ( defined CondFreeCharac || defined CondFreeVHOC )
    if (freenode .and. k==nk2) then
-      E33=-lam/lam2mu*(E11+E22)+VzSrc(i,j)/lam2mu
-      E13=VxSrc(i,j)/miu
-      E23=VySrc(i,j)/miu
+#ifdef AnisGene
+      E33= matEh2Ev(1,1,i,j)*E11+matEh2Ev(1,2,i,j)*E22+matEh2Ev(1,3,i,j)*E12 &
+          +matF2Ev(1,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(1,2,i,j)*VySrc(i,j), &
+          +matF2Ev(1,3,i,j)*VxSrc(i,j)
+      E23= matEh2Ev(2,1,i,j)*E11+matEh2Ev(2,2,i,j)*E22+matEh2Ev(2,3,i,j)*E12 &
+          +matF2Ev(2,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(2,2,i,j)*VySrc(i,j), &
+          +matF2Ev(2,3,i,j)*VxSrc(i,j)
+      E13= matEh2Ev(3,1,i,j)*E11+matEh2Ev(3,2,i,j)*E22+matEh2Ev(3,3,i,j)*E12 &
+          +matF2Ev(3,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(3,2,i,j)*VySrc(i,j), &
+          +matF2Ev(3,3,i,j)*VxSrc(i,j)
+#else
+      E33=(-tc13*E11-tc23*E22+VzSrc(i,j))/tc33
+      E23=VySrc(i,j)/tc44
+      E13=VxSrc(i,j)/tc55
+#endif
    end if
 #endif
+
+#ifdef AnisGene
+   hTxx(i,j,k)=tc11*E11+tc12*E22+tc13*E33+tc14*E23+tc15*E13+tc16*E12
+   hTyy(i,j,k)=tc12*E11+tc22*E22+tc23*E33+tc24*E23+tc25*E13+tc26*E12
+   hTzz(i,j,k)=tc13*E11+tc23*E22+tc33*E33+tc34*E23+tc35*E13+tc36*E12
+   hTyz(i,j,k)=tc14*E11+tc24*E22+tc34*E33+tc44*E23+tc45*E13+tc46*E12
+   hTxz(i,j,k)=tc15*E11+tc25*E22+tc35*E33+tc45*E23+tc55*E13+tc56*E12
+   hTxy(i,j,k)=tc16*E11+tc26*E22+tc36*E33+tc46*E23+tc56*E13+tc66*E12
+#else
+   hTxx(i,j,k)=tc11*E11+tc12*E22+tc13*E33
+   hTyy(i,j,k)=tc12*E11+tc22*E22+tc23*E33
+   hTzz(i,j,k)=tc13*E11+tc23*E22+tc33*E33
+   hTyz(i,j,k)=tc44*E23
+   hTxz(i,j,k)=         tc55*E13
+   hTxy(i,j,k)=                  tc66*E12
 #endif
 
-   hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
-   hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
-   hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
-   hTxy(i,j,k)=miu*E12
-   hTxz(i,j,k)=miu*E13
-   hTyz(i,j,k)=miu*E23
 end do
 end do
 end do
 !$OMP END PARALLEL DO
 end subroutine LxB_LyF_LzF
-
+!-------------------------------------------------------------------------------
 subroutine LxF_LyB_LzB(I1,I2,J1,J2,K1,K2)
 integer,intent(in) :: I1,I2,J1,J2,K1,K2
 integer :: i,j,k
 real(SP) :: DxTxx,DxTxy,DxTxz,DxVx,DxVy,DxVz
 real(SP) :: DyTyy,DyTxy,DyTyz,DyVx,DyVy,DyVz
 real(SP) :: DzTzz,DzTxz,DzTyz,DzVx,DzVy,DzVz
-real(SP) :: lam,miu,lam2mu,rrho
+real(SP) :: rrho
+real(SP) :: tc11,tc12,tc13,tc22,tc23,tc33,tc44,tc55,tc66
+#ifdef AnisGene
+real(SP) :: tc14,tc15,tc16,tc24,tc25,tc26,tc34,tc35,tc36
+real(SP) :: tc45,tc46,tc56
+#endif
 real(SP) :: E11,E22,E33,E12,E13,E23
 ! curvilinear
 !$OMP PARALLEL DO DEFAULT(shared)  &
@@ -1677,7 +2242,6 @@ real(SP) :: E11,E22,E33,E12,E13,E23
 do k=K1,K2
 do j=J1,J2
 do i=I1,I2
-   lam=lambda(i,j,k);miu=mu(i,j,k);lam2mu=lam+2.0*miu;rrho=1.0/rho(i,j,k)
    DxTxx = (              &
      m3d_FDxF1(Txx,i,j,k) &
      m3d_FDxF2(Txx,i,j,k) &
@@ -1786,7 +2350,7 @@ do i=I1,I2
 #endif
 
 #ifdef WATER
-   if (miu<=SEIS_ZERO) then
+   if (C66(i,j,k)<=SEIS_ZERO) then
       DxTxy=0.0
       DxTxz=0.0
       DyTxy=0.0
@@ -1796,12 +2360,60 @@ do i=I1,I2
    end if
 #endif
 
+   rrho=1.0/rho(i,j,k)
+
    hVx(i,j,k)= rrho*( DxTxx/z(k)+DyTxy/z(k)/xsin(i)+DzTxz                    &
         +(3.0_SP*Txz(i,j,k)+Txx(i,j,k)*xcot(i)-Tyy(i,j,k)*xcot(i))/z(k) )
    hVy(i,j,k)= rrho*( DxTxy/z(k)+DyTyy/z(k)/xsin(i)+DzTyz                    &
         +(2.0_SP*Txy(i,j,k)*xcot(i)+3.0_SP*Tyz(i,j,k))/z(k) )
    hVz(i,j,k)= rrho*( DxTxz/z(k)+DyTyz/z(k)/xsin(i)+DzTzz                    &
         +(2.0_SP*Tzz(i,j,k)-Txx(i,j,k)-Tyy(i,j,k)+Txz(i,j,k)*xcot(i))/z(k) )
+
+#if defined AnisGene
+   tc11=C11(i,j,k)
+   tc12=C12(i,j,k)
+   tc13=C13(i,j,k)
+   tc14=C14(i,j,k)
+   tc15=C15(i,j,k)
+   tc16=C16(i,j,k)
+   tc22=C22(i,j,k)
+   tc23=C23(i,j,k)
+   tc24=C24(i,j,k)
+   tc25=C25(i,j,k)
+   tc26=C26(i,j,k)
+   tc33=C33(i,j,k)
+   tc34=C34(i,j,k)
+   tc35=C35(i,j,k)
+   tc36=C36(i,j,k)
+   tc44=C44(i,j,k)
+   tc45=C45(i,j,k)
+   tc46=C46(i,j,k)
+   tc55=C55(i,j,k)
+   tc56=C56(i,j,k)
+   tc66=C66(i,j,k)
+#elif defined AnisVTI
+   tc11=C11(i,j,k)
+   tc13=C13(i,j,k)
+   tc33=C33(i,j,k)
+   tc44=C44(i,j,k)
+   tc66=C66(i,j,k)
+
+   tc12=tc11-2.0_SP*tc66
+   tc22=tc11
+   tc23=tc13
+   tc55=tc44
+#else
+   tc13=C13(i,j,k)
+   tc66=C66(i,j,k)
+
+   tc11=tc13+2.0_SP*tc66
+   tc12=tc13
+   tc22=tc11
+   tc23=tc13
+   tc33=tc11
+   tc44=tc66
+   tc55=tc66
+#endif
 
    E11=(DxVx+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy/xsin(i)+Vz(i,j,k))/z(k)
@@ -1810,35 +2422,64 @@ do i=I1,I2
    E33=DzVz
    E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))
    E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))
-#ifndef CondFreeCharac
-#ifndef CondFreeVHOC
+
+#if ! ( defined CondFreeCharac || defined CondFreeVHOC )
    if (freenode .and. k==nk2) then
-      E33=-lam/lam2mu*(E11+E22)+VzSrc(i,j)/lam2mu
-      E13=VxSrc(i,j)/miu
-      E23=VySrc(i,j)/miu
+#ifdef AnisGene
+      E33= matEh2Ev(1,1,i,j)*E11+matEh2Ev(1,2,i,j)*E22+matEh2Ev(1,3,i,j)*E12 &
+          +matF2Ev(1,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(1,2,i,j)*VySrc(i,j), &
+          +matF2Ev(1,3,i,j)*VxSrc(i,j)
+      E23= matEh2Ev(2,1,i,j)*E11+matEh2Ev(2,2,i,j)*E22+matEh2Ev(2,3,i,j)*E12 &
+          +matF2Ev(2,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(2,2,i,j)*VySrc(i,j), &
+          +matF2Ev(2,3,i,j)*VxSrc(i,j)
+      E13= matEh2Ev(3,1,i,j)*E11+matEh2Ev(3,2,i,j)*E22+matEh2Ev(3,3,i,j)*E12 &
+          +matF2Ev(3,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(3,2,i,j)*VySrc(i,j), &
+          +matF2Ev(3,3,i,j)*VxSrc(i,j)
+#else
+      E33=(-tc13*E11-tc23*E22+VzSrc(i,j))/tc33
+      E23=VySrc(i,j)/tc44
+      E13=VxSrc(i,j)/tc55
+#endif
    end if
 #endif
+
+#ifdef AnisGene
+   hTxx(i,j,k)=tc11*E11+tc12*E22+tc13*E33+tc14*E23+tc15*E13+tc16*E12
+   hTyy(i,j,k)=tc12*E11+tc22*E22+tc23*E33+tc24*E23+tc25*E13+tc26*E12
+   hTzz(i,j,k)=tc13*E11+tc23*E22+tc33*E33+tc34*E23+tc35*E13+tc36*E12
+   hTyz(i,j,k)=tc14*E11+tc24*E22+tc34*E33+tc44*E23+tc45*E13+tc46*E12
+   hTxz(i,j,k)=tc15*E11+tc25*E22+tc35*E33+tc45*E23+tc55*E13+tc56*E12
+   hTxy(i,j,k)=tc16*E11+tc26*E22+tc36*E33+tc46*E23+tc56*E13+tc66*E12
+#else
+   hTxx(i,j,k)=tc11*E11+tc12*E22+tc13*E33
+   hTyy(i,j,k)=tc12*E11+tc22*E22+tc23*E33
+   hTzz(i,j,k)=tc13*E11+tc23*E22+tc33*E33
+   hTyz(i,j,k)=tc44*E23
+   hTxz(i,j,k)=         tc55*E13
+   hTxy(i,j,k)=                  tc66*E12
 #endif
 
-   hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
-   hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
-   hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
-   hTxy(i,j,k)=miu*E12
-   hTxz(i,j,k)=miu*E13
-   hTyz(i,j,k)=miu*E23
 end do
 end do
 end do
 !$OMP END PARALLEL DO
 end subroutine LxF_LyB_LzB
-
+!-------------------------------------------------------------------------------
 subroutine LxF_LyB_LzF(I1,I2,J1,J2,K1,K2)
 integer,intent(in) :: I1,I2,J1,J2,K1,K2
 integer :: i,j,k
 real(SP) :: DxTxx,DxTxy,DxTxz,DxVx,DxVy,DxVz
 real(SP) :: DyTyy,DyTxy,DyTyz,DyVx,DyVy,DyVz
 real(SP) :: DzTzz,DzTxz,DzTyz,DzVx,DzVy,DzVz
-real(SP) :: lam,miu,lam2mu,rrho
+real(SP) :: rrho
+real(SP) :: tc11,tc12,tc13,tc22,tc23,tc33,tc44,tc55,tc66
+#ifdef AnisGene
+real(SP) :: tc14,tc15,tc16,tc24,tc25,tc26,tc34,tc35,tc36
+real(SP) :: tc45,tc46,tc56
+#endif
 real(SP) :: E11,E22,E33,E12,E13,E23
 ! curvilinear
 !$OMP PARALLEL DO DEFAULT(shared)  &
@@ -1851,7 +2492,6 @@ real(SP) :: E11,E22,E33,E12,E13,E23
 do k=K1,K2
 do j=J1,J2
 do i=I1,I2
-   lam=lambda(i,j,k);miu=mu(i,j,k);lam2mu=lam+2.0*miu;rrho=1.0/rho(i,j,k)
    DxTxx = (              &
      m3d_FDxF1(Txx,i,j,k) &
      m3d_FDxF2(Txx,i,j,k) &
@@ -1960,7 +2600,7 @@ do i=I1,I2
 #endif
 
 #ifdef WATER
-   if (miu<=SEIS_ZERO) then
+   if (C66(i,j,k)<=SEIS_ZERO) then
       DxTxy=0.0
       DxTxz=0.0
       DyTxy=0.0
@@ -1970,12 +2610,60 @@ do i=I1,I2
    end if
 #endif
 
+   rrho=1.0/rho(i,j,k)
+
    hVx(i,j,k)= rrho*( DxTxx/z(k)+DyTxy/z(k)/xsin(i)+DzTxz                    &
         +(3.0_SP*Txz(i,j,k)+Txx(i,j,k)*xcot(i)-Tyy(i,j,k)*xcot(i))/z(k) )
    hVy(i,j,k)= rrho*( DxTxy/z(k)+DyTyy/z(k)/xsin(i)+DzTyz                    &
         +(2.0_SP*Txy(i,j,k)*xcot(i)+3.0_SP*Tyz(i,j,k))/z(k) )
    hVz(i,j,k)= rrho*( DxTxz/z(k)+DyTyz/z(k)/xsin(i)+DzTzz                    &
         +(2.0_SP*Tzz(i,j,k)-Txx(i,j,k)-Tyy(i,j,k)+Txz(i,j,k)*xcot(i))/z(k) )
+
+#if defined AnisGene
+   tc11=C11(i,j,k)
+   tc12=C12(i,j,k)
+   tc13=C13(i,j,k)
+   tc14=C14(i,j,k)
+   tc15=C15(i,j,k)
+   tc16=C16(i,j,k)
+   tc22=C22(i,j,k)
+   tc23=C23(i,j,k)
+   tc24=C24(i,j,k)
+   tc25=C25(i,j,k)
+   tc26=C26(i,j,k)
+   tc33=C33(i,j,k)
+   tc34=C34(i,j,k)
+   tc35=C35(i,j,k)
+   tc36=C36(i,j,k)
+   tc44=C44(i,j,k)
+   tc45=C45(i,j,k)
+   tc46=C46(i,j,k)
+   tc55=C55(i,j,k)
+   tc56=C56(i,j,k)
+   tc66=C66(i,j,k)
+#elif defined AnisVTI
+   tc11=C11(i,j,k)
+   tc13=C13(i,j,k)
+   tc33=C33(i,j,k)
+   tc44=C44(i,j,k)
+   tc66=C66(i,j,k)
+
+   tc12=tc11-2.0_SP*tc66
+   tc22=tc11
+   tc23=tc13
+   tc55=tc44
+#else
+   tc13=C13(i,j,k)
+   tc66=C66(i,j,k)
+
+   tc11=tc13+2.0_SP*tc66
+   tc12=tc13
+   tc22=tc11
+   tc23=tc13
+   tc33=tc11
+   tc44=tc66
+   tc55=tc66
+#endif
 
    E11=(DxVx+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy/xsin(i)+Vz(i,j,k))/z(k)
@@ -1984,35 +2672,64 @@ do i=I1,I2
    E33=DzVz
    E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))
    E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))
-#ifndef CondFreeCharac
-#ifndef CondFreeVHOC
+
+#if ! ( defined CondFreeCharac || defined CondFreeVHOC )
    if (freenode .and. k==nk2) then
-      E33=-lam/lam2mu*(E11+E22)+VzSrc(i,j)/lam2mu
-      E13=VxSrc(i,j)/miu
-      E23=VySrc(i,j)/miu
+#ifdef AnisGene
+      E33= matEh2Ev(1,1,i,j)*E11+matEh2Ev(1,2,i,j)*E22+matEh2Ev(1,3,i,j)*E12 &
+          +matF2Ev(1,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(1,2,i,j)*VySrc(i,j), &
+          +matF2Ev(1,3,i,j)*VxSrc(i,j)
+      E23= matEh2Ev(2,1,i,j)*E11+matEh2Ev(2,2,i,j)*E22+matEh2Ev(2,3,i,j)*E12 &
+          +matF2Ev(2,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(2,2,i,j)*VySrc(i,j), &
+          +matF2Ev(2,3,i,j)*VxSrc(i,j)
+      E13= matEh2Ev(3,1,i,j)*E11+matEh2Ev(3,2,i,j)*E22+matEh2Ev(3,3,i,j)*E12 &
+          +matF2Ev(3,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(3,2,i,j)*VySrc(i,j), &
+          +matF2Ev(3,3,i,j)*VxSrc(i,j)
+#else
+      E33=(-tc13*E11-tc23*E22+VzSrc(i,j))/tc33
+      E23=VySrc(i,j)/tc44
+      E13=VxSrc(i,j)/tc55
+#endif
    end if
 #endif
+
+#ifdef AnisGene
+   hTxx(i,j,k)=tc11*E11+tc12*E22+tc13*E33+tc14*E23+tc15*E13+tc16*E12
+   hTyy(i,j,k)=tc12*E11+tc22*E22+tc23*E33+tc24*E23+tc25*E13+tc26*E12
+   hTzz(i,j,k)=tc13*E11+tc23*E22+tc33*E33+tc34*E23+tc35*E13+tc36*E12
+   hTyz(i,j,k)=tc14*E11+tc24*E22+tc34*E33+tc44*E23+tc45*E13+tc46*E12
+   hTxz(i,j,k)=tc15*E11+tc25*E22+tc35*E33+tc45*E23+tc55*E13+tc56*E12
+   hTxy(i,j,k)=tc16*E11+tc26*E22+tc36*E33+tc46*E23+tc56*E13+tc66*E12
+#else
+   hTxx(i,j,k)=tc11*E11+tc12*E22+tc13*E33
+   hTyy(i,j,k)=tc12*E11+tc22*E22+tc23*E33
+   hTzz(i,j,k)=tc13*E11+tc23*E22+tc33*E33
+   hTyz(i,j,k)=tc44*E23
+   hTxz(i,j,k)=         tc55*E13
+   hTxy(i,j,k)=                  tc66*E12
 #endif
 
-   hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
-   hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
-   hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
-   hTxy(i,j,k)=miu*E12
-   hTxz(i,j,k)=miu*E13
-   hTyz(i,j,k)=miu*E23
 end do
 end do
 end do
 !$OMP END PARALLEL DO
 end subroutine LxF_LyB_LzF
-
+!-------------------------------------------------------------------------------
 subroutine LxB_LyF_LzB(I1,I2,J1,J2,K1,K2)
 integer,intent(in) :: I1,I2,J1,J2,K1,K2
 integer :: i,j,k
 real(SP) :: DxTxx,DxTxy,DxTxz,DxVx,DxVy,DxVz
 real(SP) :: DyTyy,DyTxy,DyTyz,DyVx,DyVy,DyVz
 real(SP) :: DzTzz,DzTxz,DzTyz,DzVx,DzVy,DzVz
-real(SP) :: lam,miu,lam2mu,rrho
+real(SP) :: rrho
+real(SP) :: tc11,tc12,tc13,tc22,tc23,tc33,tc44,tc55,tc66
+#ifdef AnisGene
+real(SP) :: tc14,tc15,tc16,tc24,tc25,tc26,tc34,tc35,tc36
+real(SP) :: tc45,tc46,tc56
+#endif
 real(SP) :: E11,E22,E33,E12,E13,E23
 ! curvilinear
 !$OMP PARALLEL DO DEFAULT(shared)  &
@@ -2025,7 +2742,6 @@ real(SP) :: E11,E22,E33,E12,E13,E23
 do k=K1,K2
 do j=J1,J2
 do i=I1,I2
-   lam=lambda(i,j,k);miu=mu(i,j,k);lam2mu=lam+2.0*miu;rrho=1.0/rho(i,j,k)
    DxTxx = (              &
      m3d_FDxB1(Txx,i,j,k) &
      m3d_FDxB2(Txx,i,j,k) &
@@ -2134,7 +2850,7 @@ do i=I1,I2
 #endif
 
 #ifdef WATER
-   if (miu<=SEIS_ZERO) then
+   if (C66(i,j,k)<=SEIS_ZERO) then
       DxTxy=0.0
       DxTxz=0.0
       DyTxy=0.0
@@ -2144,12 +2860,60 @@ do i=I1,I2
    end if
 #endif
 
+   rrho=1.0/rho(i,j,k)
+
    hVx(i,j,k)= rrho*( DxTxx/z(k)+DyTxy/z(k)/xsin(i)+DzTxz                    &
         +(3.0_SP*Txz(i,j,k)+Txx(i,j,k)*xcot(i)-Tyy(i,j,k)*xcot(i))/z(k) )
    hVy(i,j,k)= rrho*( DxTxy/z(k)+DyTyy/z(k)/xsin(i)+DzTyz                    &
         +(2.0_SP*Txy(i,j,k)*xcot(i)+3.0_SP*Tyz(i,j,k))/z(k) )
    hVz(i,j,k)= rrho*( DxTxz/z(k)+DyTyz/z(k)/xsin(i)+DzTzz                    &
         +(2.0_SP*Tzz(i,j,k)-Txx(i,j,k)-Tyy(i,j,k)+Txz(i,j,k)*xcot(i))/z(k) )
+
+#if defined AnisGene
+   tc11=C11(i,j,k)
+   tc12=C12(i,j,k)
+   tc13=C13(i,j,k)
+   tc14=C14(i,j,k)
+   tc15=C15(i,j,k)
+   tc16=C16(i,j,k)
+   tc22=C22(i,j,k)
+   tc23=C23(i,j,k)
+   tc24=C24(i,j,k)
+   tc25=C25(i,j,k)
+   tc26=C26(i,j,k)
+   tc33=C33(i,j,k)
+   tc34=C34(i,j,k)
+   tc35=C35(i,j,k)
+   tc36=C36(i,j,k)
+   tc44=C44(i,j,k)
+   tc45=C45(i,j,k)
+   tc46=C46(i,j,k)
+   tc55=C55(i,j,k)
+   tc56=C56(i,j,k)
+   tc66=C66(i,j,k)
+#elif defined AnisVTI
+   tc11=C11(i,j,k)
+   tc13=C13(i,j,k)
+   tc33=C33(i,j,k)
+   tc44=C44(i,j,k)
+   tc66=C66(i,j,k)
+
+   tc12=tc11-2.0_SP*tc66
+   tc22=tc11
+   tc23=tc13
+   tc55=tc44
+#else
+   tc13=C13(i,j,k)
+   tc66=C66(i,j,k)
+
+   tc11=tc13+2.0_SP*tc66
+   tc12=tc13
+   tc22=tc11
+   tc23=tc13
+   tc33=tc11
+   tc44=tc66
+   tc55=tc66
+#endif
 
    E11=(DxVx+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy/xsin(i)+Vz(i,j,k))/z(k)
@@ -2158,36 +2922,65 @@ do i=I1,I2
    E33=DzVz
    E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))
    E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))
-#ifndef CondFreeCharac
-#ifndef CondFreeVHOC
+
+#if ! ( defined CondFreeCharac || defined CondFreeVHOC )
    if (freenode .and. k==nk2) then
-      E33=-lam/lam2mu*(E11+E22)+VzSrc(i,j)/lam2mu
-      E13=VxSrc(i,j)/miu
-      E23=VySrc(i,j)/miu
+#ifdef AnisGene
+      E33= matEh2Ev(1,1,i,j)*E11+matEh2Ev(1,2,i,j)*E22+matEh2Ev(1,3,i,j)*E12 &
+          +matF2Ev(1,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(1,2,i,j)*VySrc(i,j), &
+          +matF2Ev(1,3,i,j)*VxSrc(i,j)
+      E23= matEh2Ev(2,1,i,j)*E11+matEh2Ev(2,2,i,j)*E22+matEh2Ev(2,3,i,j)*E12 &
+          +matF2Ev(2,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(2,2,i,j)*VySrc(i,j), &
+          +matF2Ev(2,3,i,j)*VxSrc(i,j)
+      E13= matEh2Ev(3,1,i,j)*E11+matEh2Ev(3,2,i,j)*E22+matEh2Ev(3,3,i,j)*E12 &
+          +matF2Ev(3,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(3,2,i,j)*VySrc(i,j), &
+          +matF2Ev(3,3,i,j)*VxSrc(i,j)
+#else
+      E33=(-tc13*E11-tc23*E22+VzSrc(i,j))/tc33
+      E23=VySrc(i,j)/tc44
+      E13=VxSrc(i,j)/tc55
+#endif
    end if
 #endif
+
+#ifdef AnisGene
+   hTxx(i,j,k)=tc11*E11+tc12*E22+tc13*E33+tc14*E23+tc15*E13+tc16*E12
+   hTyy(i,j,k)=tc12*E11+tc22*E22+tc23*E33+tc24*E23+tc25*E13+tc26*E12
+   hTzz(i,j,k)=tc13*E11+tc23*E22+tc33*E33+tc34*E23+tc35*E13+tc36*E12
+   hTyz(i,j,k)=tc14*E11+tc24*E22+tc34*E33+tc44*E23+tc45*E13+tc46*E12
+   hTxz(i,j,k)=tc15*E11+tc25*E22+tc35*E33+tc45*E23+tc55*E13+tc56*E12
+   hTxy(i,j,k)=tc16*E11+tc26*E22+tc36*E33+tc46*E23+tc56*E13+tc66*E12
+#else
+   hTxx(i,j,k)=tc11*E11+tc12*E22+tc13*E33
+   hTyy(i,j,k)=tc12*E11+tc22*E22+tc23*E33
+   hTzz(i,j,k)=tc13*E11+tc23*E22+tc33*E33
+   hTyz(i,j,k)=tc44*E23
+   hTxz(i,j,k)=         tc55*E13
+   hTxy(i,j,k)=                  tc66*E12
 #endif
 
-   hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
-   hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
-   hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
-   hTxy(i,j,k)=miu*E12
-   hTxz(i,j,k)=miu*E13
-   hTyz(i,j,k)=miu*E23
 end do
 end do
 end do
 !$OMP END PARALLEL DO
 end subroutine LxB_LyF_LzB
+!-------------------------------------------------------------------------------
 
 #ifdef CondFreeVHOC
-!*************************************************************************
-!* use Compact MacCormack scheme to calculate velocities fd with         *
-!* respect to eta and assemble the right hand side to update stresses    *
-!*************************************************************************
+!-------------------------------------------------------------------------------
+!--  use Compact MacCormack scheme to calculate velocities fd with
+!--  respect to eta and assemble the right hand side to update stresses
+!-------------------------------------------------------------------------------
 subroutine LxF_LyF_LzF_VHOC
 integer :: i,j,k,n
-real(SP) :: lam,miu,lam2mu,rrho
+real(SP) :: tc11,tc12,tc13,tc22,tc23,tc33,tc44,tc55,tc66
+#ifdef AnisGene
+real(SP) :: tc14,tc15,tc16,tc24,tc25,tc26,tc34,tc35,tc36
+real(SP) :: tc45,tc46,tc56
+#endif
 real(SP) :: rhs_Dz,lhs_Dz
 real(SP),dimension(1:LenFD+1) :: DxVx,DxVy,DxVz, &
                              DyVx,DyVy,DyVz, &
@@ -2201,7 +2994,26 @@ loop_eta: do j=nj1,nj2
 loop_xi:  do i=ni1,ni2
    !-- k=nz --
    n=LenFD+1; k=nk2
-   lam=lambda(i,j,k);miu=mu(i,j,k);lam2mu=lam+2.0*miu;rrho=1.0/rho(i,j,k)
+
+#if ! defined AnisGene
+#if defined AnisVTI
+   tc13=C13(i,j,k)
+   tc33=C33(i,j,k)
+   tc44=C44(i,j,k)
+
+   tc23=tc13
+   tc55=tc44
+#else
+   tc13=C13(i,j,k)
+   tc66=C66(i,j,k)
+
+   tc11=tc13+2.0_SP*tc66
+   tc23=tc13
+   tc33=tc11
+   tc44=tc66
+   tc55=tc66
+#endif
+#endif
 
    DxVx(n) =  (          &
      m3d_FDxF1(Vx,i,j,k) &
@@ -2232,9 +3044,29 @@ loop_xi:  do i=ni1,ni2
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
 
-   DzVx(n) = (-DxVz(n)/z(k)+Vx(i,j,k)/z(k)+VxSrc(i,j)/miu)/zeta_z(k)
-   DzVy(n) = (-DyVz(n)/z(k)/xsin(i)+Vy(i,j,k)/z(k)+VySrc(i,j)/miu)/zeta_z(k)
-   DzVz(n) = (-lam/lam2mu*(E11+E22)+VzSrc(i,j)/lam2mu)/zeta_z(k)
+#ifdef AnisGene
+   E12=(DxVy(n)+DyVx(n)/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)
+   E33= matEh2Ev(1,1,i,j)*E11+matEh2Ev(1,2,i,j)*E22+matEh2Ev(1,3,i,j)*E12 &
+          +matF2Ev(1,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(1,2,i,j)*VySrc(i,j), &
+          +matF2Ev(1,3,i,j)*VxSrc(i,j)
+   E23= matEh2Ev(2,1,i,j)*E11+matEh2Ev(2,2,i,j)*E22+matEh2Ev(2,3,i,j)*E12 &
+          +matF2Ev(2,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(2,2,i,j)*VySrc(i,j), &
+          +matF2Ev(2,3,i,j)*VxSrc(i,j)
+   E13= matEh2Ev(3,1,i,j)*E11+matEh2Ev(3,2,i,j)*E22+matEh2Ev(3,3,i,j)*E12 &
+          +matF2Ev(3,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(3,2,i,j)*VySrc(i,j), &
+          +matF2Ev(3,3,i,j)*VxSrc(i,j)
+#else
+   E33=(-tc13*E11-tc23*E22+VzSrc(i,j))/tc33
+   E23=VySrc(i,j)/tc44
+   E13=VxSrc(i,j)/tc55
+#endif
+
+   DzVz(n) = E33/zeta_z(k)
+   DzVy(n) = (E23-DyVz(n)/z(k)/xsin(i)+Vy(i,j,k)/z(k))/zeta_z(k)
+   DzVx(n) = (E13-DxVz(n)/z(k)+Vx(i,j,k)/z(k))/zeta_z(k)
 
    !-- j=ny-LenFD+1:ny-1 --
 do n=LenFD,2,-1
@@ -2299,19 +3131,75 @@ do n=2,LenFD+1
    DzVx(n)=DzVx(n)*zeta_z(k)
    DzVy(n)=DzVy(n)*zeta_z(k)
    DzVz(n)=DzVz(n)*zeta_z(k)
-   lam=lambda(i,j,k);miu=mu(i,j,k);lam2mu=lam+2.0*miu;rrho=1.0/rho(i,j,k)
+
+#if defined AnisGene
+   tc11=C11(i,j,k)
+   tc12=C12(i,j,k)
+   tc13=C13(i,j,k)
+   tc14=C14(i,j,k)
+   tc15=C15(i,j,k)
+   tc16=C16(i,j,k)
+   tc22=C22(i,j,k)
+   tc23=C23(i,j,k)
+   tc24=C24(i,j,k)
+   tc25=C25(i,j,k)
+   tc26=C26(i,j,k)
+   tc33=C33(i,j,k)
+   tc34=C34(i,j,k)
+   tc35=C35(i,j,k)
+   tc36=C36(i,j,k)
+   tc44=C44(i,j,k)
+   tc45=C45(i,j,k)
+   tc46=C46(i,j,k)
+   tc55=C55(i,j,k)
+   tc56=C56(i,j,k)
+   tc66=C66(i,j,k)
+#elif defined AnisVTI
+   tc11=C11(i,j,k)
+   tc13=C13(i,j,k)
+   tc33=C33(i,j,k)
+   tc44=C44(i,j,k)
+   tc66=C66(i,j,k)
+
+   tc12=tc11-2.0_SP*tc66
+   tc22=tc11
+   tc23=tc13
+   tc55=tc44
+#else
+   tc13=C13(i,j,k)
+   tc66=C66(i,j,k)
+
+   tc11=tc13+2.0_SP*tc66
+   tc12=tc13
+   tc22=tc11
+   tc23=tc13
+   tc33=tc11
+   tc44=tc66
+   tc55=tc66
+#endif
+
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
    E33=DzVz(n)
    E12=(DxVy(n)+DyVx(n)/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)
    E13=(DxVz(n)/z(k)+DzVx(n)-Vx(i,j,k)/z(k))
    E23=(DyVz(n)/z(k)/xsin(i)+DzVy(n)-Vy(i,j,k)/z(k))
-   hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
-   hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
-   hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
-   hTxy(i,j,k)=miu*E12
-   hTxz(i,j,k)=miu*E13
-   hTyz(i,j,k)=miu*E23
+
+#ifdef AnisGene
+   hTxx(i,j,k)=tc11*E11+tc12*E22+tc13*E33+tc14*E23+tc15*E13+tc16*E12
+   hTyy(i,j,k)=tc12*E11+tc22*E22+tc23*E33+tc24*E23+tc25*E13+tc26*E12
+   hTzz(i,j,k)=tc13*E11+tc23*E22+tc33*E33+tc34*E23+tc35*E13+tc36*E12
+   hTyz(i,j,k)=tc14*E11+tc24*E22+tc34*E33+tc44*E23+tc45*E13+tc46*E12
+   hTxz(i,j,k)=tc15*E11+tc25*E22+tc35*E33+tc45*E23+tc55*E13+tc56*E12
+   hTxy(i,j,k)=tc16*E11+tc26*E22+tc36*E33+tc46*E23+tc56*E13+tc66*E12
+#else
+   hTxx(i,j,k)=tc11*E11+tc12*E22+tc13*E33
+   hTyy(i,j,k)=tc12*E11+tc22*E22+tc23*E33
+   hTzz(i,j,k)=tc13*E11+tc23*E22+tc33*E33
+   hTyz(i,j,k)=tc44*E23
+   hTxz(i,j,k)=         tc55*E13
+   hTxy(i,j,k)=                  tc66*E12
+#endif
    if (k==nk2) then
       hTxz(i,j,k)=VxSrc(i,j)
       hTyz(i,j,k)=VySrc(i,j)
@@ -2321,9 +3209,14 @@ end do
 end do loop_xi
 end do loop_eta
 end subroutine LxF_LyF_LzF_VHOC
+!-------------------------------------------------------------------------------
 subroutine LxB_LyB_LzB_VHOC
 integer :: i,j,k,n
-real(SP) :: lam,miu,lam2mu,rrho
+real(SP) :: tc11,tc12,tc13,tc22,tc23,tc33,tc44,tc55,tc66
+#ifdef AnisGene
+real(SP) :: tc14,tc15,tc16,tc24,tc25,tc26,tc34,tc35,tc36
+real(SP) :: tc45,tc46,tc56
+#endif
 real(SP) :: rhs_Dz,lhs_Dz
 real(SP),dimension(1:LenFD+1) :: DxVx,DxVy,DxVz, &
                              DyVx,DyVy,DyVz, &
@@ -2378,14 +3271,52 @@ loop_xi:  do i=ni1,ni2
      m3d_FDyB2(Vz,i,j,k) &
      )*eta_y(j)
 
-   lam=lambda(i,j,k);miu=mu(i,j,k);lam2mu=lam+2.0*miu;rrho=1.0/rho(i,j,k)
+#if ! defined AnisGene
+#if defined AnisVTI
+   tc13=C13(i,j,k)
+   tc33=C33(i,j,k)
+   tc44=C44(i,j,k)
+
+   tc23=tc13
+   tc55=tc44
+#else
+   tc13=C13(i,j,k)
+   tc66=C66(i,j,k)
+
+   tc11=tc13+2.0_SP*tc66
+   tc23=tc13
+   tc33=tc11
+   tc44=tc66
+   tc55=tc66
+#endif
+#endif
 
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
 
-   DzVx(n) = (-DxVz(n)/z(k)+Vx(i,j,k)/z(k)+VxSrc(i,j)/miu)/zeta_z(k)
-   DzVy(n) = (-DyVz(n)/z(k)/xsin(i)+Vy(i,j,k)/z(k)+VySrc(i,j)/miu)/zeta_z(k)
-   DzVz(n) = (-lam/lam2mu*(E11+E22)+VzSrc(i,j)/lam2mu)/zeta_z(k)
+#ifdef AnisGene
+   E12=(DxVy(n)+DyVx(n)/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)
+   E33= matEh2Ev(1,1,i,j)*E11+matEh2Ev(1,2,i,j)*E22+matEh2Ev(1,3,i,j)*E12 &
+          +matF2Ev(1,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(1,2,i,j)*VySrc(i,j), &
+          +matF2Ev(1,3,i,j)*VxSrc(i,j)
+   E23= matEh2Ev(2,1,i,j)*E11+matEh2Ev(2,2,i,j)*E22+matEh2Ev(2,3,i,j)*E12 &
+          +matF2Ev(2,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(2,2,i,j)*VySrc(i,j), &
+          +matF2Ev(2,3,i,j)*VxSrc(i,j)
+   E13= matEh2Ev(3,1,i,j)*E11+matEh2Ev(3,2,i,j)*E22+matEh2Ev(3,3,i,j)*E12 &
+          +matF2Ev(3,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(3,2,i,j)*VySrc(i,j), &
+          +matF2Ev(3,3,i,j)*VxSrc(i,j)
+#else
+   E33=(-tc13*E11-tc23*E22+VzSrc(i,j))/tc33
+   E23=VySrc(i,j)/tc44
+   E13=VxSrc(i,j)/tc55
+#endif
+
+   DzVz(n) = E33/zeta_z(k)
+   DzVy(n) = (E23-DyVz(n)/z(k)/xsin(i)+Vy(i,j,k)/z(k))/zeta_z(k)
+   DzVx(n) = (E13-DxVz(n)/z(k)+Vx(i,j,k)/z(k))/zeta_z(k)
 
    !-- k=nk2-LenFD+1:nk2-1 --
 do n=2,LenFD
@@ -2450,19 +3381,75 @@ do n=2,LenFD+1
    DzVx(n)=DzVx(n)*zeta_z(k)
    DzVy(n)=DzVy(n)*zeta_z(k)
    DzVz(n)=DzVz(n)*zeta_z(k)
-   lam=lambda(i,j,k);miu=mu(i,j,k);lam2mu=lam+2.0*miu;rrho=1.0/rho(i,j,k)
+
+#if defined AnisGene
+   tc11=C11(i,j,k)
+   tc12=C12(i,j,k)
+   tc13=C13(i,j,k)
+   tc14=C14(i,j,k)
+   tc15=C15(i,j,k)
+   tc16=C16(i,j,k)
+   tc22=C22(i,j,k)
+   tc23=C23(i,j,k)
+   tc24=C24(i,j,k)
+   tc25=C25(i,j,k)
+   tc26=C26(i,j,k)
+   tc33=C33(i,j,k)
+   tc34=C34(i,j,k)
+   tc35=C35(i,j,k)
+   tc36=C36(i,j,k)
+   tc44=C44(i,j,k)
+   tc45=C45(i,j,k)
+   tc46=C46(i,j,k)
+   tc55=C55(i,j,k)
+   tc56=C56(i,j,k)
+   tc66=C66(i,j,k)
+#elif defined AnisVTI
+   tc11=C11(i,j,k)
+   tc13=C13(i,j,k)
+   tc33=C33(i,j,k)
+   tc44=C44(i,j,k)
+   tc66=C66(i,j,k)
+
+   tc12=tc11-2.0_SP*tc66
+   tc22=tc11
+   tc23=tc13
+   tc55=tc44
+#else
+   tc13=C13(i,j,k)
+   tc66=C66(i,j,k)
+
+   tc11=tc13+2.0_SP*tc66
+   tc12=tc13
+   tc22=tc11
+   tc23=tc13
+   tc33=tc11
+   tc44=tc66
+   tc55=tc66
+#endif
+
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
    E33=DzVz(n)
    E12=(DxVy(n)+DyVx(n)/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)
    E13=(DxVz(n)/z(k)+DzVx(n)-Vx(i,j,k)/z(k))
    E23=(DyVz(n)/z(k)/xsin(i)+DzVy(n)-Vy(i,j,k)/z(k))
-   hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
-   hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
-   hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
-   hTxy(i,j,k)=miu*E12
-   hTxz(i,j,k)=miu*E13
-   hTyz(i,j,k)=miu*E23
+
+#ifdef AnisGene
+   hTxx(i,j,k)=tc11*E11+tc12*E22+tc13*E33+tc14*E23+tc15*E13+tc16*E12
+   hTyy(i,j,k)=tc12*E11+tc22*E22+tc23*E33+tc24*E23+tc25*E13+tc26*E12
+   hTzz(i,j,k)=tc13*E11+tc23*E22+tc33*E33+tc34*E23+tc35*E13+tc36*E12
+   hTyz(i,j,k)=tc14*E11+tc24*E22+tc34*E33+tc44*E23+tc45*E13+tc46*E12
+   hTxz(i,j,k)=tc15*E11+tc25*E22+tc35*E33+tc45*E23+tc55*E13+tc56*E12
+   hTxy(i,j,k)=tc16*E11+tc26*E22+tc36*E33+tc46*E23+tc56*E13+tc66*E12
+#else
+   hTxx(i,j,k)=tc11*E11+tc12*E22+tc13*E33
+   hTyy(i,j,k)=tc12*E11+tc22*E22+tc23*E33
+   hTzz(i,j,k)=tc13*E11+tc23*E22+tc33*E33
+   hTyz(i,j,k)=tc44*E23
+   hTxz(i,j,k)=         tc55*E13
+   hTxy(i,j,k)=                  tc66*E12
+#endif
    if (k==nk2) then
       hTxz(i,j,k)=VxSrc(i,j)
       hTyz(i,j,k)=VySrc(i,j)
@@ -2472,10 +3459,14 @@ end do
 end do loop_xi
 end do loop_eta
 end subroutine LxB_LyB_LzB_VHOC
-
+!-------------------------------------------------------------------------------
 subroutine LxF_LyF_LzB_VHOC
 integer :: i,j,k,n
-real(SP) :: lam,miu,lam2mu,rrho
+real(SP) :: tc11,tc12,tc13,tc22,tc23,tc33,tc44,tc55,tc66
+#ifdef AnisGene
+real(SP) :: tc14,tc15,tc16,tc24,tc25,tc26,tc34,tc35,tc36
+real(SP) :: tc45,tc46,tc56
+#endif
 real(SP) :: rhs_Dz,lhs_Dz
 real(SP),dimension(1:LenFD+1) :: DxVx,DxVy,DxVz, &
                              DyVx,DyVy,DyVz, &
@@ -2530,14 +3521,52 @@ loop_xi:  do i=ni1,ni2
      m3d_FDyF2(Vz,i,j,k) &
      )*eta_y(j)
 
-   lam=lambda(i,j,k);miu=mu(i,j,k);lam2mu=lam+2.0*miu;rrho=1.0/rho(i,j,k)
+#if ! defined AnisGene
+#if defined AnisVTI
+   tc13=C13(i,j,k)
+   tc33=C33(i,j,k)
+   tc44=C44(i,j,k)
+
+   tc23=tc13
+   tc55=tc44
+#else
+   tc13=C13(i,j,k)
+   tc66=C66(i,j,k)
+
+   tc11=tc13+2.0_SP*tc66
+   tc23=tc13
+   tc33=tc11
+   tc44=tc66
+   tc55=tc66
+#endif
+#endif
 
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
 
-   DzVx(n) = (-DxVz(n)/z(k)+Vx(i,j,k)/z(k)+VxSrc(i,j)/miu)/zeta_z(k)
-   DzVy(n) = (-DyVz(n)/z(k)/xsin(i)+Vy(i,j,k)/z(k)+VySrc(i,j)/miu)/zeta_z(k)
-   DzVz(n) = (-lam/lam2mu*(E11+E22)+VzSrc(i,j)/lam2mu)/zeta_z(k)
+#ifdef AnisGene
+   E12=(DxVy(n)+DyVx(n)/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)
+   E33= matEh2Ev(1,1,i,j)*E11+matEh2Ev(1,2,i,j)*E22+matEh2Ev(1,3,i,j)*E12 &
+          +matF2Ev(1,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(1,2,i,j)*VySrc(i,j), &
+          +matF2Ev(1,3,i,j)*VxSrc(i,j)
+   E23= matEh2Ev(2,1,i,j)*E11+matEh2Ev(2,2,i,j)*E22+matEh2Ev(2,3,i,j)*E12 &
+          +matF2Ev(2,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(2,2,i,j)*VySrc(i,j), &
+          +matF2Ev(2,3,i,j)*VxSrc(i,j)
+   E13= matEh2Ev(3,1,i,j)*E11+matEh2Ev(3,2,i,j)*E22+matEh2Ev(3,3,i,j)*E12 &
+          +matF2Ev(3,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(3,2,i,j)*VySrc(i,j), &
+          +matF2Ev(3,3,i,j)*VxSrc(i,j)
+#else
+   E33=(-tc13*E11-tc23*E22+VzSrc(i,j))/tc33
+   E23=VySrc(i,j)/tc44
+   E13=VxSrc(i,j)/tc55
+#endif
+
+   DzVz(n) = E33/zeta_z(k)
+   DzVy(n) = (E23-DyVz(n)/z(k)/xsin(i)+Vy(i,j,k)/z(k))/zeta_z(k)
+   DzVx(n) = (E13-DxVz(n)/z(k)+Vx(i,j,k)/z(k))/zeta_z(k)
 
    !-- k=nk2-LenFD+1:nk2-1 --
 do n=2,LenFD
@@ -2602,19 +3631,75 @@ do n=2,LenFD+1
    DzVx(n)=DzVx(n)*zeta_z(k)
    DzVy(n)=DzVy(n)*zeta_z(k)
    DzVz(n)=DzVz(n)*zeta_z(k)
-   lam=lambda(i,j,k);miu=mu(i,j,k);lam2mu=lam+2.0*miu;rrho=1.0/rho(i,j,k)
+
+#if defined AnisGene
+   tc11=C11(i,j,k)
+   tc12=C12(i,j,k)
+   tc13=C13(i,j,k)
+   tc14=C14(i,j,k)
+   tc15=C15(i,j,k)
+   tc16=C16(i,j,k)
+   tc22=C22(i,j,k)
+   tc23=C23(i,j,k)
+   tc24=C24(i,j,k)
+   tc25=C25(i,j,k)
+   tc26=C26(i,j,k)
+   tc33=C33(i,j,k)
+   tc34=C34(i,j,k)
+   tc35=C35(i,j,k)
+   tc36=C36(i,j,k)
+   tc44=C44(i,j,k)
+   tc45=C45(i,j,k)
+   tc46=C46(i,j,k)
+   tc55=C55(i,j,k)
+   tc56=C56(i,j,k)
+   tc66=C66(i,j,k)
+#elif defined AnisVTI
+   tc11=C11(i,j,k)
+   tc13=C13(i,j,k)
+   tc33=C33(i,j,k)
+   tc44=C44(i,j,k)
+   tc66=C66(i,j,k)
+
+   tc12=tc11-2.0_SP*tc66
+   tc22=tc11
+   tc23=tc13
+   tc55=tc44
+#else
+   tc13=C13(i,j,k)
+   tc66=C66(i,j,k)
+
+   tc11=tc13+2.0_SP*tc66
+   tc12=tc13
+   tc22=tc11
+   tc23=tc13
+   tc33=tc11
+   tc44=tc66
+   tc55=tc66
+#endif
+
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
    E33=DzVz(n)
    E12=(DxVy(n)+DyVx(n)/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)
    E13=(DxVz(n)/z(k)+DzVx(n)-Vx(i,j,k)/z(k))
    E23=(DyVz(n)/z(k)/xsin(i)+DzVy(n)-Vy(i,j,k)/z(k))
-   hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
-   hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
-   hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
-   hTxy(i,j,k)=miu*E12
-   hTxz(i,j,k)=miu*E13
-   hTyz(i,j,k)=miu*E23
+
+#ifdef AnisGene
+   hTxx(i,j,k)=tc11*E11+tc12*E22+tc13*E33+tc14*E23+tc15*E13+tc16*E12
+   hTyy(i,j,k)=tc12*E11+tc22*E22+tc23*E33+tc24*E23+tc25*E13+tc26*E12
+   hTzz(i,j,k)=tc13*E11+tc23*E22+tc33*E33+tc34*E23+tc35*E13+tc36*E12
+   hTyz(i,j,k)=tc14*E11+tc24*E22+tc34*E33+tc44*E23+tc45*E13+tc46*E12
+   hTxz(i,j,k)=tc15*E11+tc25*E22+tc35*E33+tc45*E23+tc55*E13+tc56*E12
+   hTxy(i,j,k)=tc16*E11+tc26*E22+tc36*E33+tc46*E23+tc56*E13+tc66*E12
+#else
+   hTxx(i,j,k)=tc11*E11+tc12*E22+tc13*E33
+   hTyy(i,j,k)=tc12*E11+tc22*E22+tc23*E33
+   hTzz(i,j,k)=tc13*E11+tc23*E22+tc33*E33
+   hTyz(i,j,k)=tc44*E23
+   hTxz(i,j,k)=         tc55*E13
+   hTxy(i,j,k)=                  tc66*E12
+#endif
    if (k==nk2) then
       hTxz(i,j,k)=VxSrc(i,j)
       hTyz(i,j,k)=VySrc(i,j)
@@ -2624,9 +3709,14 @@ end do
 end do loop_xi
 end do loop_eta
 end subroutine LxF_LyF_LzB_VHOC
+!-------------------------------------------------------------------------------
 subroutine LxB_LyB_LzF_VHOC
 integer :: i,j,k,n
-real(SP) :: lam,miu,lam2mu,rrho
+real(SP) :: tc11,tc12,tc13,tc22,tc23,tc33,tc44,tc55,tc66
+#ifdef AnisGene
+real(SP) :: tc14,tc15,tc16,tc24,tc25,tc26,tc34,tc35,tc36
+real(SP) :: tc45,tc46,tc56
+#endif
 real(SP) :: rhs_Dz,lhs_Dz
 real(SP),dimension(1:LenFD+1) :: DxVx,DxVy,DxVz, &
                              DyVx,DyVy,DyVz, &
@@ -2640,7 +3730,6 @@ loop_eta: do j=nj1,nj2
 loop_xi:  do i=ni1,ni2
    !-- k=nz --
    n=LenFD+1; k=nk2
-   lam=lambda(i,j,k);miu=mu(i,j,k);lam2mu=lam+2.0*miu;rrho=1.0/rho(i,j,k)
 
    DxVx(n) =  (          &
      m3d_FDxB1(Vx,i,j,k) &
@@ -2668,12 +3757,52 @@ loop_xi:  do i=ni1,ni2
      m3d_FDyB2(Vz,i,j,k) &
      )*eta_y(j)
 
+#if ! defined AnisGene
+#if defined AnisVTI
+   tc13=C13(i,j,k)
+   tc33=C33(i,j,k)
+   tc44=C44(i,j,k)
+
+   tc23=tc13
+   tc55=tc44
+#else
+   tc13=C13(i,j,k)
+   tc66=C66(i,j,k)
+
+   tc11=tc13+2.0_SP*tc66
+   tc23=tc13
+   tc33=tc11
+   tc44=tc66
+   tc55=tc66
+#endif
+#endif
+
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
 
-   DzVx(n) = (-DxVz(n)/z(k)+Vx(i,j,k)/z(k)+VxSrc(i,j)/miu)/zeta_z(k)
-   DzVy(n) = (-DyVz(n)/z(k)/xsin(i)+Vy(i,j,k)/z(k)+VySrc(i,j)/miu)/zeta_z(k)
-   DzVz(n) = (-lam/lam2mu*(E11+E22)+VzSrc(i,j)/lam2mu)/zeta_z(k)
+#ifdef AnisGene
+   E12=(DxVy(n)+DyVx(n)/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)
+   E33= matEh2Ev(1,1,i,j)*E11+matEh2Ev(1,2,i,j)*E22+matEh2Ev(1,3,i,j)*E12 &
+          +matF2Ev(1,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(1,2,i,j)*VySrc(i,j), &
+          +matF2Ev(1,3,i,j)*VxSrc(i,j)
+   E23= matEh2Ev(2,1,i,j)*E11+matEh2Ev(2,2,i,j)*E22+matEh2Ev(2,3,i,j)*E12 &
+          +matF2Ev(2,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(2,2,i,j)*VySrc(i,j), &
+          +matF2Ev(2,3,i,j)*VxSrc(i,j)
+   E13= matEh2Ev(3,1,i,j)*E11+matEh2Ev(3,2,i,j)*E22+matEh2Ev(3,3,i,j)*E12 &
+          +matF2Ev(3,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(3,2,i,j)*VySrc(i,j), &
+          +matF2Ev(3,3,i,j)*VxSrc(i,j)
+#else
+   E33=(-tc13*E11-tc23*E22+VzSrc(i,j))/tc33
+   E23=VySrc(i,j)/tc44
+   E13=VxSrc(i,j)/tc55
+#endif
+
+   DzVz(n) = E33/zeta_z(k)
+   DzVy(n) = (E23-DyVz(n)/z(k)/xsin(i)+Vy(i,j,k)/z(k))/zeta_z(k)
+   DzVx(n) = (E13-DxVz(n)/z(k)+Vx(i,j,k)/z(k))/zeta_z(k)
 
    !-- j=ny-LenFD+1:ny-1 --
 do n=LenFD,2,-1
@@ -2738,19 +3867,75 @@ do n=2,LenFD+1
    DzVx(n)=DzVx(n)*zeta_z(k)
    DzVy(n)=DzVy(n)*zeta_z(k)
    DzVz(n)=DzVz(n)*zeta_z(k)
-   lam=lambda(i,j,k);miu=mu(i,j,k);lam2mu=lam+2.0*miu;rrho=1.0/rho(i,j,k)
+
+#if defined AnisGene
+   tc11=C11(i,j,k)
+   tc12=C12(i,j,k)
+   tc13=C13(i,j,k)
+   tc14=C14(i,j,k)
+   tc15=C15(i,j,k)
+   tc16=C16(i,j,k)
+   tc22=C22(i,j,k)
+   tc23=C23(i,j,k)
+   tc24=C24(i,j,k)
+   tc25=C25(i,j,k)
+   tc26=C26(i,j,k)
+   tc33=C33(i,j,k)
+   tc34=C34(i,j,k)
+   tc35=C35(i,j,k)
+   tc36=C36(i,j,k)
+   tc44=C44(i,j,k)
+   tc45=C45(i,j,k)
+   tc46=C46(i,j,k)
+   tc55=C55(i,j,k)
+   tc56=C56(i,j,k)
+   tc66=C66(i,j,k)
+#elif defined AnisVTI
+   tc11=C11(i,j,k)
+   tc13=C13(i,j,k)
+   tc33=C33(i,j,k)
+   tc44=C44(i,j,k)
+   tc66=C66(i,j,k)
+
+   tc12=tc11-2.0_SP*tc66
+   tc22=tc11
+   tc23=tc13
+   tc55=tc44
+#else
+   tc13=C13(i,j,k)
+   tc66=C66(i,j,k)
+
+   tc11=tc13+2.0_SP*tc66
+   tc12=tc13
+   tc22=tc11
+   tc23=tc13
+   tc33=tc11
+   tc44=tc66
+   tc55=tc66
+#endif
+
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
    E33=DzVz(n)
    E12=(DxVy(n)+DyVx(n)/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)
    E13=(DxVz(n)/z(k)+DzVx(n)-Vx(i,j,k)/z(k))
    E23=(DyVz(n)/z(k)/xsin(i)+DzVy(n)-Vy(i,j,k)/z(k))
-   hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
-   hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
-   hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
-   hTxy(i,j,k)=miu*E12
-   hTxz(i,j,k)=miu*E13
-   hTyz(i,j,k)=miu*E23
+
+#ifdef AnisGene
+   hTxx(i,j,k)=tc11*E11+tc12*E22+tc13*E33+tc14*E23+tc15*E13+tc16*E12
+   hTyy(i,j,k)=tc12*E11+tc22*E22+tc23*E33+tc24*E23+tc25*E13+tc26*E12
+   hTzz(i,j,k)=tc13*E11+tc23*E22+tc33*E33+tc34*E23+tc35*E13+tc36*E12
+   hTyz(i,j,k)=tc14*E11+tc24*E22+tc34*E33+tc44*E23+tc45*E13+tc46*E12
+   hTxz(i,j,k)=tc15*E11+tc25*E22+tc35*E33+tc45*E23+tc55*E13+tc56*E12
+   hTxy(i,j,k)=tc16*E11+tc26*E22+tc36*E33+tc46*E23+tc56*E13+tc66*E12
+#else
+   hTxx(i,j,k)=tc11*E11+tc12*E22+tc13*E33
+   hTyy(i,j,k)=tc12*E11+tc22*E22+tc23*E33
+   hTzz(i,j,k)=tc13*E11+tc23*E22+tc33*E33
+   hTyz(i,j,k)=tc44*E23
+   hTxz(i,j,k)=         tc55*E13
+   hTxy(i,j,k)=                  tc66*E12
+#endif
    if (k==nk2) then
       hTxz(i,j,k)=VxSrc(i,j)
       hTyz(i,j,k)=VySrc(i,j)
@@ -2760,10 +3945,14 @@ end do
 end do loop_xi
 end do loop_eta
 end subroutine LxB_LyB_LzF_VHOC
-
+!-------------------------------------------------------------------------------
 subroutine LxB_LyF_LzF_VHOC
 integer :: i,j,k,n
-real(SP) :: lam,miu,lam2mu,rrho
+real(SP) :: tc11,tc12,tc13,tc22,tc23,tc33,tc44,tc55,tc66
+#ifdef AnisGene
+real(SP) :: tc14,tc15,tc16,tc24,tc25,tc26,tc34,tc35,tc36
+real(SP) :: tc45,tc46,tc56
+#endif
 real(SP) :: rhs_Dz,lhs_Dz
 real(SP),dimension(1:LenFD+1) :: DxVx,DxVy,DxVz, &
                              DyVx,DyVy,DyVz, &
@@ -2777,7 +3966,6 @@ loop_eta: do j=nj1,nj2
 loop_xi:  do i=ni1,ni2
    !-- k=nz --
    n=LenFD+1; k=nk2
-   lam=lambda(i,j,k);miu=mu(i,j,k);lam2mu=lam+2.0*miu;rrho=1.0/rho(i,j,k)
 
    DxVx(n) =  (          &
      m3d_FDxB1(Vx,i,j,k) &
@@ -2805,12 +3993,53 @@ loop_xi:  do i=ni1,ni2
      m3d_FDyF2(Vz,i,j,k) &
      )*eta_y(j)
 
+#if ! defined AnisGene
+#if defined AnisVTI
+   tc13=C13(i,j,k)
+   tc33=C33(i,j,k)
+   tc44=C44(i,j,k)
+
+   tc23=tc13
+   tc55=tc44
+#else
+   tc13=C13(i,j,k)
+   tc66=C66(i,j,k)
+
+   tc11=tc13+2.0_SP*tc66
+   tc23=tc13
+   tc33=tc11
+   tc44=tc66
+   tc55=tc66
+#endif
+#endif
+
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
 
-   DzVx(n) = (-DxVz(n)/z(k)+Vx(i,j,k)/z(k)+VxSrc(i,j)/miu)/zeta_z(k)
-   DzVy(n) = (-DyVz(n)/z(k)/xsin(i)+Vy(i,j,k)/z(k)+VySrc(i,j)/miu)/zeta_z(k)
-   DzVz(n) = (-lam/lam2mu*(E11+E22)+VzSrc(i,j)/lam2mu)/zeta_z(k)
+#ifdef AnisGene
+   E12=(DxVy(n)+DyVx(n)/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)
+   E33= matEh2Ev(1,1,i,j)*E11+matEh2Ev(1,2,i,j)*E22+matEh2Ev(1,3,i,j)*E12 &
+          +matF2Ev(1,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(1,2,i,j)*VySrc(i,j), &
+          +matF2Ev(1,3,i,j)*VxSrc(i,j)
+   E23= matEh2Ev(2,1,i,j)*E11+matEh2Ev(2,2,i,j)*E22+matEh2Ev(2,3,i,j)*E12 &
+          +matF2Ev(2,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(2,2,i,j)*VySrc(i,j), &
+          +matF2Ev(2,3,i,j)*VxSrc(i,j)
+   E13= matEh2Ev(3,1,i,j)*E11+matEh2Ev(3,2,i,j)*E22+matEh2Ev(3,3,i,j)*E12 &
+          +matF2Ev(3,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(3,2,i,j)*VySrc(i,j), &
+          +matF2Ev(3,3,i,j)*VxSrc(i,j)
+#else
+   E33=(-tc13*E11-tc23*E22+VzSrc(i,j))/tc33
+   E23=VySrc(i,j)/tc44
+   E13=VxSrc(i,j)/tc55
+#endif
+
+   DzVz(n) = E33/zeta_z(k)
+   DzVy(n) = (E23-DyVz(n)/z(k)/xsin(i)+Vy(i,j,k)/z(k))/zeta_z(k)
+   DzVx(n) = (E13-DxVz(n)/z(k)+Vx(i,j,k)/z(k))/zeta_z(k)
+
 
    !-- j=ny-LenFD+1:ny-1 --
 do n=LenFD,2,-1
@@ -2875,19 +4104,75 @@ do n=2,LenFD+1
    DzVx(n)=DzVx(n)*zeta_z(k)
    DzVy(n)=DzVy(n)*zeta_z(k)
    DzVz(n)=DzVz(n)*zeta_z(k)
-   lam=lambda(i,j,k);miu=mu(i,j,k);lam2mu=lam+2.0*miu;rrho=1.0/rho(i,j,k)
+
+#if defined AnisGene
+   tc11=C11(i,j,k)
+   tc12=C12(i,j,k)
+   tc13=C13(i,j,k)
+   tc14=C14(i,j,k)
+   tc15=C15(i,j,k)
+   tc16=C16(i,j,k)
+   tc22=C22(i,j,k)
+   tc23=C23(i,j,k)
+   tc24=C24(i,j,k)
+   tc25=C25(i,j,k)
+   tc26=C26(i,j,k)
+   tc33=C33(i,j,k)
+   tc34=C34(i,j,k)
+   tc35=C35(i,j,k)
+   tc36=C36(i,j,k)
+   tc44=C44(i,j,k)
+   tc45=C45(i,j,k)
+   tc46=C46(i,j,k)
+   tc55=C55(i,j,k)
+   tc56=C56(i,j,k)
+   tc66=C66(i,j,k)
+#elif defined AnisVTI
+   tc11=C11(i,j,k)
+   tc13=C13(i,j,k)
+   tc33=C33(i,j,k)
+   tc44=C44(i,j,k)
+   tc66=C66(i,j,k)
+
+   tc12=tc11-2.0_SP*tc66
+   tc22=tc11
+   tc23=tc13
+   tc55=tc44
+#else
+   tc13=C13(i,j,k)
+   tc66=C66(i,j,k)
+
+   tc11=tc13+2.0_SP*tc66
+   tc12=tc13
+   tc22=tc11
+   tc23=tc13
+   tc33=tc11
+   tc44=tc66
+   tc55=tc66
+#endif
+
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
    E33=DzVz(n)
    E12=(DxVy(n)+DyVx(n)/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)
    E13=(DxVz(n)/z(k)+DzVx(n)-Vx(i,j,k)/z(k))
    E23=(DyVz(n)/z(k)/xsin(i)+DzVy(n)-Vy(i,j,k)/z(k))
-   hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
-   hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
-   hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
-   hTxy(i,j,k)=miu*E12
-   hTxz(i,j,k)=miu*E13
-   hTyz(i,j,k)=miu*E23
+
+#ifdef AnisGene
+   hTxx(i,j,k)=tc11*E11+tc12*E22+tc13*E33+tc14*E23+tc15*E13+tc16*E12
+   hTyy(i,j,k)=tc12*E11+tc22*E22+tc23*E33+tc24*E23+tc25*E13+tc26*E12
+   hTzz(i,j,k)=tc13*E11+tc23*E22+tc33*E33+tc34*E23+tc35*E13+tc36*E12
+   hTyz(i,j,k)=tc14*E11+tc24*E22+tc34*E33+tc44*E23+tc45*E13+tc46*E12
+   hTxz(i,j,k)=tc15*E11+tc25*E22+tc35*E33+tc45*E23+tc55*E13+tc56*E12
+   hTxy(i,j,k)=tc16*E11+tc26*E22+tc36*E33+tc46*E23+tc56*E13+tc66*E12
+#else
+   hTxx(i,j,k)=tc11*E11+tc12*E22+tc13*E33
+   hTyy(i,j,k)=tc12*E11+tc22*E22+tc23*E33
+   hTzz(i,j,k)=tc13*E11+tc23*E22+tc33*E33
+   hTyz(i,j,k)=tc44*E23
+   hTxz(i,j,k)=         tc55*E13
+   hTxy(i,j,k)=                  tc66*E12
+#endif
    if (k==nk2) then
       hTxz(i,j,k)=VxSrc(i,j)
       hTyz(i,j,k)=VySrc(i,j)
@@ -2897,9 +4182,14 @@ end do
 end do loop_xi
 end do loop_eta
 end subroutine LxB_LyF_LzF_VHOC
+!-------------------------------------------------------------------------------
 subroutine LxF_LyB_LzB_VHOC
 integer :: i,j,k,n
-real(SP) :: lam,miu,lam2mu,rrho
+real(SP) :: tc11,tc12,tc13,tc22,tc23,tc33,tc44,tc55,tc66
+#ifdef AnisGene
+real(SP) :: tc14,tc15,tc16,tc24,tc25,tc26,tc34,tc35,tc36
+real(SP) :: tc45,tc46,tc56
+#endif
 real(SP) :: rhs_Dz,lhs_Dz
 real(SP),dimension(1:LenFD+1) :: DxVx,DxVy,DxVz, &
                              DyVx,DyVy,DyVz, &
@@ -2954,14 +4244,53 @@ loop_xi:  do i=ni1,ni2
      m3d_FDyB2(Vz,i,j,k) &
      )*eta_y(j)
 
-   lam=lambda(i,j,k);miu=mu(i,j,k);lam2mu=lam+2.0*miu;rrho=1.0/rho(i,j,k)
+#if ! defined AnisGene
+#if defined AnisVTI
+   tc13=C13(i,j,k)
+   tc33=C33(i,j,k)
+   tc44=C44(i,j,k)
+
+   tc23=tc13
+   tc55=tc44
+#else
+   tc13=C13(i,j,k)
+   tc66=C66(i,j,k)
+
+   tc11=tc13+2.0_SP*tc66
+   tc23=tc13
+   tc33=tc11
+   tc44=tc66
+   tc55=tc66
+#endif
+#endif
 
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
 
-   DzVx(n) = (-DxVz(n)/z(k)+Vx(i,j,k)/z(k)+VxSrc(i,j)/miu)/zeta_z(k)
-   DzVy(n) = (-DyVz(n)/z(k)/xsin(i)+Vy(i,j,k)/z(k)+VySrc(i,j)/miu)/zeta_z(k)
-   DzVz(n) = (-lam/lam2mu*(E11+E22)+VzSrc(i,j)/lam2mu)/zeta_z(k)
+#ifdef AnisGene
+   E12=(DxVy(n)+DyVx(n)/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)
+   E33= matEh2Ev(1,1,i,j)*E11+matEh2Ev(1,2,i,j)*E22+matEh2Ev(1,3,i,j)*E12 &
+          +matF2Ev(1,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(1,2,i,j)*VySrc(i,j), &
+          +matF2Ev(1,3,i,j)*VxSrc(i,j)
+   E23= matEh2Ev(2,1,i,j)*E11+matEh2Ev(2,2,i,j)*E22+matEh2Ev(2,3,i,j)*E12 &
+          +matF2Ev(2,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(2,2,i,j)*VySrc(i,j), &
+          +matF2Ev(2,3,i,j)*VxSrc(i,j)
+   E13= matEh2Ev(3,1,i,j)*E11+matEh2Ev(3,2,i,j)*E22+matEh2Ev(3,3,i,j)*E12 &
+          +matF2Ev(3,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(3,2,i,j)*VySrc(i,j), &
+          +matF2Ev(3,3,i,j)*VxSrc(i,j)
+#else
+   E33=(-tc13*E11-tc23*E22+VzSrc(i,j))/tc33
+   E23=VySrc(i,j)/tc44
+   E13=VxSrc(i,j)/tc55
+#endif
+
+   DzVz(n) = E33/zeta_z(k)
+   DzVy(n) = (E23-DyVz(n)/z(k)/xsin(i)+Vy(i,j,k)/z(k))/zeta_z(k)
+   DzVx(n) = (E13-DxVz(n)/z(k)+Vx(i,j,k)/z(k))/zeta_z(k)
+
 
    !-- k=nk2-LenFD+1:nk2-1 --
 do n=2,LenFD
@@ -3026,19 +4355,75 @@ do n=2,LenFD+1
    DzVx(n)=DzVx(n)*zeta_z(k)
    DzVy(n)=DzVy(n)*zeta_z(k)
    DzVz(n)=DzVz(n)*zeta_z(k)
-   lam=lambda(i,j,k);miu=mu(i,j,k);lam2mu=lam+2.0*miu;rrho=1.0/rho(i,j,k)
+
+#if defined AnisGene
+   tc11=C11(i,j,k)
+   tc12=C12(i,j,k)
+   tc13=C13(i,j,k)
+   tc14=C14(i,j,k)
+   tc15=C15(i,j,k)
+   tc16=C16(i,j,k)
+   tc22=C22(i,j,k)
+   tc23=C23(i,j,k)
+   tc24=C24(i,j,k)
+   tc25=C25(i,j,k)
+   tc26=C26(i,j,k)
+   tc33=C33(i,j,k)
+   tc34=C34(i,j,k)
+   tc35=C35(i,j,k)
+   tc36=C36(i,j,k)
+   tc44=C44(i,j,k)
+   tc45=C45(i,j,k)
+   tc46=C46(i,j,k)
+   tc55=C55(i,j,k)
+   tc56=C56(i,j,k)
+   tc66=C66(i,j,k)
+#elif defined AnisVTI
+   tc11=C11(i,j,k)
+   tc13=C13(i,j,k)
+   tc33=C33(i,j,k)
+   tc44=C44(i,j,k)
+   tc66=C66(i,j,k)
+
+   tc12=tc11-2.0_SP*tc66
+   tc22=tc11
+   tc23=tc13
+   tc55=tc44
+#else
+   tc13=C13(i,j,k)
+   tc66=C66(i,j,k)
+
+   tc11=tc13+2.0_SP*tc66
+   tc12=tc13
+   tc22=tc11
+   tc23=tc13
+   tc33=tc11
+   tc44=tc66
+   tc55=tc66
+#endif
+
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
    E33=DzVz(n)
    E12=(DxVy(n)+DyVx(n)/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)
    E13=(DxVz(n)/z(k)+DzVx(n)-Vx(i,j,k)/z(k))
    E23=(DyVz(n)/z(k)/xsin(i)+DzVy(n)-Vy(i,j,k)/z(k))
-   hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
-   hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
-   hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
-   hTxy(i,j,k)=miu*E12
-   hTxz(i,j,k)=miu*E13
-   hTyz(i,j,k)=miu*E23
+
+#ifdef AnisGene
+   hTxx(i,j,k)=tc11*E11+tc12*E22+tc13*E33+tc14*E23+tc15*E13+tc16*E12
+   hTyy(i,j,k)=tc12*E11+tc22*E22+tc23*E33+tc24*E23+tc25*E13+tc26*E12
+   hTzz(i,j,k)=tc13*E11+tc23*E22+tc33*E33+tc34*E23+tc35*E13+tc36*E12
+   hTyz(i,j,k)=tc14*E11+tc24*E22+tc34*E33+tc44*E23+tc45*E13+tc46*E12
+   hTxz(i,j,k)=tc15*E11+tc25*E22+tc35*E33+tc45*E23+tc55*E13+tc56*E12
+   hTxy(i,j,k)=tc16*E11+tc26*E22+tc36*E33+tc46*E23+tc56*E13+tc66*E12
+#else
+   hTxx(i,j,k)=tc11*E11+tc12*E22+tc13*E33
+   hTyy(i,j,k)=tc12*E11+tc22*E22+tc23*E33
+   hTzz(i,j,k)=tc13*E11+tc23*E22+tc33*E33
+   hTyz(i,j,k)=tc44*E23
+   hTxz(i,j,k)=         tc55*E13
+   hTxy(i,j,k)=                  tc66*E12
+#endif
    if (k==nk2) then
       hTxz(i,j,k)=VxSrc(i,j)
       hTyz(i,j,k)=VySrc(i,j)
@@ -3048,10 +4433,14 @@ end do
 end do loop_xi
 end do loop_eta
 end subroutine LxF_LyB_LzB_VHOC
-
+!-------------------------------------------------------------------------------
 subroutine LxF_LyB_LzF_VHOC
 integer :: i,j,k,n
-real(SP) :: lam,miu,lam2mu,rrho
+real(SP) :: tc11,tc12,tc13,tc22,tc23,tc33,tc44,tc55,tc66
+#ifdef AnisGene
+real(SP) :: tc14,tc15,tc16,tc24,tc25,tc26,tc34,tc35,tc36
+real(SP) :: tc45,tc46,tc56
+#endif
 real(SP) :: rhs_Dz,lhs_Dz
 real(SP),dimension(1:LenFD+1) :: DxVx,DxVy,DxVz, &
                              DyVx,DyVy,DyVz, &
@@ -3065,7 +4454,6 @@ loop_eta: do j=nj1,nj2
 loop_xi:  do i=ni1,ni2
    !-- k=nz --
    n=LenFD+1; k=nk2
-   lam=lambda(i,j,k);miu=mu(i,j,k);lam2mu=lam+2.0*miu;rrho=1.0/rho(i,j,k)
 
    DxVx(n) =  (          &
      m3d_FDxF1(Vx,i,j,k) &
@@ -3093,12 +4481,52 @@ loop_xi:  do i=ni1,ni2
      m3d_FDyB2(Vz,i,j,k) &
      )*eta_y(j)
 
+#if ! defined AnisGene
+#if defined AnisVTI
+   tc13=C13(i,j,k)
+   tc33=C33(i,j,k)
+   tc44=C44(i,j,k)
+
+   tc23=tc13
+   tc55=tc44
+#else
+   tc13=C13(i,j,k)
+   tc66=C66(i,j,k)
+
+   tc11=tc13+2.0_SP*tc66
+   tc23=tc13
+   tc33=tc11
+   tc44=tc66
+   tc55=tc66
+#endif
+#endif
+
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
 
-   DzVx(n) = (-DxVz(n)/z(k)+Vx(i,j,k)/z(k)+VxSrc(i,j)/miu)/zeta_z(k)
-   DzVy(n) = (-DyVz(n)/z(k)/xsin(i)+Vy(i,j,k)/z(k)+VySrc(i,j)/miu)/zeta_z(k)
-   DzVz(n) = (-lam/lam2mu*(E11+E22)+VzSrc(i,j)/lam2mu)/zeta_z(k)
+#ifdef AnisGene
+   E12=(DxVy(n)+DyVx(n)/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)
+   E33= matEh2Ev(1,1,i,j)*E11+matEh2Ev(1,2,i,j)*E22+matEh2Ev(1,3,i,j)*E12 &
+          +matF2Ev(1,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(1,2,i,j)*VySrc(i,j), &
+          +matF2Ev(1,3,i,j)*VxSrc(i,j)
+   E23= matEh2Ev(2,1,i,j)*E11+matEh2Ev(2,2,i,j)*E22+matEh2Ev(2,3,i,j)*E12 &
+          +matF2Ev(2,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(2,2,i,j)*VySrc(i,j), &
+          +matF2Ev(2,3,i,j)*VxSrc(i,j)
+   E13= matEh2Ev(3,1,i,j)*E11+matEh2Ev(3,2,i,j)*E22+matEh2Ev(3,3,i,j)*E12 &
+          +matF2Ev(3,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(3,2,i,j)*VySrc(i,j), &
+          +matF2Ev(3,3,i,j)*VxSrc(i,j)
+#else
+   E33=(-tc13*E11-tc23*E22+VzSrc(i,j))/tc33
+   E23=VySrc(i,j)/tc44
+   E13=VxSrc(i,j)/tc55
+#endif
+
+   DzVz(n) = E33/zeta_z(k)
+   DzVy(n) = (E23-DyVz(n)/z(k)/xsin(i)+Vy(i,j,k)/z(k))/zeta_z(k)
+   DzVx(n) = (E13-DxVz(n)/z(k)+Vx(i,j,k)/z(k))/zeta_z(k)
 
    !-- j=ny-LenFD+1:ny-1 --
 do n=LenFD,2,-1
@@ -3163,19 +4591,75 @@ do n=2,LenFD+1
    DzVx(n)=DzVx(n)*zeta_z(k)
    DzVy(n)=DzVy(n)*zeta_z(k)
    DzVz(n)=DzVz(n)*zeta_z(k)
-   lam=lambda(i,j,k);miu=mu(i,j,k);lam2mu=lam+2.0*miu;rrho=1.0/rho(i,j,k)
+
+#if defined AnisGene
+   tc11=C11(i,j,k)
+   tc12=C12(i,j,k)
+   tc13=C13(i,j,k)
+   tc14=C14(i,j,k)
+   tc15=C15(i,j,k)
+   tc16=C16(i,j,k)
+   tc22=C22(i,j,k)
+   tc23=C23(i,j,k)
+   tc24=C24(i,j,k)
+   tc25=C25(i,j,k)
+   tc26=C26(i,j,k)
+   tc33=C33(i,j,k)
+   tc34=C34(i,j,k)
+   tc35=C35(i,j,k)
+   tc36=C36(i,j,k)
+   tc44=C44(i,j,k)
+   tc45=C45(i,j,k)
+   tc46=C46(i,j,k)
+   tc55=C55(i,j,k)
+   tc56=C56(i,j,k)
+   tc66=C66(i,j,k)
+#elif defined AnisVTI
+   tc11=C11(i,j,k)
+   tc13=C13(i,j,k)
+   tc33=C33(i,j,k)
+   tc44=C44(i,j,k)
+   tc66=C66(i,j,k)
+
+   tc12=tc11-2.0_SP*tc66
+   tc22=tc11
+   tc23=tc13
+   tc55=tc44
+#else
+   tc13=C13(i,j,k)
+   tc66=C66(i,j,k)
+
+   tc11=tc13+2.0_SP*tc66
+   tc12=tc13
+   tc22=tc11
+   tc23=tc13
+   tc33=tc11
+   tc44=tc66
+   tc55=tc66
+#endif
+
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
    E33=DzVz(n)
    E12=(DxVy(n)+DyVx(n)/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)
    E13=(DxVz(n)/z(k)+DzVx(n)-Vx(i,j,k)/z(k))
    E23=(DyVz(n)/z(k)/xsin(i)+DzVy(n)-Vy(i,j,k)/z(k))
-   hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
-   hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
-   hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
-   hTxy(i,j,k)=miu*E12
-   hTxz(i,j,k)=miu*E13
-   hTyz(i,j,k)=miu*E23
+
+#ifdef AnisGene
+   hTxx(i,j,k)=tc11*E11+tc12*E22+tc13*E33+tc14*E23+tc15*E13+tc16*E12
+   hTyy(i,j,k)=tc12*E11+tc22*E22+tc23*E33+tc24*E23+tc25*E13+tc26*E12
+   hTzz(i,j,k)=tc13*E11+tc23*E22+tc33*E33+tc34*E23+tc35*E13+tc36*E12
+   hTyz(i,j,k)=tc14*E11+tc24*E22+tc34*E33+tc44*E23+tc45*E13+tc46*E12
+   hTxz(i,j,k)=tc15*E11+tc25*E22+tc35*E33+tc45*E23+tc55*E13+tc56*E12
+   hTxy(i,j,k)=tc16*E11+tc26*E22+tc36*E33+tc46*E23+tc56*E13+tc66*E12
+#else
+   hTxx(i,j,k)=tc11*E11+tc12*E22+tc13*E33
+   hTyy(i,j,k)=tc12*E11+tc22*E22+tc23*E33
+   hTzz(i,j,k)=tc13*E11+tc23*E22+tc33*E33
+   hTyz(i,j,k)=tc44*E23
+   hTxz(i,j,k)=         tc55*E13
+   hTxy(i,j,k)=                  tc66*E12
+#endif
    if (k==nk2) then
       hTxz(i,j,k)=VxSrc(i,j)
       hTyz(i,j,k)=VySrc(i,j)
@@ -3185,9 +4669,14 @@ end do
 end do loop_xi
 end do loop_eta
 end subroutine LxF_LyB_LzF_VHOC
+!-------------------------------------------------------------------------------
 subroutine LxB_LyF_LzB_VHOC
 integer :: i,j,k,n
-real(SP) :: lam,miu,lam2mu,rrho
+real(SP) :: tc11,tc12,tc13,tc22,tc23,tc33,tc44,tc55,tc66
+#ifdef AnisGene
+real(SP) :: tc14,tc15,tc16,tc24,tc25,tc26,tc34,tc35,tc36
+real(SP) :: tc45,tc46,tc56
+#endif
 real(SP) :: rhs_Dz,lhs_Dz
 real(SP),dimension(1:LenFD+1) :: DxVx,DxVy,DxVz, &
                              DyVx,DyVy,DyVz, &
@@ -3242,14 +4731,52 @@ loop_xi:  do i=ni1,ni2
      m3d_FDyF2(Vz,i,j,k) &
      )*eta_y(j)
 
-   lam=lambda(i,j,k);miu=mu(i,j,k);lam2mu=lam+2.0*miu;rrho=1.0/rho(i,j,k)
+#if ! defined AnisGene
+#if defined AnisVTI
+   tc13=C13(i,j,k)
+   tc33=C33(i,j,k)
+   tc44=C44(i,j,k)
+
+   tc23=tc13
+   tc55=tc44
+#else
+   tc13=C13(i,j,k)
+   tc66=C66(i,j,k)
+
+   tc11=tc13+2.0_SP*tc66
+   tc23=tc13
+   tc33=tc11
+   tc44=tc66
+   tc55=tc66
+#endif
+#endif
 
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
 
-   DzVx(n) = (-DxVz(n)/z(k)+Vx(i,j,k)/z(k)+VxSrc(i,j)/miu)/zeta_z(k)
-   DzVy(n) = (-DyVz(n)/z(k)/xsin(i)+Vy(i,j,k)/z(k)+VySrc(i,j)/miu)/zeta_z(k)
-   DzVz(n) = (-lam/lam2mu*(E11+E22)+VzSrc(i,j)/lam2mu)/zeta_z(k)
+#ifdef AnisGene
+   E12=(DxVy(n)+DyVx(n)/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)
+   E33= matEh2Ev(1,1,i,j)*E11+matEh2Ev(1,2,i,j)*E22+matEh2Ev(1,3,i,j)*E12 &
+          +matF2Ev(1,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(1,2,i,j)*VySrc(i,j), &
+          +matF2Ev(1,3,i,j)*VxSrc(i,j)
+   E23= matEh2Ev(2,1,i,j)*E11+matEh2Ev(2,2,i,j)*E22+matEh2Ev(2,3,i,j)*E12 &
+          +matF2Ev(2,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(2,2,i,j)*VySrc(i,j), &
+          +matF2Ev(2,3,i,j)*VxSrc(i,j)
+   E13= matEh2Ev(3,1,i,j)*E11+matEh2Ev(3,2,i,j)*E22+matEh2Ev(3,3,i,j)*E12 &
+          +matF2Ev(3,1,i,j)*VzSrc(i,j), &
+          +matF2Ev(3,2,i,j)*VySrc(i,j), &
+          +matF2Ev(3,3,i,j)*VxSrc(i,j)
+#else
+   E33=(-tc13*E11-tc23*E22+VzSrc(i,j))/tc33
+   E23=VySrc(i,j)/tc44
+   E13=VxSrc(i,j)/tc55
+#endif
+
+   DzVz(n) = E33/zeta_z(k)
+   DzVy(n) = (E23-DyVz(n)/z(k)/xsin(i)+Vy(i,j,k)/z(k))/zeta_z(k)
+   DzVx(n) = (E13-DxVz(n)/z(k)+Vx(i,j,k)/z(k))/zeta_z(k)
 
    !-- k=nk2-LenFD+1:nk2-1 --
 do n=2,LenFD
@@ -3314,19 +4841,75 @@ do n=2,LenFD+1
    DzVx(n)=DzVx(n)*zeta_z(k)
    DzVy(n)=DzVy(n)*zeta_z(k)
    DzVz(n)=DzVz(n)*zeta_z(k)
-   lam=lambda(i,j,k);miu=mu(i,j,k);lam2mu=lam+2.0*miu;rrho=1.0/rho(i,j,k)
+
+#if defined AnisGene
+   tc11=C11(i,j,k)
+   tc12=C12(i,j,k)
+   tc13=C13(i,j,k)
+   tc14=C14(i,j,k)
+   tc15=C15(i,j,k)
+   tc16=C16(i,j,k)
+   tc22=C22(i,j,k)
+   tc23=C23(i,j,k)
+   tc24=C24(i,j,k)
+   tc25=C25(i,j,k)
+   tc26=C26(i,j,k)
+   tc33=C33(i,j,k)
+   tc34=C34(i,j,k)
+   tc35=C35(i,j,k)
+   tc36=C36(i,j,k)
+   tc44=C44(i,j,k)
+   tc45=C45(i,j,k)
+   tc46=C46(i,j,k)
+   tc55=C55(i,j,k)
+   tc56=C56(i,j,k)
+   tc66=C66(i,j,k)
+#elif defined AnisVTI
+   tc11=C11(i,j,k)
+   tc13=C13(i,j,k)
+   tc33=C33(i,j,k)
+   tc44=C44(i,j,k)
+   tc66=C66(i,j,k)
+
+   tc12=tc11-2.0_SP*tc66
+   tc22=tc11
+   tc23=tc13
+   tc55=tc44
+#else
+   tc13=C13(i,j,k)
+   tc66=C66(i,j,k)
+
+   tc11=tc13+2.0_SP*tc66
+   tc12=tc13
+   tc22=tc11
+   tc23=tc13
+   tc33=tc11
+   tc44=tc66
+   tc55=tc66
+#endif
+
    E11=(DxVx(n)+Vz(i,j,k))/z(k)
    E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
    E33=DzVz(n)
    E12=(DxVy(n)+DyVx(n)/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)
    E13=(DxVz(n)/z(k)+DzVx(n)-Vx(i,j,k)/z(k))
    E23=(DyVz(n)/z(k)/xsin(i)+DzVy(n)-Vy(i,j,k)/z(k))
-   hTxx(i,j,k)=lam2mu*E11+lam*(E22+E33)
-   hTyy(i,j,k)=lam2mu*E22+lam*(E11+E33)
-   hTzz(i,j,k)=lam2mu*E33+lam*(E11+E22)
-   hTxy(i,j,k)=miu*E12
-   hTxz(i,j,k)=miu*E13
-   hTyz(i,j,k)=miu*E23
+
+#ifdef AnisGene
+   hTxx(i,j,k)=tc11*E11+tc12*E22+tc13*E33+tc14*E23+tc15*E13+tc16*E12
+   hTyy(i,j,k)=tc12*E11+tc22*E22+tc23*E33+tc24*E23+tc25*E13+tc26*E12
+   hTzz(i,j,k)=tc13*E11+tc23*E22+tc33*E33+tc34*E23+tc35*E13+tc36*E12
+   hTyz(i,j,k)=tc14*E11+tc24*E22+tc34*E33+tc44*E23+tc45*E13+tc46*E12
+   hTxz(i,j,k)=tc15*E11+tc25*E22+tc35*E33+tc45*E23+tc55*E13+tc56*E12
+   hTxy(i,j,k)=tc16*E11+tc26*E22+tc36*E33+tc46*E23+tc56*E13+tc66*E12
+#else
+   hTxx(i,j,k)=tc11*E11+tc12*E22+tc13*E33
+   hTyy(i,j,k)=tc12*E11+tc22*E22+tc23*E33
+   hTzz(i,j,k)=tc13*E11+tc23*E22+tc33*E33
+   hTyz(i,j,k)=tc44*E23
+   hTxz(i,j,k)=         tc55*E13
+   hTxy(i,j,k)=                  tc66*E12
+#endif
    if (k==nk2) then
       hTxz(i,j,k)=VxSrc(i,j)
       hTyz(i,j,k)=VySrc(i,j)
@@ -3336,9 +4919,12 @@ end do
 end do loop_xi
 end do loop_eta
 end subroutine LxB_LyF_LzB_VHOC
+!-------------------------------------------------------------------------------
 #endif
 
-subroutine free_charac
+!-------------------------------------------------------------------------------
+subroutine free_charac  !-- characteristic variable free surface boundary
+!-------------------------------------------------------------------------------
 integer i,j,k
 real(SP) v1,v2,v3,t11,t22,t33,t12,t13,t23
 real(SP) lam,miu,lam2mu,rrho,f1,f2,fct
@@ -3350,7 +4936,8 @@ if (.not. freenode) return
 do j=nj1,nj2
 do i=ni1,ni2
 
-   lam=lambda(i,j,k);miu=mu(i,j,k);lam2mu=lam+2.0*miu;rrho=rho(i,j,k)
+   lam=C13(i,j,k);miu=C66(i,j,k);lam2mu=lam+2.0*miu;
+   rrho=rho(i,j,k)
    f1=sqrt(rrho*lam2mu); f2=sqrt(rrho*miu); fct=lam/lam2mu
    v1 = Vx (i,j,k)
    v2 = Vy (i,j,k)
@@ -3373,9 +4960,13 @@ do i=ni1,ni2
    Tyz(i,j,k)=Ty
 end do
 end do
+!-------------------------------------------------------------------------------
 end subroutine free_charac
+!-------------------------------------------------------------------------------
 
-subroutine free_extrap
+!-------------------------------------------------------------------------------
+subroutine free_extrap  !--- extrapolate wavefield on grids above surface
+!-------------------------------------------------------------------------------
 integer i,j,k
 
 if (freenode) then
@@ -3395,8 +4986,13 @@ end do
 end do
 end do
 end if
+!-------------------------------------------------------------------------------
 end subroutine free_extrap
-subroutine free_vext
+!-------------------------------------------------------------------------------
+
+!-------------------------------------------------------------------------------
+subroutine free_vext  !--- only extrapolate velocity above surface
+!-------------------------------------------------------------------------------
 integer i,j,k
 
 if (freenode) then
@@ -3410,8 +5006,13 @@ end do
 end do
 end do
 end if
+!-------------------------------------------------------------------------------
 end subroutine free_vext
-subroutine free_timg
+!-------------------------------------------------------------------------------
+
+!-------------------------------------------------------------------------------
+subroutine free_timg  !--- stress imaging of stress
+!-------------------------------------------------------------------------------
 integer i,j,k
 
 if (freenode) then
@@ -3433,18 +5034,26 @@ do i=ni1,ni2
 end do
 end do
 end if
+!-------------------------------------------------------------------------------
 end subroutine free_timg
+!-------------------------------------------------------------------------------
 
-!--------------------------------------------------------------------}
-subroutine macdrp_mesg_init
+!-------------------------------------------------------------------------------
+subroutine macdrp_mesg_init  !--- initial the continuous communication
+!-------------------------------------------------------------------------------
   call mesg_init_LxF
   call mesg_init_LxB
   call mesg_init_LyF
   call mesg_init_LyB
   call mesg_init_LzF
   call mesg_init_LzB
+!-------------------------------------------------------------------------------
 end subroutine macdrp_mesg_init
+!-------------------------------------------------------------------------------
 
+!-------------------------------------------------------------------------------
+!--- message for each direction and forward or backward operator
+!-------------------------------------------------------------------------------
 subroutine mesg_init_LxF
 integer s1,s2,s3,s4,s5,s6,s7,s8,s9
 integer r1,r2,r3,r4,r5,r6,r7,r8,r9
@@ -3455,7 +5064,6 @@ call MPI_SEND_INIT(BufX2,NBufXS,SEISMPI_DATATYPE,neigid(1,2),1211,SWMPI_COMM,s2,
 call MPI_RECV_INIT(RevX1,NBufXS,SEISMPI_DATATYPE,neigid(1,1),1211,SWMPI_COMM,r2,ierr)
 reqXF=(/ s1,r1,s2,r2 /)
 #else
-! --- LxF ------------------------------------------------------------------
 ! to X1
 call MPI_SEND_INIT(Txx(ni1,ny1,nz1),1,DTypeXL,neigid(1,1),1131,SWMPI_COMM,s1,ierr)
 !call MPI_SEND_INIT(Tyy(ni1,ny1,nz1),1,DTypeXL,neigid(1,1),1132,SWMPI_COMM,s2,ierr)
@@ -3503,10 +5111,9 @@ call MPI_RECV_INIT(Vz (ni1-LenFDS,ny1,nz1),1,DTypeXS,neigid(1,1),1219,SWMPI_COMM
 ! put into array
 !reqXF(19:36)=(/ s1,r1,s2,r2,s3,r3,s4,r4,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
 reqXF(13:24)=(/ s1,r1,s4,r4,s5,r5,s7,r7,s8,r8,s9,r9 /)
-!---------------------------------------------------------------------------
 #endif
 end subroutine mesg_init_LxF
-
+!-------------------------------------------------------------------------------
 subroutine mesg_init_LxB
 integer s1,s2,s3,s4,s5,s6,s7,s8,s9
 integer r1,r2,r3,r4,r5,r6,r7,r8,r9
@@ -3517,7 +5124,6 @@ call MPI_SEND_INIT(BufX2,NBufXL,SEISMPI_DATATYPE,neigid(1,2),1231,SWMPI_COMM,s2,
 call MPI_RECV_INIT(RevX1,NBufXL,SEISMPI_DATATYPE,neigid(1,1),1231,SWMPI_COMM,r2,ierr)
 reqXB=(/ s1,r1,s2,r2 /)
 #else
-! --- LxB ------------------------------------------------------------------
 ! to X1
 call MPI_SEND_INIT(Txx(ni1,ny1,nz1),1,DTypeXS,neigid(1,1),1111,SWMPI_COMM,s1,ierr)
 !call MPI_SEND_INIT(Tyy(ni1,ny1,nz1),1,DTypeXS,neigid(1,1),1112,SWMPI_COMM,s2,ierr)
@@ -3565,10 +5171,9 @@ call MPI_RECV_INIT(Vz (ni1-LenFDL,ny1,nz1),1,DTypeXL,neigid(1,1),1239,SWMPI_COMM
 ! put into array
 !reqXB(19:36)=(/ s1,r1,s2,r2,s3,r3,s4,r4,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
 reqXB(13:24)=(/ s1,r1,s4,r4,s5,r5,s7,r7,s8,r8,s9,r9 /)
-!---------------------------------------------------------------------------
 #endif
 end subroutine mesg_init_LxB
-
+!-------------------------------------------------------------------------------
 subroutine mesg_init_LyF
 integer s1,s2,s3,s4,s5,s6,s7,s8,s9
 integer r1,r2,r3,r4,r5,r6,r7,r8,r9
@@ -3579,7 +5184,6 @@ call MPI_SEND_INIT(BufY2,NBufYS,SEISMPI_DATATYPE,neigid(2,2),2211,SWMPI_COMM,s2,
 call MPI_RECV_INIT(RevY1,NBufYS,SEISMPI_DATATYPE,neigid(2,1),2211,SWMPI_COMM,r2,ierr)
 reqYF=(/ s1,r1,s2,r2 /)
 #else
-! --- LyF ------------------------------------------------------------------
 ! to Y1
 !call MPI_SEND_INIT(Txx(nx1,nj1,nz1),1,DTypeYL,neigid(2,1),2131,SWMPI_COMM,s1,ierr)
 call MPI_SEND_INIT(Tyy(nx1,nj1,nz1),1,DTypeYL,neigid(2,1),2132,SWMPI_COMM,s2,ierr)
@@ -3628,10 +5232,9 @@ call MPI_RECV_INIT(Vz (nx1,nj1-LenFDS,nz1),1,DTypeYS,neigid(2,1),2219,SWMPI_COMM
 ! put into array
 !reqYF(19:36)=(/ s1,r1,s2,r2,s3,r3,s4,r4,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
 reqYF(13:24)=(/ s2,r2,s4,r4,s6,r6,s7,r7,s8,r8,s9,r9 /)
-!---------------------------------------------------------------------------
 #endif
 end subroutine mesg_init_LyF
-
+!-------------------------------------------------------------------------------
 subroutine mesg_init_LyB
 integer s1,s2,s3,s4,s5,s6,s7,s8,s9
 integer r1,r2,r3,r4,r5,r6,r7,r8,r9
@@ -3642,7 +5245,6 @@ call MPI_SEND_INIT(BufY2,NBufYL,SEISMPI_DATATYPE,neigid(2,2),2231,SWMPI_COMM,s2,
 call MPI_RECV_INIT(RevY1,NBufYL,SEISMPI_DATATYPE,neigid(2,1),2231,SWMPI_COMM,r2,ierr)
 reqYB=(/ s1,r1,s2,r2 /)
 #else
-! --- LyB ------------------------------------------------------------------
 ! to Y1
 !call MPI_SEND_INIT(Txx(nx1,nj1,nz1),1,DTypeYS,neigid(2,1),2111,SWMPI_COMM,s1,ierr)
 call MPI_SEND_INIT(Tyy(nx1,nj1,nz1),1,DTypeYS,neigid(2,1),2112,SWMPI_COMM,s2,ierr)
@@ -3690,10 +5292,9 @@ call MPI_RECV_INIT(Vz (nx1,nj1-LenFDL,nz1),1,DTypeYL,neigid(2,1),2239,SWMPI_COMM
 ! put into array
 !reqYB(19:36)=(/ s1,r1,s2,r2,s3,r3,s4,r4,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
 reqYB(13:24)=(/ s2,r2,s4,r4,s6,r6,s7,r7,s8,r8,s9,r9 /)
-!---------------------------------------------------------------------------
 #endif
 end subroutine mesg_init_LyB
-
+!-------------------------------------------------------------------------------
 subroutine mesg_init_LzF
 integer s1,s2,s3,s4,s5,s6,s7,s8,s9
 integer r1,r2,r3,r4,r5,r6,r7,r8,r9
@@ -3704,7 +5305,6 @@ call MPI_SEND_INIT(BufZ2,NBufZS,SEISMPI_DATATYPE,neigid(3,2),3211,SWMPI_COMM,s2,
 call MPI_RECV_INIT(RevZ1,NBufZS,SEISMPI_DATATYPE,neigid(3,1),3211,SWMPI_COMM,r2,ierr)
 reqZF=(/ s1,r1,s2,r2 /)
 #else
-! --- LzF ------------------------------------------------------------------
 !to Z1
 !call MPI_SEND_INIT(Txx(nx1,ny1,nk1),1,DTypeZL,neigid(3,1),3131,SWMPI_COMM,s1,ierr)
 !call MPI_SEND_INIT(Tyy(nx1,ny1,nk1),1,DTypeZL,neigid(3,1),3132,SWMPI_COMM,s2,ierr)
@@ -3752,10 +5352,9 @@ call MPI_RECV_INIT(Vz (nx1,ny1,nk1-LenFDS),1,DTypeZS,neigid(3,1),3219,SWMPI_COMM
 ! put into array
 !reqZF(19:36)=(/ s1,r1,s2,r2,s3,r3,s4,r4,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
 reqZF(13:24)=(/ s3,r3,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
-!---------------------------------------------------------------------------
 #endif
 end subroutine mesg_init_LzF
-
+!-------------------------------------------------------------------------------
 subroutine mesg_init_LzB
 integer s1,s2,s3,s4,s5,s6,s7,s8,s9
 integer r1,r2,r3,r4,r5,r6,r7,r8,r9
@@ -3766,7 +5365,6 @@ call MPI_SEND_INIT(BufZ2,NBufZL,SEISMPI_DATATYPE,neigid(3,2),3231,SWMPI_COMM,s2,
 call MPI_RECV_INIT(RevZ1,NBufZL,SEISMPI_DATATYPE,neigid(3,1),3231,SWMPI_COMM,r2,ierr)
 reqZB=(/ s1,r1,s2,r2 /)
 #else
-! --- LzB ------------------------------------------------------------------
 !to Z1
 !call MPI_SEND_INIT(Txx(nx1,ny1,nk1),1,DTypeZS,neigid(3,1),3111,SWMPI_COMM,s1,ierr)
 !call MPI_SEND_INIT(Tyy(nx1,ny1,nk1),1,DTypeZS,neigid(3,1),3112,SWMPI_COMM,s2,ierr)
@@ -3816,8 +5414,12 @@ call MPI_RECV_INIT(Vz (nx1,ny1,nk1-LenFDL),1,DTypeZL,neigid(3,1),3239,SWMPI_COMM
 reqZB(13:24)=(/ s3,r3,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
 #endif
 end subroutine mesg_init_LzB
+!-------------------------------------------------------------------------------
 
 #ifdef MPIBuffered
+!-------------------------------------------------------------------------------
+!--- buffered communication
+!-------------------------------------------------------------------------------
 subroutine fill_buff_LxF
 integer :: i,j,k,n
 ! to X1
@@ -3915,6 +5517,7 @@ end do
 end do
 end do
 end subroutine fill_buff_LxF
+!-------------------------------------------------------------------------------
 subroutine recv_buff_LxF
 integer :: i,j,k,n
 ! from X1
@@ -4012,7 +5615,7 @@ end do
 end do
 end do
 end subroutine recv_buff_LxF
-
+!-------------------------------------------------------------------------------
 subroutine fill_buff_LxB
 integer :: i,j,k,n
 ! to X1
@@ -4110,6 +5713,7 @@ end do
 end do
 end do
 end subroutine fill_buff_LxB
+!-------------------------------------------------------------------------------
 subroutine recv_buff_LxB
 integer :: i,j,k,n
 ! from X1
@@ -4207,7 +5811,7 @@ end do
 end do
 end do
 end subroutine recv_buff_LxB
-!---------------------------------------------------
+!-------------------------------------------------------------------------------
 subroutine fill_buff_LyF
 integer :: i,j,k,n
 ! to Y1
@@ -4305,6 +5909,7 @@ end do
 end do
 end do
 end subroutine fill_buff_LyF
+!-------------------------------------------------------------------------------
 subroutine recv_buff_LyF
 integer :: i,j,k,n
 ! from Y1
@@ -4402,6 +6007,7 @@ end do
 end do
 end do
 end subroutine recv_buff_LyF
+!-------------------------------------------------------------------------------
 subroutine fill_buff_LyB
 integer :: i,j,k,n
 ! to Y1
@@ -4499,6 +6105,7 @@ end do
 end do
 end do
 end subroutine fill_buff_LyB
+!-------------------------------------------------------------------------------
 subroutine recv_buff_LyB
 integer :: i,j,k,n
 ! from Y1
@@ -4596,7 +6203,7 @@ end do
 end do
 end do
 end subroutine recv_buff_LyB
-!---------------------------------------------------
+!-------------------------------------------------------------------------------
 subroutine fill_buff_LzF
 integer :: i,j,k,n
 ! to Z1
@@ -4694,6 +6301,7 @@ end do
 end do
 end do
 end subroutine fill_buff_LzF
+!-------------------------------------------------------------------------------
 subroutine recv_buff_LzF
 integer :: i,j,k,n
 ! from Z1
@@ -4791,7 +6399,7 @@ end do
 end do
 end do
 end subroutine recv_buff_LzF
-
+!-------------------------------------------------------------------------------
 subroutine fill_buff_LzB
 integer :: i,j,k,n
 ! to Z1
@@ -4889,6 +6497,7 @@ end do
 end do
 end do
 end subroutine fill_buff_LzB
+!-------------------------------------------------------------------------------
 subroutine recv_buff_LzB
 integer :: i,j,k,n
 ! from Z1
@@ -4986,8 +6595,92 @@ end do
 end do
 end do
 end subroutine recv_buff_LzB
-
+!-------------------------------------------------------------------------------
 #endif
+
+!===============================================================================
+subroutine macdrp_print_info(fid) 
+!===============================================================================
+
+!-------------------------------------------------------------------------------
+!-- Description:
+!-------------------------------------------------------------------------------
+!--   print variables and compiler macro
+
+!-------------------------------------------------------------------------------
+!-- Input arguments:
+!-------------------------------------------------------------------------------
+!--
+    integer,intent(in) :: fid        !-- id of opened info file
+
+!-------------------------------------------------------------------------------
+!-- Local variables:
+!-------------------------------------------------------------------------------
+
+    character (len=300) :: FFLAG     !-- compiler flag
+
+!-------------------------------------------------------------------------------
+!-- Entry point: 
+!-------------------------------------------------------------------------------
+
+    write(fid,*)
+    write(fid,"(a)") "#========================================================"
+    write(fid,"(a)") "Compiler MACRO used for macdrp_mod:"
+    write(fid,"(a)") "#========================================================"
+    FFLAG = ''
+
+!---- MPI or feather related
+#ifdef MPIBuffered
+    FFLAG = trim(FFLAG)//' -DMPIBuffered'
+#endif
+#ifdef MPIBARRIER
+    FFLAG = trim(FFLAG)//' -DMPIBARRIER'
+#endif
+#ifdef VERBOSE
+    FFLAG = trim(FFLAG)//' -DVERBOSE'
+#endif
+
+!---- medium related
+#ifdef AnisGene
+    FFLAG = trim(FFLAG)//' -DAnisGene'
+#endif
+#ifdef AnisVTI
+    FFLAG = trim(FFLAG)//' -DAnisVTI'
+#endif
+#ifdef WATER
+    FFLAG = trim(FFLAG)//' -DWATER'
+#endif
+
+!---- free surface boundary related
+#ifdef CondFreeCharac
+    FFLAG = trim(FFLAG)//' -DCondFreeCharac'
+#endif
+#ifdef CondFreeTIMG
+    FFLAG = trim(FFLAG)//' -DCondFreeTIMG'
+#endif
+#ifdef CondFreeVEXT
+    FFLAG = trim(FFLAG)//' -DCondFreeVEXT'
+#endif
+#ifdef CondFreeVHOC
+    FFLAG = trim(FFLAG)//' -DCondFreeVHOC'
+#endif
+#ifdef CondFreeVLOW
+    FFLAG = trim(FFLAG)//' -DCondFreeVLOW'
+#endif
+
+    !---- write FFLAG to the output file -----
+    write(fid,"(a)") "FFLAG = "//trim(FFLAG)
+    write(fid,*)
+
+    write(fid,"(a)") "#========================================================"
+    write(fid,"(a)") "Input parameter values in macdrp_mod:"
+    write(fid,"(a)") "#========================================================"
+    write(fid,"(a)") "  no input parameter"
+    write(fid,*)
+
+!===============================================================================
+end subroutine macdrp_print_info
+!===============================================================================
 
 end module macdrp_mod
 
