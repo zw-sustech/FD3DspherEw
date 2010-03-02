@@ -13,9 +13,6 @@ program seis3d_wave
 !
 !*****************************************************************************
 
-!#define USEPML
-#define PMLNT 1
-
 !{ -- declare module used --
 use mpi
 use para_mod
@@ -32,7 +29,8 @@ use omp_lib
 !} -- end declare module used ---
 
 implicit none
-integer ntime,ierr
+integer :: ntime,ierr
+integer :: fid_info  !-- fid for info file
 
 call MPI_INIT(ierr)
 
@@ -83,58 +81,87 @@ call OMP_SET_NUM_THREADS(2)
 #endif
 
 
-! 1-1A FFF
-! 8-4B FFB
+!-------------------------------------------------------------------------------
+!-- print info in each module
+!-------------------------------------------------------------------------------
+if ( masternode ) then
+
+    fid_info = 9101
+
+    !-- open info file --
+    call io_info_file_open(myid,fid_info)
+
+    !-- write info --
+    call io_print_info    (fid_info)
+    call macdrp_print_info(fid_info)
+
+    !-- close info file
+    call io_info_file_close(fid_info)
+end if
+!-------------------------------------------------------------------------------
+
+!-- seis3d_wave_8op_p3
 ! 5-1B BBB
+! 8-4B FFB
+! 1-1A FFF
 ! 4-4A BBF
 
-! 6-2B FBB
 ! 7-3B BFB
-! 2-2A BFF
+! 6-2B FBB
 ! 3-3A FBF
+! 2-2A BFF
 
 loop_time: do
 !-----------------------------------------------------------------------------
 
 if ( ntime>nt ) exit
 
-#ifdef USEPML
-if ( ntime< PMLNT .or. ntime >=2*PMLNT) then
-#endif
-! 1-1A FFF
-! {==========================================================================
+! 5-1B BBB
+! { ============================= third : lddrk4 =============================
 ! prepare
 call swmpi_time_write(ntime,filename_log)
 call macdrp_syn
 call abs_syn
 ! the 1th stage
 call set_cur_time(ntime,0.0_SP)
-call macdrp_LxF_LyF_LzF
-call abs_LxF_LyF_LzF
+#ifdef SrcSurface
+  call src_surface(ntime,0.0_SP,stept)
+#endif
+call macdrp_LxB_LyB_LzB
+call abs_LxB_LyB_LzB
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,0.0_SP,stept)
   call src_force(hVx,hVy,hVz,ntime,0.0_SP,stept)
 call macdrp_RK_beg(firRKa(1),firRKb(1))
 call abs_RK_beg(firRKa(1),firRKb(1))
 ! the 2th stage
 call set_cur_time(ntime,firRKa(1))
-call macdrp_LxB_LyB_LzB
-call abs_LxB_LyB_LzB
+#ifdef SrcSurface
+  call src_surface(ntime,firRKa(1),stept)
+#endif
+call macdrp_LxF_LyF_LzF
+call abs_LxF_LyF_LzF
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(1),stept)
   call src_force(hVx,hVy,hVz,ntime,firRKa(1),stept)
 call macdrp_RK_inn(firRKa(2),firRKb(2))
 call abs_RK_inn(firRKa(2),firRKb(2))
 ! the 3th stage
 call set_cur_time(ntime,firRKa(2))
-call macdrp_LxF_LyF_LzF
-call abs_LxF_LyF_LzF
+#ifdef SrcSurface
+  call src_surface(ntime,firRKa(2),stept)
+#endif
+call macdrp_LxB_LyB_LzB
+call abs_LxB_LyB_LzB
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(2),stept)
   call src_force(hVx,hVy,hVz,ntime,firRKa(2),stept)
 call macdrp_RK_inn(firRKa(3),firRKb(3))
 call abs_RK_inn(firRKa(3),firRKb(3))
 ! the 4th stage
 call set_cur_time(ntime,firRKa(3))
-call macdrp_LxB_LyB_LzB
-call abs_LxB_LyB_LzB
+#ifdef SrcSurface
+  call src_surface(ntime,firRKa(3),stept)
+#endif
+call macdrp_LxF_LyF_LzF
+call abs_LxF_LyF_LzF
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(3),stept)
   call src_force(hVx,hVy,hVz,ntime,firRKa(3),stept)
 call macdrp_RK_fin(firRKb(4))
@@ -148,6 +175,7 @@ call abs_RK_fin(firRKb(4))
 call macdrp_check(ntime)
 call io_seismo_put(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime)
 call io_wave_export(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,stept)
+call io_rest_export(Txx,Tyy,Tzz,Txy,Txz,Tyz,Vx,Vy,Vz,ntime)
 ! ========================================================================== }
 
 ! 8-4B FFB
@@ -158,6 +186,9 @@ call macdrp_syn
 call abs_syn
 ! the 1th stage
 call set_cur_time(ntime,0.0_SP)
+#ifdef SrcSurface
+  call src_surface(ntime,0.0_SP,stept)
+#endif
 call macdrp_LxF_LyF_LzB
 call abs_LxF_LyF_LzB
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,0.0_SP,stept)
@@ -166,6 +197,9 @@ call macdrp_RK_beg(firRKa(1),firRKb(1))
 call abs_RK_beg(firRKa(1),firRKb(1))
 ! the 2th stage
 call set_cur_time(ntime,firRKa(1))
+#ifdef SrcSurface
+  call src_surface(ntime,firRKa(1),stept)
+#endif
 call macdrp_LxB_LyB_LzF
 call abs_LxB_LyB_LzF
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(1),stept)
@@ -174,6 +208,9 @@ call macdrp_RK_inn(firRKa(2),firRKb(2))
 call abs_RK_inn(firRKa(2),firRKb(2))
 ! the 3th stage
 call set_cur_time(ntime,firRKa(2))
+#ifdef SrcSurface
+  call src_surface(ntime,firRKa(2),stept)
+#endif
 call macdrp_LxF_LyF_LzB
 call abs_LxF_LyF_LzB
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(2),stept)
@@ -182,6 +219,9 @@ call macdrp_RK_inn(firRKa(3),firRKb(3))
 call abs_RK_inn(firRKa(3),firRKb(3))
 ! the 4th stage
 call set_cur_time(ntime,firRKa(3))
+#ifdef SrcSurface
+  call src_surface(ntime,firRKa(3),stept)
+#endif
 call macdrp_LxB_LyB_LzF
 call abs_LxB_LyB_LzF
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(3),stept)
@@ -200,40 +240,52 @@ call io_wave_export(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,stept)
 call io_rest_export(Txx,Tyy,Tzz,Txy,Txz,Tyz,Vx,Vy,Vz,ntime)
 ! ========================================================================== }
 
-! 5-1B BBB
-! { ============================= third : lddrk4 =============================
+! 1-1A FFF
+! {==========================================================================
 ! prepare
 call swmpi_time_write(ntime,filename_log)
 call macdrp_syn
 call abs_syn
 ! the 1th stage
 call set_cur_time(ntime,0.0_SP)
-call macdrp_LxB_LyB_LzB
-call abs_LxB_LyB_LzB
+#ifdef SrcSurface
+  call src_surface(ntime,0.0_SP,stept)
+#endif
+call macdrp_LxF_LyF_LzF
+call abs_LxF_LyF_LzF
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,0.0_SP,stept)
   call src_force(hVx,hVy,hVz,ntime,0.0_SP,stept)
 call macdrp_RK_beg(firRKa(1),firRKb(1))
 call abs_RK_beg(firRKa(1),firRKb(1))
 ! the 2th stage
 call set_cur_time(ntime,firRKa(1))
-call macdrp_LxF_LyF_LzF
-call abs_LxF_LyF_LzF
+#ifdef SrcSurface
+  call src_surface(ntime,firRKa(1),stept)
+#endif
+call macdrp_LxB_LyB_LzB
+call abs_LxB_LyB_LzB
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(1),stept)
   call src_force(hVx,hVy,hVz,ntime,firRKa(1),stept)
 call macdrp_RK_inn(firRKa(2),firRKb(2))
 call abs_RK_inn(firRKa(2),firRKb(2))
 ! the 3th stage
 call set_cur_time(ntime,firRKa(2))
-call macdrp_LxB_LyB_LzB
-call abs_LxB_LyB_LzB
+#ifdef SrcSurface
+  call src_surface(ntime,firRKa(2),stept)
+#endif
+call macdrp_LxF_LyF_LzF
+call abs_LxF_LyF_LzF
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(2),stept)
   call src_force(hVx,hVy,hVz,ntime,firRKa(2),stept)
 call macdrp_RK_inn(firRKa(3),firRKb(3))
 call abs_RK_inn(firRKa(3),firRKb(3))
 ! the 4th stage
 call set_cur_time(ntime,firRKa(3))
-call macdrp_LxF_LyF_LzF
-call abs_LxF_LyF_LzF
+#ifdef SrcSurface
+  call src_surface(ntime,firRKa(3),stept)
+#endif
+call macdrp_LxB_LyB_LzB
+call abs_LxB_LyB_LzB
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(3),stept)
   call src_force(hVx,hVy,hVz,ntime,firRKa(3),stept)
 call macdrp_RK_fin(firRKb(4))
@@ -247,6 +299,7 @@ call abs_RK_fin(firRKb(4))
 call macdrp_check(ntime)
 call io_seismo_put(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime)
 call io_wave_export(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,stept)
+call io_rest_export(Txx,Tyy,Tzz,Txy,Txz,Tyz,Vx,Vy,Vz,ntime)
 ! ========================================================================== }
 
 ! 4-4A BBF
@@ -257,6 +310,9 @@ call macdrp_syn
 call abs_syn
 ! the 1th stage
 call set_cur_time(ntime,0.0_SP)
+#ifdef SrcSurface
+  call src_surface(ntime,0.0_SP,stept)
+#endif
 call macdrp_LxB_LyB_LzF
 call abs_LxB_LyB_LzF
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,0.0_SP,stept)
@@ -265,6 +321,9 @@ call macdrp_RK_beg(firRKa(1),firRKb(1))
 call abs_RK_beg(firRKa(1),firRKb(1))
 ! the 2th stage
 call set_cur_time(ntime,firRKa(1))
+#ifdef SrcSurface
+  call src_surface(ntime,firRKa(1),stept)
+#endif
 call macdrp_LxF_LyF_LzB
 call abs_LxF_LyF_LzB
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(1),stept)
@@ -273,6 +332,9 @@ call macdrp_RK_inn(firRKa(2),firRKb(2))
 call abs_RK_inn(firRKa(2),firRKb(2))
 ! the 3th stage
 call set_cur_time(ntime,firRKa(2))
+#ifdef SrcSurface
+  call src_surface(ntime,firRKa(2),stept)
+#endif
 call macdrp_LxB_LyB_LzF
 call abs_LxB_LyB_LzF
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(2),stept)
@@ -281,6 +343,9 @@ call macdrp_RK_inn(firRKa(3),firRKb(3))
 call abs_RK_inn(firRKa(3),firRKb(3))
 ! the 4th stage
 call set_cur_time(ntime,firRKa(3))
+#ifdef SrcSurface
+  call src_surface(ntime,firRKa(3),stept)
+#endif
 call macdrp_LxF_LyF_LzB
 call abs_LxF_LyF_LzB
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(3),stept)
@@ -299,9 +364,67 @@ call io_wave_export(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,stept)
 call io_rest_export(Txx,Tyy,Tzz,Txy,Txz,Tyz,Vx,Vy,Vz,ntime)
 ! ========================================================================== }
 
-#ifdef USEPML
-end if
-if (ntime>=PMLNT) then
+! 7-3B BFB
+! {==========================================================================
+! prepare
+call swmpi_time_write(ntime,filename_log)
+call macdrp_syn
+call abs_syn
+! the 1th stage
+call set_cur_time(ntime,0.0_SP)
+#ifdef SrcSurface
+  call src_surface(ntime,0.0_SP,stept)
+#endif
+call macdrp_LxB_LyF_LzB
+call abs_LxB_LyF_LzB
+  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,0.0_SP,stept)
+  call src_force(hVx,hVy,hVz,ntime,0.0_SP,stept)
+call macdrp_RK_beg(firRKa(1),firRKb(1))
+call abs_RK_beg(firRKa(1),firRKb(1))
+! the 2th stage
+call set_cur_time(ntime,firRKa(1))
+#ifdef SrcSurface
+  call src_surface(ntime,firRKa(1),stept)
+#endif
+call macdrp_LxF_LyB_LzF
+call abs_LxF_LyB_LzF
+  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(1),stept)
+  call src_force(hVx,hVy,hVz,ntime,firRKa(1),stept)
+call macdrp_RK_inn(firRKa(2),firRKb(2))
+call abs_RK_inn(firRKa(2),firRKb(2))
+! the 3th stage
+call set_cur_time(ntime,firRKa(2))
+#ifdef SrcSurface
+  call src_surface(ntime,firRKa(2),stept)
+#endif
+call macdrp_LxB_LyF_LzB
+call abs_LxB_LyF_LzB
+  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(2),stept)
+  call src_force(hVx,hVy,hVz,ntime,firRKa(2),stept)
+call macdrp_RK_inn(firRKa(3),firRKb(3))
+call abs_RK_inn(firRKa(3),firRKb(3))
+! the 4th stage
+call set_cur_time(ntime,firRKa(3))
+#ifdef SrcSurface
+  call src_surface(ntime,firRKa(3),stept)
+#endif
+call macdrp_LxF_LyB_LzF
+call abs_LxF_LyB_LzF
+  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(3),stept)
+  call src_force(hVx,hVy,hVz,ntime,firRKa(3),stept)
+call macdrp_RK_fin(firRKb(4))
+call abs_RK_fin(firRKb(4))
+#ifdef WITHQS
+ call atten_graves
+#endif
+
+! save result
+     ntime=ntime+1
+call macdrp_check(ntime)
+call io_seismo_put(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime)
+call io_wave_export(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,stept)
+call io_rest_export(Txx,Tyy,Tzz,Txy,Txz,Tyz,Vx,Vy,Vz,ntime)
+! ========================================================================== }
 
 ! 6-2B FBB
 ! {==========================================================================
@@ -311,6 +434,9 @@ call macdrp_syn
 call abs_syn
 ! the 1th stage
 call set_cur_time(ntime,0.0_SP)
+#ifdef SrcSurface
+  call src_surface(ntime,0.0_SP,stept)
+#endif
 call macdrp_LxF_LyB_LzB
 call abs_LxF_LyB_LzB
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,0.0_SP,stept)
@@ -319,6 +445,9 @@ call macdrp_RK_beg(firRKa(1),firRKb(1))
 call abs_RK_beg(firRKa(1),firRKb(1))
 ! the 2th stage
 call set_cur_time(ntime,firRKa(1))
+#ifdef SrcSurface
+  call src_surface(ntime,firRKa(1),stept)
+#endif
 call macdrp_LxB_LyF_LzF
 call abs_LxB_LyF_LzF
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(1),stept)
@@ -327,6 +456,9 @@ call macdrp_RK_inn(firRKa(2),firRKb(2))
 call abs_RK_inn(firRKa(2),firRKb(2))
 ! the 3th stage
 call set_cur_time(ntime,firRKa(2))
+#ifdef SrcSurface
+  call src_surface(ntime,firRKa(2),stept)
+#endif
 call macdrp_LxF_LyB_LzB
 call abs_LxF_LyB_LzB
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(2),stept)
@@ -335,6 +467,9 @@ call macdrp_RK_inn(firRKa(3),firRKb(3))
 call abs_RK_inn(firRKa(3),firRKb(3))
 ! the 4th stage
 call set_cur_time(ntime,firRKa(3))
+#ifdef SrcSurface
+  call src_surface(ntime,firRKa(3),stept)
+#endif
 call macdrp_LxB_LyF_LzF
 call abs_LxB_LyF_LzF
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(3),stept)
@@ -350,104 +485,7 @@ call abs_RK_fin(firRKb(4))
 call macdrp_check(ntime)
 call io_seismo_put(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime)
 call io_wave_export(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,stept)
-! ========================================================================== }
-
-! 7-3B BFB
-! {==========================================================================
-! prepare
-call swmpi_time_write(ntime,filename_log)
-call macdrp_syn
-call abs_syn
-! the 1th stage
-call set_cur_time(ntime,0.0_SP)
-call macdrp_LxB_LyF_LzB
-call abs_LxB_LyF_LzB
-  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,0.0_SP,stept)
-  call src_force(hVx,hVy,hVz,ntime,0.0_SP,stept)
-call macdrp_RK_beg(firRKa(1),firRKb(1))
-call abs_RK_beg(firRKa(1),firRKb(1))
-! the 2th stage
-call set_cur_time(ntime,firRKa(1))
-call macdrp_LxF_LyB_LzF
-call abs_LxF_LyB_LzF
-  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(1),stept)
-  call src_force(hVx,hVy,hVz,ntime,firRKa(1),stept)
-call macdrp_RK_inn(firRKa(2),firRKb(2))
-call abs_RK_inn(firRKa(2),firRKb(2))
-! the 3th stage
-call set_cur_time(ntime,firRKa(2))
-call macdrp_LxB_LyF_LzB
-call abs_LxB_LyF_LzB
-  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(2),stept)
-  call src_force(hVx,hVy,hVz,ntime,firRKa(2),stept)
-call macdrp_RK_inn(firRKa(3),firRKb(3))
-call abs_RK_inn(firRKa(3),firRKb(3))
-! the 4th stage
-call set_cur_time(ntime,firRKa(3))
-call macdrp_LxF_LyB_LzF
-call abs_LxF_LyB_LzF
-  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(3),stept)
-  call src_force(hVx,hVy,hVz,ntime,firRKa(3),stept)
-call macdrp_RK_fin(firRKb(4))
-call abs_RK_fin(firRKb(4))
-#ifdef WITHQS
- call atten_graves
-#endif
-
-! save result
-     ntime=ntime+1
-call macdrp_check(ntime)
-call io_seismo_put(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime)
-call io_wave_export(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,stept)
-! ========================================================================== }
-
-! 2-2A BFF
-! {==========================================================================
-! prepare
-call swmpi_time_write(ntime,filename_log)
-call macdrp_syn
-call abs_syn
-! the 1th stage
-call set_cur_time(ntime,0.0_SP)
-call macdrp_LxB_LyF_LzF
-call abs_LxB_LyF_LzF
-  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,0.0_SP,stept)
-  call src_force(hVx,hVy,hVz,ntime,0.0_SP,stept)
-call macdrp_RK_beg(firRKa(1),firRKb(1))
-call abs_RK_beg(firRKa(1),firRKb(1))
-! the 2th stage
-call set_cur_time(ntime,firRKa(1))
-call macdrp_LxF_LyB_LzB
-call abs_LxF_LyB_LzB
-  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(1),stept)
-  call src_force(hVx,hVy,hVz,ntime,firRKa(1),stept)
-call macdrp_RK_inn(firRKa(2),firRKb(2))
-call abs_RK_inn(firRKa(2),firRKb(2))
-! the 3th stage
-call set_cur_time(ntime,firRKa(2))
-call macdrp_LxB_LyF_LzF
-call abs_LxB_LyF_LzF
-  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(2),stept)
-  call src_force(hVx,hVy,hVz,ntime,firRKa(2),stept)
-call macdrp_RK_inn(firRKa(3),firRKb(3))
-call abs_RK_inn(firRKa(3),firRKb(3))
-! the 4th stage
-call set_cur_time(ntime,firRKa(3))
-call macdrp_LxF_LyB_LzB
-call abs_LxF_LyB_LzB
-  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(3),stept)
-  call src_force(hVx,hVy,hVz,ntime,firRKa(3),stept)
-call macdrp_RK_fin(firRKb(4))
-call abs_RK_fin(firRKb(4))
-#ifdef WITHQS
- call atten_graves
-#endif
-
-! save result
-     ntime=ntime+1
-call macdrp_check(ntime)
-call io_seismo_put(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime)
-call io_wave_export(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,stept)
+call io_rest_export(Txx,Tyy,Tzz,Txy,Txz,Tyz,Vx,Vy,Vz,ntime)
 ! ========================================================================== }
 
 ! 3-3A FBF
@@ -458,6 +496,9 @@ call macdrp_syn
 call abs_syn
 ! the 1th stage
 call set_cur_time(ntime,0.0_SP)
+#ifdef SrcSurface
+  call src_surface(ntime,0.0_SP,stept)
+#endif
 call macdrp_LxF_LyB_LzF
 call abs_LxF_LyB_LzF
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,0.0_SP,stept)
@@ -466,6 +507,9 @@ call macdrp_RK_beg(firRKa(1),firRKb(1))
 call abs_RK_beg(firRKa(1),firRKb(1))
 ! the 2th stage
 call set_cur_time(ntime,firRKa(1))
+#ifdef SrcSurface
+  call src_surface(ntime,firRKa(1),stept)
+#endif
 call macdrp_LxB_LyF_LzB
 call abs_LxB_LyF_LzB
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(1),stept)
@@ -474,6 +518,9 @@ call macdrp_RK_inn(firRKa(2),firRKb(2))
 call abs_RK_inn(firRKa(2),firRKb(2))
 ! the 3th stage
 call set_cur_time(ntime,firRKa(2))
+#ifdef SrcSurface
+  call src_surface(ntime,firRKa(2),stept)
+#endif
 call macdrp_LxF_LyB_LzF
 call abs_LxF_LyB_LzF
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(2),stept)
@@ -482,6 +529,9 @@ call macdrp_RK_inn(firRKa(3),firRKb(3))
 call abs_RK_inn(firRKa(3),firRKb(3))
 ! the 4th stage
 call set_cur_time(ntime,firRKa(3))
+#ifdef SrcSurface
+  call src_surface(ntime,firRKa(3),stept)
+#endif
 call macdrp_LxB_LyF_LzB
 call abs_LxB_LyF_LzB
   call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(3),stept)
@@ -497,10 +547,70 @@ call abs_RK_fin(firRKb(4))
 call macdrp_check(ntime)
 call io_seismo_put(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime)
 call io_wave_export(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,stept)
+call io_rest_export(Txx,Tyy,Tzz,Txy,Txz,Tyz,Vx,Vy,Vz,ntime)
 ! ========================================================================== }
 
-end if
+! 2-2A BFF
+! {==========================================================================
+! prepare
+call swmpi_time_write(ntime,filename_log)
+call macdrp_syn
+call abs_syn
+! the 1th stage
+call set_cur_time(ntime,0.0_SP)
+#ifdef SrcSurface
+  call src_surface(ntime,0.0_SP,stept)
 #endif
+call macdrp_LxB_LyF_LzF
+call abs_LxB_LyF_LzF
+  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,0.0_SP,stept)
+  call src_force(hVx,hVy,hVz,ntime,0.0_SP,stept)
+call macdrp_RK_beg(firRKa(1),firRKb(1))
+call abs_RK_beg(firRKa(1),firRKb(1))
+! the 2th stage
+call set_cur_time(ntime,firRKa(1))
+#ifdef SrcSurface
+  call src_surface(ntime,firRKa(1),stept)
+#endif
+call macdrp_LxF_LyB_LzB
+call abs_LxF_LyB_LzB
+  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(1),stept)
+  call src_force(hVx,hVy,hVz,ntime,firRKa(1),stept)
+call macdrp_RK_inn(firRKa(2),firRKb(2))
+call abs_RK_inn(firRKa(2),firRKb(2))
+! the 3th stage
+call set_cur_time(ntime,firRKa(2))
+#ifdef SrcSurface
+  call src_surface(ntime,firRKa(2),stept)
+#endif
+call macdrp_LxB_LyF_LzF
+call abs_LxB_LyF_LzF
+  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(2),stept)
+  call src_force(hVx,hVy,hVz,ntime,firRKa(2),stept)
+call macdrp_RK_inn(firRKa(3),firRKb(3))
+call abs_RK_inn(firRKa(3),firRKb(3))
+! the 4th stage
+call set_cur_time(ntime,firRKa(3))
+#ifdef SrcSurface
+  call src_surface(ntime,firRKa(3),stept)
+#endif
+call macdrp_LxF_LyB_LzB
+call abs_LxF_LyB_LzB
+  call src_stress(hTxx,hTyy,hTzz,hTxy,hTxz,hTyz,ntime,firRKa(3),stept)
+  call src_force(hVx,hVy,hVz,ntime,firRKa(3),stept)
+call macdrp_RK_fin(firRKb(4))
+call abs_RK_fin(firRKb(4))
+#ifdef WITHQS
+ call atten_graves
+#endif
+
+! save result
+     ntime=ntime+1
+call macdrp_check(ntime)
+call io_seismo_put(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime)
+call io_wave_export(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,stept)
+call io_rest_export(Txx,Tyy,Tzz,Txy,Txz,Tyz,Vx,Vy,Vz,ntime)
+! ========================================================================== }
 
 !-----------------------------------------------------------------------------
 end do loop_time
