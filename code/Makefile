@@ -25,36 +25,38 @@ WHEREAMI := uri
 STATIC := ON
 #GETARG := ON
 #VERBOSE :=ON
+CheckOverFlow := ON
 
 #MPITOPO1D :=ON
 #MPIBARRIER := ON
 #USEOMP :=ON
+#MPIBuffered := ON
 
-#USEPML := ON
+USEPML := ON
 #WITHQS := ON
 #DataTypeDouble := ON
 
-SrcSmooth :=ON
+#AnisVTI := ON
+#AnisGene := ON
+
+#SrcSmooth :=ON
+SrcSurface := ON
 
 #CondFreeCharac := ON
 CondFreeTIMG := ON
-#CondFreeVHOC := ON
-CondFreeVLOW := ON
+CondFreeVHOC := ON
+#CondFreeVLOW := ON
 #CondFreeVEXT := ON
 
-DFLAG_LIST := DEBUG STATIC GETARG VERBOSE \
-			  MPITOPO1D USEOMP MPIBARRIER DataTypeDouble \
-              USEPML WITHQS SrcSmooth  \
+DFLAG_LIST := DEBUG STATIC GETARG VERBOSE CheckOverFlow \
+			  MPITOPO1D USEOMP MPIBARRIER MPIBuffered DataTypeDouble \
+              USEPML WITHQS SrcSmooth SrcSurface \
+              AnisVTI AnisGene \
 			  CondFreeCharac CondFreeTIMG \
               CondFreeVHOC CondFreeVEXT CondFreeVLOW
 
 DFLAGS := $(foreach flag,$(DFLAG_LIST),$(if $($(flag)),-D$(flag),)) $(DFLAGS)
 DFLAGS := $(strip $(DFLAGS))
-
-MediaMPI  := ON
-KernelMPI := ON
-#KernelInfoMPI := ON
-#KernelAssmMPI := ON
 
 #######################################################################
 #            directories, source files and target names               #
@@ -123,7 +125,8 @@ include Makefile.opt.$(WHEREAMI)
 phony_list := skel all preprocess solver postprocess
 .PHONY: $(phony_list)
 
-all: skel preprocess solver kernel
+all: skel preprocess solver
+#all: skel preprocess solver kernel
 #all: skel preprocess solver postprocess kernel
 
 preprocess: $(BINDIR)/$(EXE_GRID)  \
@@ -173,6 +176,9 @@ distclean: cleanexe cleanobj cleanf90
 
 seis3d_media_mpi.f90: seis3d_media.F90
 	$(FPP) $(FPPINCS) $(FPPFLAGS) -DMediaMPI $< > $(SRCDIR)/$(@F)
+
+seis3d_wave.f90: seis3d_wave_8op_p3.F90
+	$(FPP) $(FPPINCS) $(FPPFLAGS) $< > $(SRCDIR)/$(@F)
 
 %.f90 : %.F90
 	$(FPP) $(FPPFLAGS) $< > $(SRCDIR)/$(@F)
