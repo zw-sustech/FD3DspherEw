@@ -1,6 +1,8 @@
 module para_mod
 
+!------------------------------------------------------------------------------
 ! This module declares parameters variables
+!------------------------------------------------------------------------------
 !
 ! Author: Wei ZHANG     Email: zhangwei.zw@gmail.com
 ! Copyright (C) 2006 Wei ZHANG
@@ -168,6 +170,11 @@ function loct_ijk(ijk) result(indx)
   indx(2)=ijk(2)+ny1-1
   indx(3)=ijk(3)+nz1-1
 end function loct_ijk
+
+!-------------------------------------------------------------------------------
+subroutine print_info
+!--- 
+end subroutine print_info
 
 end module para_mod
 
