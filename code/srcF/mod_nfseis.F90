@@ -45,6 +45,7 @@ interface nfseis_varget
    module procedure nfseis_varget_real2d
    module procedure nfseis_varget_real3d
    module procedure nfseis_varget_real4d
+   module procedure nfseis_varget_real5d
 end interface
 
 interface nfseis_varput
@@ -921,6 +922,29 @@ ierr=nf90_close(ncid)
      if (ierr /= nf90_noerr) &
      call nfseis_except(ierr,'file close in vargut_real4d')
 end subroutine nfseis_varget_real4d
+subroutine nfseis_varget_real5d(filenm,varnm,var,subs,subc,subt)
+character (len=*),intent(in) :: filenm,varnm
+real(SP),dimension(:,:,:,:,:),intent(out) :: var
+integer,dimension(:),intent(in) :: subs,subc,subt
+integer :: ierr,ncid,varid
+! open
+ierr=nf90_open(trim(filenm),NF90_NOWRITE,ncid)
+     if (ierr /= nf90_noerr) &
+     call nfseis_except(ierr,'vargut_real5d:'//trim(filenm))
+ierr=nf90_inq_varid(ncid, varnm, varid)
+     if (ierr /= nf90_noerr) &
+     call nfseis_except(ierr,'var name in vargut_real5d:'//trim(varnm))
+ierr=nf90_get_var(ncid,varid,var,subs,subc,subt)
+     if (ierr /= nf90_noerr) then
+     print *, 'subs=',subs
+     print *, 'subc=',subc
+     print *, 'subt=',subt
+     call nfseis_except(ierr,'vargut_real5d error:'//trim(filenm))
+     end if
+ierr=nf90_close(ncid)
+     if (ierr /= nf90_noerr) &
+     call nfseis_except(ierr,'file close in vargut_real5d')
+end subroutine nfseis_varget_real5d
 
 ! --- get att ---
 subroutine nfseis_attget_int(filenm,attnm,att)
