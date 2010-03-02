@@ -76,7 +76,7 @@ ntime=0
 
 call io_rest_import(Txx,Tyy,Tzz,Txy,Txz,Tyz,Vx,Vy,Vz,ntime)
 
-call swmpi_time_init(fnm_log,ntime)
+call swmpi_time_init(filename_log,ntime)
 
 #ifdef WithOMP
 call OMP_SET_NUM_THREADS(2)
@@ -104,7 +104,7 @@ if ( ntime< PMLNT .or. ntime >=2*PMLNT) then
 ! 1-1A FFF
 ! {==========================================================================
 ! prepare
-call swmpi_time_write(ntime,fnm_log)
+call swmpi_time_write(ntime,filename_log)
 call macdrp_syn
 call abs_syn
 ! the 1th stage
@@ -153,7 +153,7 @@ call io_wave_export(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,stept)
 ! 8-4B FFB
 ! {==========================================================================
 ! prepare
-call swmpi_time_write(ntime,fnm_log)
+call swmpi_time_write(ntime,filename_log)
 call macdrp_syn
 call abs_syn
 ! the 1th stage
@@ -203,7 +203,7 @@ call io_rest_export(Txx,Tyy,Tzz,Txy,Txz,Tyz,Vx,Vy,Vz,ntime)
 ! 5-1B BBB
 ! { ============================= third : lddrk4 =============================
 ! prepare
-call swmpi_time_write(ntime,fnm_log)
+call swmpi_time_write(ntime,filename_log)
 call macdrp_syn
 call abs_syn
 ! the 1th stage
@@ -252,7 +252,7 @@ call io_wave_export(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,stept)
 ! 4-4A BBF
 ! { ============================= forth : lddrk4 =============================
 ! prepare
-call swmpi_time_write(ntime,fnm_log)
+call swmpi_time_write(ntime,filename_log)
 call macdrp_syn
 call abs_syn
 ! the 1th stage
@@ -306,7 +306,7 @@ if (ntime>=PMLNT) then
 ! 6-2B FBB
 ! {==========================================================================
 ! prepare
-call swmpi_time_write(ntime,fnm_log)
+call swmpi_time_write(ntime,filename_log)
 call macdrp_syn
 call abs_syn
 ! the 1th stage
@@ -355,7 +355,7 @@ call io_wave_export(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,stept)
 ! 7-3B BFB
 ! {==========================================================================
 ! prepare
-call swmpi_time_write(ntime,fnm_log)
+call swmpi_time_write(ntime,filename_log)
 call macdrp_syn
 call abs_syn
 ! the 1th stage
@@ -404,7 +404,7 @@ call io_wave_export(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,stept)
 ! 2-2A BFF
 ! {==========================================================================
 ! prepare
-call swmpi_time_write(ntime,fnm_log)
+call swmpi_time_write(ntime,filename_log)
 call macdrp_syn
 call abs_syn
 ! the 1th stage
@@ -453,7 +453,7 @@ call io_wave_export(Vx,Vy,Vz,Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,stept)
 ! 3-3A FBF
 ! {==========================================================================
 ! prepare
-call swmpi_time_write(ntime,fnm_log)
+call swmpi_time_write(ntime,filename_log)
 call macdrp_syn
 call abs_syn
 ! the 1th stage
@@ -507,7 +507,7 @@ end do loop_time
 
 call io_seismo_close
 call io_wave_close
-call swmpi_time_end(fnm_log)
+call swmpi_time_end(filename_log)
 
 call macdrp_destroy
 call grid_dealloc
