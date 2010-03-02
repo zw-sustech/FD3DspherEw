@@ -102,7 +102,7 @@ contains
 !-----------------------------------------------------------------------------
 
 subroutine abs_init(fnm_conf)
-use mpi_mod, only : absnode
+use mpi_mod, only : absnode,freenode
 character (len=*),intent(in) :: fnm_conf
 integer fid,n,m,i,j,k
 real(SP),dimension(SEIS_GEO,2) :: Vs
@@ -122,6 +122,11 @@ end if
 end do
 end do
 close(fid)
+
+!=== if layer >0, deset freenode ===
+if (abs_number(3,2)>0 .and. freenode) then
+   freenode=.false.
+end if
 
 do n=1,num_blk
    W(n)%isabs=.false.
