@@ -34,9 +34,12 @@ public :: seismo_on_this,retrieve_recvline
 public :: retrieve_snap_seis,retrieve_snap_time
 public :: corr_subse,corr_indx
 public :: read_nc_list
+public :: io_info_file_open, io_info_file_close, io_print_info
 
 character (len=SEIS_STRLEN),public ::        &
-    fnm_log
+    filename_log,        &  !-- file name to keep runtime time info
+    filename_info      !-- file name to write compiling and module information
+
 
 !---------------------------------------------
 integer,public :: num_recv,num_line,num_snap,num_pt
@@ -82,10 +85,14 @@ integer pt_ncid,pt_tid,pt_vid(SEIS_GEO),pt_sid(6)
 integer rest_tinv,run_from_rest
 integer :: nt_dyn_rest, nt_dyn_sync, nt_dyn_new
 
-!---------------------------------------------------------------------------
+!===============================================================================
+!===============================================================================
+
 contains
-!---------------------------------------------------------------------------
+
+!===============================================================================
 subroutine io_init(fnm_input)
+
 character (len=*),intent(in) :: fnm_input
 integer :: fid
 
@@ -95,7 +102,9 @@ open(fid,file=trim(fnm_input),status="old")
 call string_conf(fid,1,'OUTPUT_ROOT',2,pnm_out)
 call string_conf(fid,1,'STATION_ROOT',2,pnm_station)
 !-- log file --
-call string_conf(fid,1,'fnm_log',2,fnm_log)
+call string_conf(fid,1,'fnm_log',2,filename_log)
+!call string_conf(fid,1,'fnm_log',2,filename_log)
+filename_info = "seis3d_wave.info"
 
 !-- restart --
 call string_conf(fid,1,'CHECKPOINT_ROOT',2,pnm_rest)
@@ -106,10 +115,71 @@ nt_dyn_rest=0; nt_dyn_sync=0;
 
 close(fid)
 end subroutine io_init
+!===============================================================================
 
-!---------------------------------------------------------------------------
 
+!===============================================================================
+subroutine io_info_file_open(myid,fid)
+
+!-------------------------------------------------------------------------------
+!-- Description:
+!-------------------------------------------------------------------------------
+!--   open info file
+
+!-------------------------------------------------------------------------------
+!-- ToDo:
+!-------------------------------------------------------------------------------
+!--   use myid to generate file name
+
+!-------------------------------------------------------------------------------
+!-- Input arguments:
+!-------------------------------------------------------------------------------
+!--
+    integer,intent(in)    :: myid   !-- MPI thread ID
+
+!-------------------------------------------------------------------------------
+!-- Output arguments:
+!-------------------------------------------------------------------------------
+!--
+    integer,intent(inout) :: fid    !--- file id of the opened file
+
+!-------------------------------------------------------------------------------
+!-- Entry point: 
+!-------------------------------------------------------------------------------
+!-
+    open(fid,file=trim(filename_info),status='unknown')
+
+end subroutine io_info_file_open
+!===============================================================================
+
+
+!===============================================================================
+subroutine io_info_file_close(fid)
+
+!-------------------------------------------------------------------------------
+!-- Description:
+!-------------------------------------------------------------------------------
+!--   close info file
+
+!-------------------------------------------------------------------------------
+!-- Input arguments:
+!-------------------------------------------------------------------------------
+!--
+    integer,intent(in) :: fid    !--- file id of the opened file
+
+!-------------------------------------------------------------------------------
+!-- Entry point: 
+!-------------------------------------------------------------------------------
+!-
+    close(fid)
+
+end subroutine io_info_file_close
+!===============================================================================
+
+
+!===============================================================================
 subroutine io_pt_read(fnm_input)
+
 character (len=*),intent(in) :: fnm_input
 real(SP),dimension(SEIS_GEO) :: xyz0,dxyz
 integer :: fid,n,m,npt
@@ -895,6 +965,68 @@ fid=5001
 open(fid,file=trim(filenm),status='unknown')
 close(fid,status='delete')
 end subroutine io_delete
+
+!===============================================================================
+subroutine io_print_info(fid) 
+
+!-------------------------------------------------------------------------------
+!-- Description:
+!-------------------------------------------------------------------------------
+!--   print variables and compiler macro
+
+!-------------------------------------------------------------------------------
+!-- ToDo:
+!-------------------------------------------------------------------------------
+!--   print snap and station info, maybe each info file each thread
+
+!-------------------------------------------------------------------------------
+!-- Input arguments:
+!-------------------------------------------------------------------------------
+!--
+    integer,intent(in) :: fid        !-- id of opened info file
+
+!-------------------------------------------------------------------------------
+!-- Local variables:
+!-------------------------------------------------------------------------------
+
+    character (len=300) :: FFLAG     !-- compiler flag
+
+!-------------------------------------------------------------------------------
+!-- Entry point: 
+!-------------------------------------------------------------------------------
+
+    write(fid,*)
+    write(fid,"(a)") "#========================================================"
+    write(fid,"(a)") "Compiler MACRO used for io_mod:"
+    FFLAG = ''
+
+    !---- write FFLAG to the output file -----
+    write(fid,"(a)") "FFLAG = "//trim(FFLAG)
+    write(fid,*)
+
+!-------------------------------------------------------------------------------
+    write(fid,"(a)") "Input parameter values in io_mod:"
+!-------------------------------------------------------------------------------
+    write(fid,"(a)")     "OUTPUT_ROOT               = "//trim(pnm_out)
+    write(fid,"(a)")     "STATION_ROOT              = "//trim(pnm_station)
+    write(fid,"(a)")     "fnm_log                   = "//trim(filename_log)
+    write(fid,"(a)")     "CHECKPOINT_ROOT           = "//trim(pnm_rest)
+    write(fid,"(a)")     "urgent_checkpoint         = "//trim(fnm_rest_point)
+    write(fid,"(a,i6)")  "checkpoint_tinv           = ", rest_tinv
+    write(fid,"(a,i6)")  "run_from_checkpoint       = ", run_from_rest
+    write(fid,*)
+
+    !write(fid,"(a,i6)")  'number_of_recv            =',  num_recv
+    !write(fid,"(a,i6)")  'number_of_inline          =',  num_line
+    !write(fid,"(a,i6)")  'tinv_of_seismo            =',  pt_tinv
+    !write(fid,"(a,f )")  'topo_hyper_height         =',  topo_hyper_height
+    write(fid,"(a,i6)")  'number_of_sta_in_thread   =',  num_pt
+    write(fid,"(a,i6)")  'tinv_of_seismo            =',  pt_tinv
+    write(fid,"(a,i6)")  'number_of_snap_in_thread  =',  num_snap
+    write(fid,*)
+
+end subroutine io_print_info
+!===============================================================================
 
 end module io_mod
 
