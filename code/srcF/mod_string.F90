@@ -1,41 +1,61 @@
 module string_mod
 
+!-------------------------------------------------------------------------------
+! Description:
+!-------------------------------------------------------------------------------
+!
 ! This module deals with text files and string converting
 !
 ! Author: Wei ZHANG     Email: zhangwei.zw@gmail.com
 ! Copyright (C) 2006 Wei ZHANG
-
-!*****************************************************************************
+!
+!-------------------------------------------------------------------------------
+! Time stamp, log, version:
+!-------------------------------------------------------------------------------
 !
 ! $Date$
 ! $Revision$
 ! $LastChangedBy$
 !
-!*****************************************************************************
+!-------------------------------------------------------------------------------
 
-implicit none
-private
-public :: string_conf
-public :: string_enum
+!-------------------------------------------------------------------------------
+! Public interface and variables:
+!-------------------------------------------------------------------------------
+    implicit none
+    private
+    public :: string_conf
+    public :: string_enum
+    
+    interface string_conf
+      module procedure get_conf_real,    &
+                       get_conf_double,  &
+                       get_conf_integer, &
+                       get_conf_logical, &
+                       get_conf_character
+    end interface
 
-interface string_conf
-  module procedure get_conf_real,    &
-                   get_conf_double,  &
-                   get_conf_integer, &
-                   get_conf_logical, &
-                   get_conf_character
-end interface
+!-------------------------------------------------------------------------------
+! Module variables:
+!-------------------------------------------------------------------------------
+    integer,parameter :: END_OF_LINE=-2
+    integer,parameter :: END_OF_FILE=-1
+    integer,parameter :: INF_IN_FILE=-3
+    integer,parameter :: SEIS_STRLEN=300
 
-integer,parameter :: END_OF_LINE=-2
-integer,parameter :: END_OF_FILE=-1
-integer,parameter :: INF_IN_FILE=-3
-integer,parameter :: SEIS_STRLEN=300
+!===============================================================================
+! subroutine and functions in this module
+!===============================================================================
 
 contains
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!===============================================================================
 !!! analyse string
+!===============================================================================
+
+!-------------------------------------------------------------------------------
 subroutine blank_punct(text)
+!-------------------------------------------------------------------------------
     implicit none
     character (len=*),intent(inout) :: text
     character (len=*),parameter :: &
@@ -52,9 +72,13 @@ subroutine blank_punct(text)
           text(i:i)=" "
        end if
     end do
+!-------------------------------------------------------------------------------
 end subroutine blank_punct
+!-------------------------------------------------------------------------------
 
+!-------------------------------------------------------------------------------
 subroutine compress_bb(text)
+!-------------------------------------------------------------------------------
     character (len=*), intent(inout) :: text
     integer :: i
     do
@@ -63,9 +87,13 @@ subroutine compress_bb(text)
         if (i==0) exit
         text(i:)=text(i+1:)
     end do
+!-------------------------------------------------------------------------------
 end subroutine compress_bb
+!-------------------------------------------------------------------------------
 
+!-------------------------------------------------------------------------------
 function count_word(text) result(n)
+!-------------------------------------------------------------------------------
     character (len=*),intent(inout) :: text
     character (len=SEIS_STRLEN) :: str
     integer n,end_of_word
@@ -83,9 +111,13 @@ function count_word(text) result(n)
           str=str(end_of_word+2:)
        end do
     end if
+!-------------------------------------------------------------------------------
 end function count_word
+!-------------------------------------------------------------------------------
 
+!-------------------------------------------------------------------------------
 function get_part_str(text,col,flag) result(str)
+!-------------------------------------------------------------------------------
     character (len=*),intent(in) :: text
     integer col
     character (len=SEIS_STRLEN) :: str,tmpstr
@@ -109,44 +141,71 @@ function get_part_str(text,col,flag) result(str)
           tmpstr=tmpstr(end_of_word+2:)
        end do
     end if
+!-------------------------------------------------------------------------------
 end function get_part_str
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!-------------------------------------------------------------------------------
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!===============================================================================
 !!! convert nth part of str to datatype !!!
+!===============================================================================
+
+!-------------------------------------------------------------------------------
 subroutine convert_str_integer(text,n,gdata)
+!-------------------------------------------------------------------------------
     character (len=*),intent(in) :: text
     integer gdata
     integer n
     character (len=SEIS_STRLEN) :: str
     str=get_part_str(text,n,.true.)
     read(str,*) gdata
+!-------------------------------------------------------------------------------
 end subroutine convert_str_integer
+!-------------------------------------------------------------------------------
+
+!-------------------------------------------------------------------------------
 subroutine convert_str_real(text,n,gdata)
+!-------------------------------------------------------------------------------
     character (len=*),intent(in) :: text
     real gdata
     integer n
     character (len=SEIS_STRLEN) :: str
     str=get_part_str(text,n,.true.)
     read(str,*) gdata
+!-------------------------------------------------------------------------------
 end subroutine convert_str_real
+!-------------------------------------------------------------------------------
+
+!-------------------------------------------------------------------------------
 subroutine convert_str_logical(text,n,gdata)
+!-------------------------------------------------------------------------------
     character (len=*),intent(in) :: text
     logical gdata
     integer n
     character (len=SEIS_STRLEN) :: str
     str=get_part_str(text,n,.true.)
     read(str,*) gdata
+!-------------------------------------------------------------------------------
 end subroutine convert_str_logical
+!-------------------------------------------------------------------------------
+
+!-------------------------------------------------------------------------------
 subroutine convert_str_character(text,n,gdata)
+!-------------------------------------------------------------------------------
     character (len=*),intent(in) :: text
     character (len=*) :: gdata
     integer n
     gdata=get_part_str(text,n,.true.)
+!-------------------------------------------------------------------------------
 end subroutine convert_str_character
+!-------------------------------------------------------------------------------
 
+!===============================================================================
 !!! read record from conf file !!!
+!===============================================================================
+
+!-------------------------------------------------------------------------------
 subroutine get_conf_line(fid,gstr)
+!-------------------------------------------------------------------------------
     character (len=*) :: gstr
     character (len=8) :: fmt_str
     integer err,fid
@@ -161,9 +220,13 @@ subroutine get_conf_line(fid,gstr)
         call compress_bb(gstr)
         if ( len_trim(gstr)/=0 ) exit
     end do
+!-------------------------------------------------------------------------------
 end subroutine get_conf_line
+!-------------------------------------------------------------------------------
 
+!-------------------------------------------------------------------------------
 subroutine strip_conf_file(fid,kcol,kword,gcol,gstr)
+!-------------------------------------------------------------------------------
     integer ::  &
         fid,    &
         kcol,   &   !key column
@@ -195,12 +258,17 @@ subroutine strip_conf_file(fid,kcol,kword,gcol,gstr)
            exit
         end if
     end do
+!-------------------------------------------------------------------------------
 end subroutine strip_conf_file
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!-------------------------------------------------------------------------------
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!===============================================================================
 !!! shell of strip_conf_file, to convert the gstr to datatype !!!
+!===============================================================================
+
+!-------------------------------------------------------------------------------
 subroutine get_conf_double(fid,kcol,kword,gcol,gdata)
+!-------------------------------------------------------------------------------
     integer ::  &
         fid,    &
         kcol,   &   !key column
@@ -212,8 +280,13 @@ subroutine get_conf_double(fid,kcol,kword,gcol,gdata)
         gstr
     call strip_conf_file(fid,kcol,kword,gcol,gstr)
     read(gstr,*) gdata
+!-------------------------------------------------------------------------------
 end subroutine get_conf_double
+!-------------------------------------------------------------------------------
+
+!-------------------------------------------------------------------------------
 subroutine get_conf_real(fid,kcol,kword,gcol,gdata)
+!-------------------------------------------------------------------------------
     integer ::  &
         fid,    &
         kcol,   &   !key column
@@ -225,8 +298,13 @@ subroutine get_conf_real(fid,kcol,kword,gcol,gdata)
         gstr
     call strip_conf_file(fid,kcol,kword,gcol,gstr)
     read(gstr,*) gdata
+!-------------------------------------------------------------------------------
 end subroutine get_conf_real
+!-------------------------------------------------------------------------------
+
+!-------------------------------------------------------------------------------
 subroutine get_conf_integer(fid,kcol,kword,gcol,gdata)
+!-------------------------------------------------------------------------------
     integer ::  &
         fid,    &
         kcol,   &   !key column
@@ -238,8 +316,13 @@ subroutine get_conf_integer(fid,kcol,kword,gcol,gdata)
         gstr
     call strip_conf_file(fid,kcol,kword,gcol,gstr)
     read(gstr,*) gdata
+!-------------------------------------------------------------------------------
 end subroutine get_conf_integer
+!-------------------------------------------------------------------------------
+
+!-------------------------------------------------------------------------------
 subroutine get_conf_logical(fid,kcol,kword,gcol,gdata)
+!-------------------------------------------------------------------------------
     integer ::  &
         fid,    &
         kcol,   &   !key column
@@ -251,8 +334,13 @@ subroutine get_conf_logical(fid,kcol,kword,gcol,gdata)
         gstr
     call strip_conf_file(fid,kcol,kword,gcol,gstr)
     read(gstr,*) gdata
+!-------------------------------------------------------------------------------
 end subroutine get_conf_logical
+!-------------------------------------------------------------------------------
+
+!-------------------------------------------------------------------------------
 subroutine get_conf_character(fid,kcol,kword,gcol,gstr)
+!-------------------------------------------------------------------------------
     integer ::  &
         fid,    &
         kcol,   &   !key column
@@ -261,10 +349,13 @@ subroutine get_conf_character(fid,kcol,kword,gcol,gstr)
         kword,           &
         gstr
     call strip_conf_file(fid,kcol,kword,gcol,gstr)
+!-------------------------------------------------------------------------------
 end subroutine get_conf_character
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!-------------------------------------------------------------------------------
 
+!-------------------------------------------------------------------------------
 function string_enum(n,width) result(str)
+!-------------------------------------------------------------------------------
 integer n
 integer,optional :: width
 character (len=SEIS_STRLEN) :: str,fmt_str
@@ -275,7 +366,9 @@ else
    fmt_str="(i3.3)"
 end if
 write(str,fmt_str) n
+!-------------------------------------------------------------------------------
 end function string_enum
+!-------------------------------------------------------------------------------
 
 end module string_mod
 

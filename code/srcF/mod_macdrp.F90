@@ -190,100 +190,100 @@ subroutine macdrp_init
 !-- Entry point: 
 !-------------------------------------------------------------------------------
 !-
-  allocate( Txx(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr);  Txx=0.0_SP
-  allocate( Tyy(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr);  Tyy=0.0_SP
-  allocate( Txy(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr);  Txy=0.0_SP
-  allocate( Vx (nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr);  Vx =0.0_SP
-  allocate( Vy (nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr);  Vy =0.0_SP
-  allocate( Tzz(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr);  Tzz=0.0_SP
-  allocate( Txz(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr);  Txz=0.0_SP
-  allocate( Tyz(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr);  Tyz=0.0_SP
-  allocate( Vz (nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr);  Vz =0.0_SP
-  allocate(hTxx(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); hTxx=0.0_SP
-  allocate(hTyy(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); hTyy=0.0_SP
-  allocate(hTxy(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); hTxy=0.0_SP
-  allocate(hVx (nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); hVx =0.0_SP
-  allocate(hVy (nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); hVy =0.0_SP
-  allocate(hTzz(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); hTzz=0.0_SP
-  allocate(hTxz(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); hTxz=0.0_SP
-  allocate(hTyz(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); hTyz=0.0_SP
-  allocate(hVz (nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); hVz =0.0_SP
-  allocate(mTxx(ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); mTxx=0.0_SP
-  allocate(mTyy(ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); mTyy=0.0_SP
-  allocate(mTxy(ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); mTxy=0.0_SP
-  allocate(mVx (ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); mVx =0.0_SP
-  allocate(mVy (ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); mVy =0.0_SP
-  allocate(mTzz(ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); mTzz=0.0_SP
-  allocate(mTxz(ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); mTxz=0.0_SP
-  allocate(mTyz(ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); mTyz=0.0_SP
-  allocate(mVz (ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); mVz =0.0_SP
-  allocate(tTxx(ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); tTxx=0.0_SP
-  allocate(tTyy(ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); tTyy=0.0_SP
-  allocate(tTxy(ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); tTxy=0.0_SP
-  allocate(tVx (ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); tVx =0.0_SP
-  allocate(tVy (ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); tVy =0.0_SP
-  allocate(tTzz(ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); tTzz=0.0_SP
-  allocate(tTxz(ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); tTxz=0.0_SP
-  allocate(tTyz(ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); tTyz=0.0_SP
-  allocate(tVz (ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); tVz =0.0_SP
-  if (ierr>0) then
-     print *, "can't allocate variable in macdrp_init"
-     stop 1
-  end if
-  allocate(TxSrc(nx1:nx2,ny1:ny2),stat=ierr); TxSrc=0.0_SP
-  allocate(TySrc(nx1:nx2,ny1:ny2),stat=ierr); TySrc=0.0_SP
-  allocate(TzSrc(nx1:nx2,ny1:ny2),stat=ierr); TzSrc=0.0_SP
-  allocate(VxSrc(nx1:nx2,ny1:ny2),stat=ierr); VxSrc=0.0_SP
-  allocate(VySrc(nx1:nx2,ny1:ny2),stat=ierr); VySrc=0.0_SP
-  allocate(VzSrc(nx1:nx2,ny1:ny2),stat=ierr); VzSrc=0.0_SP
+    allocate( Txx(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr);  Txx=0.0_SP
+    allocate( Tyy(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr);  Tyy=0.0_SP
+    allocate( Txy(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr);  Txy=0.0_SP
+    allocate( Vx (nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr);  Vx =0.0_SP
+    allocate( Vy (nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr);  Vy =0.0_SP
+    allocate( Tzz(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr);  Tzz=0.0_SP
+    allocate( Txz(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr);  Txz=0.0_SP
+    allocate( Tyz(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr);  Tyz=0.0_SP
+    allocate( Vz (nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr);  Vz =0.0_SP
+    allocate(hTxx(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); hTxx=0.0_SP
+    allocate(hTyy(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); hTyy=0.0_SP
+    allocate(hTxy(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); hTxy=0.0_SP
+    allocate(hVx (nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); hVx =0.0_SP
+    allocate(hVy (nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); hVy =0.0_SP
+    allocate(hTzz(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); hTzz=0.0_SP
+    allocate(hTxz(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); hTxz=0.0_SP
+    allocate(hTyz(nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); hTyz=0.0_SP
+    allocate(hVz (nx1:nx2,ny1:ny2,nz1:nz2),stat=ierr); hVz =0.0_SP
+    allocate(mTxx(ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); mTxx=0.0_SP
+    allocate(mTyy(ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); mTyy=0.0_SP
+    allocate(mTxy(ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); mTxy=0.0_SP
+    allocate(mVx (ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); mVx =0.0_SP
+    allocate(mVy (ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); mVy =0.0_SP
+    allocate(mTzz(ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); mTzz=0.0_SP
+    allocate(mTxz(ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); mTxz=0.0_SP
+    allocate(mTyz(ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); mTyz=0.0_SP
+    allocate(mVz (ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); mVz =0.0_SP
+    allocate(tTxx(ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); tTxx=0.0_SP
+    allocate(tTyy(ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); tTyy=0.0_SP
+    allocate(tTxy(ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); tTxy=0.0_SP
+    allocate(tVx (ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); tVx =0.0_SP
+    allocate(tVy (ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); tVy =0.0_SP
+    allocate(tTzz(ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); tTzz=0.0_SP
+    allocate(tTxz(ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); tTxz=0.0_SP
+    allocate(tTyz(ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); tTyz=0.0_SP
+    allocate(tVz (ni1:ni2,nj1:nj2,nk1:nk2),stat=ierr); tVz =0.0_SP
+    if (ierr>0) then
+       print *, "can't allocate variable in macdrp_init"
+       stop 1
+    end if
+    allocate(TxSrc(nx1:nx2,ny1:ny2),stat=ierr); TxSrc=0.0_SP
+    allocate(TySrc(nx1:nx2,ny1:ny2),stat=ierr); TySrc=0.0_SP
+    allocate(TzSrc(nx1:nx2,ny1:ny2),stat=ierr); TzSrc=0.0_SP
+    allocate(VxSrc(nx1:nx2,ny1:ny2),stat=ierr); VxSrc=0.0_SP
+    allocate(VySrc(nx1:nx2,ny1:ny2),stat=ierr); VySrc=0.0_SP
+    allocate(VzSrc(nx1:nx2,ny1:ny2),stat=ierr); VzSrc=0.0_SP
 #ifdef MPIBuffered
-  allocate(BufX1(LenFD*nj*nk*6),stat=ierr); BufX1=0.0_SP
-  allocate(BufX2(LenFD*nj*nk*6),stat=ierr); BufX2=0.0_SP
-  allocate(BufY1(LenFD*ni*nk*6),stat=ierr); BufY1=0.0_SP
-  allocate(BufY2(LenFD*ni*nk*6),stat=ierr); BufY2=0.0_SP
-  allocate(BufZ1(LenFD*ni*nj*6),stat=ierr); BufZ1=0.0_SP
-  allocate(BufZ2(LenFD*ni*nj*6),stat=ierr); BufZ2=0.0_SP
-  allocate(RevX1(LenFD*nj*nk*6),stat=ierr); RevX1=0.0_SP
-  allocate(RevX2(LenFD*nj*nk*6),stat=ierr); RevX2=0.0_SP
-  allocate(RevY1(LenFD*ni*nk*6),stat=ierr); RevY1=0.0_SP
-  allocate(RevY2(LenFD*ni*nk*6),stat=ierr); RevY2=0.0_SP
-  allocate(RevZ1(LenFD*ni*nj*6),stat=ierr); RevZ1=0.0_SP
-  allocate(RevZ2(LenFD*ni*nj*6),stat=ierr); RevZ2=0.0_SP
-  NBufXL=nj*nk*LenFDL*6
-  NBufXS=nj*nk*LenFDS*6
-  NBufYL=ni*nk*LenFDL*6
-  NBufYS=ni*nk*LenFDS*6
-  NBufZL=ni*nj*LenFDL*6
-  NBufZS=ni*nj*LenFDS*6
+    allocate(BufX1(LenFD*nj*nk*6),stat=ierr); BufX1=0.0_SP
+    allocate(BufX2(LenFD*nj*nk*6),stat=ierr); BufX2=0.0_SP
+    allocate(BufY1(LenFD*ni*nk*6),stat=ierr); BufY1=0.0_SP
+    allocate(BufY2(LenFD*ni*nk*6),stat=ierr); BufY2=0.0_SP
+    allocate(BufZ1(LenFD*ni*nj*6),stat=ierr); BufZ1=0.0_SP
+    allocate(BufZ2(LenFD*ni*nj*6),stat=ierr); BufZ2=0.0_SP
+    allocate(RevX1(LenFD*nj*nk*6),stat=ierr); RevX1=0.0_SP
+    allocate(RevX2(LenFD*nj*nk*6),stat=ierr); RevX2=0.0_SP
+    allocate(RevY1(LenFD*ni*nk*6),stat=ierr); RevY1=0.0_SP
+    allocate(RevY2(LenFD*ni*nk*6),stat=ierr); RevY2=0.0_SP
+    allocate(RevZ1(LenFD*ni*nj*6),stat=ierr); RevZ1=0.0_SP
+    allocate(RevZ2(LenFD*ni*nj*6),stat=ierr); RevZ2=0.0_SP
+    NBufXL=nj*nk*LenFDL*6
+    NBufXS=nj*nk*LenFDS*6
+    NBufYL=ni*nk*LenFDL*6
+    NBufYS=ni*nk*LenFDS*6
+    NBufZL=ni*nj*LenFDL*6
+    NBufZS=ni*nj*LenFDS*6
 #endif
 
-! main
-  indx(:,SEIS_GEO*2+1)=(/ ni1+LenFD,ni2-LenFD, &
-                          nj1+LenFD,nj2-LenFD, &
-                          nk1+LenFD,nk2-LenFD /)
-  indx(:,SEIS_GEO*2  )=(/ ni1,ni2,nj1,nj2,nk2-LenFD+1,nk2 /) ! z2
-  indx(:,SEIS_GEO*2-1)=(/ ni1,ni2,nj1,nj2,nk1,nk1+LenFD-1 /) ! z1
-  indx(:,1)=(/ ni1,ni2,nj1,nj1+LenFD-1,nk1+LenFD,nk2-LenFD /) ! y1
-  indx(:,2)=(/ ni1,ni2,nj2-LenFD+1,nj2,nk1+LenFD,nk2-LenFD /) ! y2
-  indx(:,3)=(/ ni1,ni1+LenFD-1,nj1+LenFD,nj2-LenFD,nk1+LenFD,nk2-LenFD /) ! x1
-  indx(:,4)=(/ ni2-LenFD+1,ni2,nj1+LenFD,nj2-LenFD,nk1+LenFD,nk2-LenFD /) ! x2
-! rk coefficient
-  firRKa=(/ RK4a2, RK4a3, RK4a4, 0.0 /)
-  firRKb=(/ RK4b1, RK4b2, RK4b3, RK4b4 /)
-  !secRKa=(/ RK4a2, RK4a3, RK4a4, 0.0 /)
-  !secRKb=(/ RK4b1, RK4b2, RK4b3, RK4b4 /)
-  secRKa=(/ RK2a2, 0.0, 0.0, 0.0 /)
-  secRKb=(/ RK2b1, RK2b2, 0.0, 0.0 /)
-! mat to convert V,z
+!-- main
+    indx(:,SEIS_GEO*2+1)=(/ ni1+LenFD,ni2-LenFD, &
+                            nj1+LenFD,nj2-LenFD, &
+                            nk1+LenFD,nk2-LenFD /)
+    indx(:,SEIS_GEO*2  )=(/ ni1,ni2,nj1,nj2,nk2-LenFD+1,nk2 /) ! z2
+    indx(:,SEIS_GEO*2-1)=(/ ni1,ni2,nj1,nj2,nk1,nk1+LenFD-1 /) ! z1
+    indx(:,1)=(/ ni1,ni2,nj1,nj1+LenFD-1,nk1+LenFD,nk2-LenFD /) ! y1
+    indx(:,2)=(/ ni1,ni2,nj2-LenFD+1,nj2,nk1+LenFD,nk2-LenFD /) ! y2
+    indx(:,3)=(/ ni1,ni1+LenFD-1,nj1+LenFD,nj2-LenFD,nk1+LenFD,nk2-LenFD /) ! x1
+    indx(:,4)=(/ ni2-LenFD+1,ni2,nj1+LenFD,nj2-LenFD,nk1+LenFD,nk2-LenFD /) ! x2
+!-- rk coefficient
+    firRKa=(/ RK4a2, RK4a3, RK4a4, 0.0 /)
+    firRKb=(/ RK4b1, RK4b2, RK4b3, RK4b4 /)
+    !secRKa=(/ RK4a2, RK4a3, RK4a4, 0.0 /)
+    !secRKb=(/ RK4b1, RK4b2, RK4b3, RK4b4 /)
+    secRKa=(/ RK2a2, 0.0, 0.0, 0.0 /)
+    secRKb=(/ RK2b1, RK2b2, 0.0, 0.0 /)
+!-- mat to convert V,z
 #ifdef VERBOSE
-  fid_out=9050
-  open(fid_out,                                                                      &
-       file='log_maxval_'//trim(set_mpi_subfix(thisid(1),thisid(2),thisid(3)))//'.dat', &
-       status='unknown')
+    fid_out=9050
+    open(fid_out,                                                                      &
+         file='log_maxval_'//trim(set_mpi_subfix(thisid(1),thisid(2),thisid(3)))//'.dat', &
+         status='unknown')
 #endif
 
 #ifdef AnisGene
-  call coef_Eh2Ev
+    call coef_Eh2Ev
 #endif
 !===============================================================================
 end subroutine macdrp_init
@@ -366,282 +366,283 @@ end subroutine coef_Eh2Ev
 !===============================================================================
 subroutine macdrp_destroy  !-- deallocate module variable, not complete
 !===============================================================================
-
-deallocate( Txx, Tyy, Txy, Vx, Vy)
-deallocate(hTxx,hTyy,hTxy,hVx,hVy)
-deallocate(mTxx,mTyy,mTxy,mVx,mVy)
-deallocate(tTxx,tTyy,tTxy,tVx,tVy)
+    deallocate( Txx, Tyy, Txy, Vx, Vy)
+    deallocate(hTxx,hTyy,hTxy,hVx,hVy)
+    deallocate(mTxx,mTyy,mTxy,mVx,mVy)
+    deallocate(tTxx,tTyy,tTxy,tVx,tVy)
 #ifdef VERBOSE
-  close(fid_out)
+    close(fid_out)
 #endif
-!-------------------------------------------------------------------------------
+!===============================================================================
 end subroutine macdrp_destroy
-!-------------------------------------------------------------------------------
+!===============================================================================
 
-!-------------------------------------------------------------------------------
+!===============================================================================
 subroutine macdrp_check(ntime)  !-- check overflow at ntime step
-!-------------------------------------------------------------------------------
-integer,intent(in) :: ntime
-real(SP) :: V1,V2,V3,T11,T22,T33,T12,T13,T23,W
-integer ierr
+!===============================================================================
+    integer,intent(in) :: ntime
+    real(SP) :: V1,V2,V3,T11,T22,T33,T12,T13,T23,W
+    integer ierr
 #ifndef CheckOverFlow
- return
+    return
 #endif
-if (mod(ntime,1)==0) then
-    V1=maxval(abs(Vx))
-    V2=maxval(abs(Vy))
-    V3=maxval(abs(Vz))
-   T11=maxval(abs(Txx))
-   T22=maxval(abs(Tyy))
-   T33=maxval(abs(Tzz))
-   T12=maxval(abs(Txy))
-   T13=maxval(abs(Txz))
-   T23=maxval(abs(Tyz))
+    if (mod(ntime,1)==0) then
+        V1=maxval(abs(Vx))
+        V2=maxval(abs(Vy))
+        V3=maxval(abs(Vz))
+       T11=maxval(abs(Txx))
+       T22=maxval(abs(Tyy))
+       T33=maxval(abs(Tzz))
+       T12=maxval(abs(Txy))
+       T13=maxval(abs(Txz))
+       T23=maxval(abs(Tyz))
 #ifdef VERBOSE
-   write(fid_out,'(i5,9es12.5)') ntime, V1,V2,V3,T11,T22,T33,T12,T13,T23
+       write(fid_out,'(i5,9es12.5)') ntime, V1,V2,V3,T11,T22,T33,T12,T13,T23
 #endif
-   W=max(V1,V2,V3,T11,T22,T33,T12,T13,T23)
-   if (W>=huge(1.0)) then
-      print *, "Overflow error: "
-      write(*,"(i5,i3.2,2(i2.2),9(es12.5,3i5))") ntime,thisid(1),thisid(2),thisid(3), &
-         V1, maxloc(abs(Vx)), V2, maxloc(abs(Vy)), V3, maxloc(abs(Vz)),               &
-        T11, maxloc(abs(Txx)), T22, maxloc(abs(Tyy)), T33, maxloc(abs(Tzz)),          &
-        T12, maxloc(abs(Txy)), T13, maxloc(abs(Txz)), T23, maxloc(abs(Tyz))
+       W=max(V1,V2,V3,T11,T22,T33,T12,T13,T23)
+       if (W>=huge(1.0)) then
+          print *, "Overflow error: "
+          write(*,"(i5,i3.2,2(i2.2),9(es12.5,3i5))") ntime,thisid(1),thisid(2),thisid(3), &
+             V1, maxloc(abs(Vx)), V2, maxloc(abs(Vy)), V3, maxloc(abs(Vz)),               &
+            T11, maxloc(abs(Txx)), T22, maxloc(abs(Tyy)), T33, maxloc(abs(Tzz)),          &
+            T12, maxloc(abs(Txy)), T13, maxloc(abs(Txz)), T23, maxloc(abs(Tyz))
 #ifdef VERBOSE
-      write(fid_out,"(i5,9(es12.5,3i5))") ntime,                                      &
-         V1, maxloc(abs(Vx)), V2, maxloc(abs(Vy)), V3, maxloc(abs(Vz)),               &
-        T11, maxloc(abs(Txx)), T22, maxloc(abs(Tyy)), T33, maxloc(abs(Tzz)),          &
-        T12, maxloc(abs(Txy)), T13, maxloc(abs(Txz)), T23, maxloc(abs(Tyz))
+          write(fid_out,"(i5,9(es12.5,3i5))") ntime,                                      &
+             V1, maxloc(abs(Vx)), V2, maxloc(abs(Vy)), V3, maxloc(abs(Vz)),               &
+            T11, maxloc(abs(Txx)), T22, maxloc(abs(Tyy)), T33, maxloc(abs(Tzz)),          &
+            T12, maxloc(abs(Txy)), T13, maxloc(abs(Txz)), T23, maxloc(abs(Tyz))
 #endif
-      call MPI_ABORT(SWMPI_COMM,1,ierr)
-   end if
-end if
-!-------------------------------------------------------------------------------
+          call MPI_ABORT(SWMPI_COMM,1,ierr)
+       end if
+    end if
+!===============================================================================
 end subroutine macdrp_check
-!-------------------------------------------------------------------------------
+!===============================================================================
 
-
-!-------------------------------------------------------------------------------
+!===============================================================================
 subroutine macdrp_syn
-!-------------------------------------------------------------------------------
-
- integer i,j,k
+!===============================================================================
+    integer i,j,k
 !$OMP PARALLEL DO DEFAULT(shared) PRIVATE(i,j,k)
- do k=nk1,nk2
- do j=nj1,nj2
- do i=ni1,ni2
-  mTxx(i,j,k)=Txx(i,j,k)
-  mTyy(i,j,k)=Tyy(i,j,k)
-  mTxy(i,j,k)=Txy(i,j,k)
-  mVx (i,j,k)=Vx (i,j,k)
-  mVy (i,j,k)=Vy (i,j,k)
-  mTzz(i,j,k)=Tzz (i,j,k)
-  mTxz(i,j,k)=Txz (i,j,k)
-  mTyz(i,j,k)=Tyz (i,j,k)
-  mVz (i,j,k)=Vz  (i,j,k)
- end do
- end do
- end do
+    do k=nk1,nk2
+    do j=nj1,nj2
+    do i=ni1,ni2
+     mTxx(i,j,k)=Txx(i,j,k)
+     mTyy(i,j,k)=Tyy(i,j,k)
+     mTxy(i,j,k)=Txy(i,j,k)
+     mVx (i,j,k)=Vx (i,j,k)
+     mVy (i,j,k)=Vy (i,j,k)
+     mTzz(i,j,k)=Tzz (i,j,k)
+     mTxz(i,j,k)=Txz (i,j,k)
+     mTyz(i,j,k)=Tyz (i,j,k)
+     mVz (i,j,k)=Vz  (i,j,k)
+    end do
+    end do
+    end do
 !$OMP END PARALLEL DO
-!-------------------------------------------------------------------------------
+!===============================================================================
 end subroutine macdrp_syn
-!-------------------------------------------------------------------------------
+!===============================================================================
 
-!-------------------------------------------------------------------------------
+!===============================================================================
 subroutine macdrp_RK_beg(rka,rkb)  !--- first step of RK scheme
-!-------------------------------------------------------------------------------
- real(SP),intent(in) :: rka,rkb
- real(SP) :: a,b
- integer i,j,k
- a=rka*stept; b=rkb*stept
+!===============================================================================
+    real(SP),intent(in) :: rka,rkb
+    real(SP) :: a,b
+    integer i,j,k
+    a=rka*stept; b=rkb*stept
 !$OMP PARALLEL DO DEFAULT(shared) PRIVATE(i,j,k)
- do k=nk1,nk2
- do j=nj1,nj2
- do i=ni1,ni2
-    Txx(i,j,k)=mTxx(i,j,k)+a*hTxx(i,j,k)
-    Tyy(i,j,k)=mTyy(i,j,k)+a*hTyy(i,j,k)
-    Tzz(i,j,k)=mTzz(i,j,k)+a*hTzz(i,j,k)
-    Txy(i,j,k)=mTxy(i,j,k)+a*hTxy(i,j,k)
-    Txz(i,j,k)=mTxz(i,j,k)+a*hTxz(i,j,k)
-    Tyz(i,j,k)=mTyz(i,j,k)+a*hTyz(i,j,k)
-    Vx (i,j,k)=mVx (i,j,k)+a*hVx (i,j,k)
-    Vy (i,j,k)=mVy (i,j,k)+a*hVy (i,j,k)
-    Vz (i,j,k)=mVz (i,j,k)+a*hVz (i,j,k)
-
-    tTxx(i,j,k)=mTxx(i,j,k)+b*hTxx(i,j,k)
-    tTyy(i,j,k)=mTyy(i,j,k)+b*hTyy(i,j,k)
-    tTzz(i,j,k)=mTzz(i,j,k)+b*hTzz(i,j,k)
-    tTxy(i,j,k)=mTxy(i,j,k)+b*hTxy(i,j,k)
-    tTxz(i,j,k)=mTxz(i,j,k)+b*hTxz(i,j,k)
-    tTyz(i,j,k)=mTyz(i,j,k)+b*hTyz(i,j,k)
-    tVx (i,j,k)=mVx (i,j,k)+b*hVx (i,j,k)
-    tVy (i,j,k)=mVy (i,j,k)+b*hVy (i,j,k)
-    tVz (i,j,k)=mVz (i,j,k)+b*hVz (i,j,k)
- end do
- end do
- end do
+    do k=nk1,nk2
+    do j=nj1,nj2
+    do i=ni1,ni2
+       Txx(i,j,k)=mTxx(i,j,k)+a*hTxx(i,j,k)
+       Tyy(i,j,k)=mTyy(i,j,k)+a*hTyy(i,j,k)
+       Tzz(i,j,k)=mTzz(i,j,k)+a*hTzz(i,j,k)
+       Txy(i,j,k)=mTxy(i,j,k)+a*hTxy(i,j,k)
+       Txz(i,j,k)=mTxz(i,j,k)+a*hTxz(i,j,k)
+       Tyz(i,j,k)=mTyz(i,j,k)+a*hTyz(i,j,k)
+       Vx (i,j,k)=mVx (i,j,k)+a*hVx (i,j,k)
+       Vy (i,j,k)=mVy (i,j,k)+a*hVy (i,j,k)
+       Vz (i,j,k)=mVz (i,j,k)+a*hVz (i,j,k)
+    
+       tTxx(i,j,k)=mTxx(i,j,k)+b*hTxx(i,j,k)
+       tTyy(i,j,k)=mTyy(i,j,k)+b*hTyy(i,j,k)
+       tTzz(i,j,k)=mTzz(i,j,k)+b*hTzz(i,j,k)
+       tTxy(i,j,k)=mTxy(i,j,k)+b*hTxy(i,j,k)
+       tTxz(i,j,k)=mTxz(i,j,k)+b*hTxz(i,j,k)
+       tTyz(i,j,k)=mTyz(i,j,k)+b*hTyz(i,j,k)
+       tVx (i,j,k)=mVx (i,j,k)+b*hVx (i,j,k)
+       tVy (i,j,k)=mVy (i,j,k)+b*hVy (i,j,k)
+       tVz (i,j,k)=mVz (i,j,k)+b*hVz (i,j,k)
+    end do
+    end do
+    end do
 !$OMP END PARALLEL DO
 #ifdef CondFreeCharac
-call free_charac
-call free_extrap
+    call free_charac
+    call free_extrap
 #endif
-!-------------------------------------------------------------------------------
+!===============================================================================
 end subroutine macdrp_RK_beg
-!-------------------------------------------------------------------------------
+!===============================================================================
 
-!-------------------------------------------------------------------------------
+!===============================================================================
 subroutine macdrp_RK_inn(rka,rkb)  !-- inner step of RK scheme
-!-------------------------------------------------------------------------------
- real(SP),intent(in) :: rka,rkb
- real(SP) :: a,b
- integer i,j,k
- a=rka*stept; b=rkb*stept
+!===============================================================================
+    real(SP),intent(in) :: rka,rkb
+    real(SP) :: a,b
+    integer i,j,k
+    a=rka*stept; b=rkb*stept
 !$OMP PARALLEL DO DEFAULT(shared) PRIVATE(i,j,k)
- do k=nk1,nk2
- do j=nj1,nj2
- do i=ni1,ni2
-    Txx(i,j,k)=mTxx(i,j,k)+a*hTxx(i,j,k)
-    Tyy(i,j,k)=mTyy(i,j,k)+a*hTyy(i,j,k)
-    Tzz(i,j,k)=mTzz(i,j,k)+a*hTzz(i,j,k)
-    Txy(i,j,k)=mTxy(i,j,k)+a*hTxy(i,j,k)
-    Txz(i,j,k)=mTxz(i,j,k)+a*hTxz(i,j,k)
-    Tyz(i,j,k)=mTyz(i,j,k)+a*hTyz(i,j,k)
-    Vx (i,j,k)=mVx (i,j,k)+a*hVx (i,j,k)
-    Vy (i,j,k)=mVy (i,j,k)+a*hVy (i,j,k)
-    Vz (i,j,k)=mVz (i,j,k)+a*hVz (i,j,k)
-
-    tTxx(i,j,k)=tTxx(i,j,k)+b*hTxx(i,j,k)
-    tTyy(i,j,k)=tTyy(i,j,k)+b*hTyy(i,j,k)
-    tTzz(i,j,k)=tTzz(i,j,k)+b*hTzz(i,j,k)
-    tTxy(i,j,k)=tTxy(i,j,k)+b*hTxy(i,j,k)
-    tTxz(i,j,k)=tTxz(i,j,k)+b*hTxz(i,j,k)
-    tTyz(i,j,k)=tTyz(i,j,k)+b*hTyz(i,j,k)
-    tVx (i,j,k)=tVx (i,j,k)+b*hVx (i,j,k)
-    tVy (i,j,k)=tVy (i,j,k)+b*hVy (i,j,k)
-    tVz (i,j,k)=tVz (i,j,k)+b*hVz (i,j,k)
- end do
- end do
- end do
+    do k=nk1,nk2
+    do j=nj1,nj2
+    do i=ni1,ni2
+       Txx(i,j,k)=mTxx(i,j,k)+a*hTxx(i,j,k)
+       Tyy(i,j,k)=mTyy(i,j,k)+a*hTyy(i,j,k)
+       Tzz(i,j,k)=mTzz(i,j,k)+a*hTzz(i,j,k)
+       Txy(i,j,k)=mTxy(i,j,k)+a*hTxy(i,j,k)
+       Txz(i,j,k)=mTxz(i,j,k)+a*hTxz(i,j,k)
+       Tyz(i,j,k)=mTyz(i,j,k)+a*hTyz(i,j,k)
+       Vx (i,j,k)=mVx (i,j,k)+a*hVx (i,j,k)
+       Vy (i,j,k)=mVy (i,j,k)+a*hVy (i,j,k)
+       Vz (i,j,k)=mVz (i,j,k)+a*hVz (i,j,k)
+    
+       tTxx(i,j,k)=tTxx(i,j,k)+b*hTxx(i,j,k)
+       tTyy(i,j,k)=tTyy(i,j,k)+b*hTyy(i,j,k)
+       tTzz(i,j,k)=tTzz(i,j,k)+b*hTzz(i,j,k)
+       tTxy(i,j,k)=tTxy(i,j,k)+b*hTxy(i,j,k)
+       tTxz(i,j,k)=tTxz(i,j,k)+b*hTxz(i,j,k)
+       tTyz(i,j,k)=tTyz(i,j,k)+b*hTyz(i,j,k)
+       tVx (i,j,k)=tVx (i,j,k)+b*hVx (i,j,k)
+       tVy (i,j,k)=tVy (i,j,k)+b*hVy (i,j,k)
+       tVz (i,j,k)=tVz (i,j,k)+b*hVz (i,j,k)
+    end do
+    end do
+    end do
 !$OMP END PARALLEL DO
 #ifdef CondFreeCharac
-call free_charac
-call free_extrap
+    call free_charac
+    call free_extrap
 #endif
-!-------------------------------------------------------------------------------
+!===============================================================================
 end subroutine macdrp_RK_inn
-!-------------------------------------------------------------------------------
+!===============================================================================
 
-!-------------------------------------------------------------------------------
+!===============================================================================
 subroutine macdrp_RK_fin(rkb)  !-- final step of RK scheme
-!-------------------------------------------------------------------------------
- real(SP),intent(in) :: rkb
- real(SP) :: b
- integer i,j,k
- b=rkb*stept
+!===============================================================================
+    real(SP),intent(in) :: rkb
+    real(SP) :: b
+    integer i,j,k
+    b=rkb*stept
 !$OMP PARALLEL DO DEFAULT(shared) PRIVATE(i,j,k)
- do k=nk1,nk2
- do j=nj1,nj2
- do i=ni1,ni2
-    Txx(i,j,k)=tTxx(i,j,k)+b*hTxx(i,j,k)
-    Tyy(i,j,k)=tTyy(i,j,k)+b*hTyy(i,j,k)
-    Tzz(i,j,k)=tTzz(i,j,k)+b*hTzz(i,j,k)
-    Txy(i,j,k)=tTxy(i,j,k)+b*hTxy(i,j,k)
-    Txz(i,j,k)=tTxz(i,j,k)+b*hTxz(i,j,k)
-    Tyz(i,j,k)=tTyz(i,j,k)+b*hTyz(i,j,k)
-    Vx (i,j,k)=tVx (i,j,k)+b*hVx (i,j,k)
-    Vy (i,j,k)=tVy (i,j,k)+b*hVy (i,j,k)
-    Vz (i,j,k)=tVz (i,j,k)+b*hVz (i,j,k)
- end do
- end do
- end do
+    do k=nk1,nk2
+    do j=nj1,nj2
+    do i=ni1,ni2
+       Txx(i,j,k)=tTxx(i,j,k)+b*hTxx(i,j,k)
+       Tyy(i,j,k)=tTyy(i,j,k)+b*hTyy(i,j,k)
+       Tzz(i,j,k)=tTzz(i,j,k)+b*hTzz(i,j,k)
+       Txy(i,j,k)=tTxy(i,j,k)+b*hTxy(i,j,k)
+       Txz(i,j,k)=tTxz(i,j,k)+b*hTxz(i,j,k)
+       Tyz(i,j,k)=tTyz(i,j,k)+b*hTyz(i,j,k)
+       Vx (i,j,k)=tVx (i,j,k)+b*hVx (i,j,k)
+       Vy (i,j,k)=tVy (i,j,k)+b*hVy (i,j,k)
+       Vz (i,j,k)=tVz (i,j,k)+b*hVz (i,j,k)
+    end do
+    end do
+    end do
 !$OMP END PARALLEL DO
 #ifdef CondFreeCharac
-call free_charac
-call free_extrap
+    call free_charac
+    call free_extrap
 #endif
-!-------------------------------------------------------------------------------
+!===============================================================================
 end subroutine macdrp_RK_fin
-!-------------------------------------------------------------------------------
+!===============================================================================
 
-!-------------------------------------------------------------------------------
+!===============================================================================
 subroutine atten_graves  !-- attenuation effect
-!-------------------------------------------------------------------------------
- integer :: i,j,k
- real(SP) :: Qatt
+!===============================================================================
+    integer :: i,j,k
+    real(SP) :: Qatt
 !$OMP PARALLEL DO DEFAULT(shared) PRIVATE(i,j,k)
- do k=nk1,nk2
- do j=nj1,nj2
- do i=ni1,ni2
- if (Qs(i,j,k)<QsINF) then
-    ! Qs is Q value not attenuation coefficient now
-    Qatt=exp((-PI*QsF0*stept)/Qs(i,j,k))
-    Txx(i,j,k)=Txx(i,j,k)*Qatt
-    Tyy(i,j,k)=Tyy(i,j,k)*Qatt
-    Tzz(i,j,k)=Tzz(i,j,k)*Qatt
-    Txy(i,j,k)=Txy(i,j,k)*Qatt
-    Txz(i,j,k)=Txz(i,j,k)*Qatt
-    Tyz(i,j,k)=Tyz(i,j,k)*Qatt
-    Vx (i,j,k)=Vx (i,j,k)*Qatt
-    Vy (i,j,k)=Vy (i,j,k)*Qatt
-    Vz (i,j,k)=Vz (i,j,k)*Qatt
- end if
- end do
- end do
- end do
+    do k=nk1,nk2
+    do j=nj1,nj2
+    do i=ni1,ni2
+    if (Qs(i,j,k)<QsINF) then
+       ! Qs is Q value not attenuation coefficient now
+       Qatt=exp((-PI*QsF0*stept)/Qs(i,j,k))
+       Txx(i,j,k)=Txx(i,j,k)*Qatt
+       Tyy(i,j,k)=Tyy(i,j,k)*Qatt
+       Tzz(i,j,k)=Tzz(i,j,k)*Qatt
+       Txy(i,j,k)=Txy(i,j,k)*Qatt
+       Txz(i,j,k)=Txz(i,j,k)*Qatt
+       Tyz(i,j,k)=Tyz(i,j,k)*Qatt
+       Vx (i,j,k)=Vx (i,j,k)*Qatt
+       Vy (i,j,k)=Vy (i,j,k)*Qatt
+       Vz (i,j,k)=Vz (i,j,k)*Qatt
+    end if
+    end do
+    end do
+    end do
 !$OMP END PARALLEL DO
-!-------------------------------------------------------------------------------
+!===============================================================================
 end subroutine atten_graves
-!-------------------------------------------------------------------------------
+!===============================================================================
 
-!-------------------------------------------------------------------------------
+!===============================================================================
 !--- 3D bias FD of the MacCormack scheme
-!-------------------------------------------------------------------------------
+!===============================================================================
+
+!===============================================================================
 subroutine in_LxF_LyF_LzF
-  integer n
+!===============================================================================
+    integer n
 #ifdef MPIBARRIER
-  integer ierr
-  call MPI_BARRIER(SWMPI_COMM,ierr)
+    integer ierr
+    call MPI_BARRIER(SWMPI_COMM,ierr)
 #endif
-  !Txx=real(myid)
+    !Txx=real(myid)
 #ifdef CondFreeTIMG
-  if (freenode) call free_timg
+    if (freenode) call free_timg
 #endif
 #ifdef CondFreeVEXT
-  if (freenode) call free_vext
+    if (freenode) call free_vext
 #endif
-  n=SEIS_GEO*2+1
+    n=SEIS_GEO*2+1
 #ifdef MPIBuffered
-  call fill_buff_LxF
-  call fill_buff_LyF
-  call fill_buff_LzF
+    call fill_buff_LxF
+    call fill_buff_LyF
+    call fill_buff_LzF
 #endif
-  call MPI_STARTALL(NREQ,reqXF,ierr)
-  call MPI_STARTALL(NREQ,reqYF,ierr)
-  call MPI_STARTALL(NREQ,reqZF,ierr)
-  call LxF_LyF_LzF( indx(1,n),indx(2,n), &
-                    indx(3,n),indx(4,n), &
-                    indx(5,n),indx(6,n) )
-  call MPI_WAITALL(NREQ,reqXF,reqstat,ierr)
-  call MPI_WAITALL(NREQ,reqYF,reqstat,ierr)
-  call MPI_WAITALL(NREQ,reqZF,reqstat,ierr)
+    call MPI_STARTALL(NREQ,reqXF,ierr)
+    call MPI_STARTALL(NREQ,reqYF,ierr)
+    call MPI_STARTALL(NREQ,reqZF,ierr)
+    call LxF_LyF_LzF( indx(1,n),indx(2,n), &
+                      indx(3,n),indx(4,n), &
+                      indx(5,n),indx(6,n) )
+    call MPI_WAITALL(NREQ,reqXF,reqstat,ierr)
+    call MPI_WAITALL(NREQ,reqYF,reqstat,ierr)
+    call MPI_WAITALL(NREQ,reqZF,reqstat,ierr)
 #ifdef MPIBuffered
-  call recv_buff_LxF
-  call recv_buff_LyF
-  call recv_buff_LzF
+    call recv_buff_LxF
+    call recv_buff_LyF
+    call recv_buff_LzF
 #endif
 
-  do n=1,SEIS_GEO*2
-  call LxF_LyF_LzF( indx(1,n),indx(2,n), &
-                    indx(3,n),indx(4,n), &
-                    indx(5,n),indx(6,n) )
-  end do
+    do n=1,SEIS_GEO*2
+    call LxF_LyF_LzF( indx(1,n),indx(2,n), &
+                      indx(3,n),indx(4,n), &
+                      indx(5,n),indx(6,n) )
+    end do
 
 #ifdef CondFreeVHOC
-   if (freenode)  call LxF_LyF_LzF_VHOC
+    if (freenode)  call LxF_LyF_LzF_VHOC
 #endif
-
+!===============================================================================
 end subroutine in_LxF_LyF_LzF
-!-------------------------------------------------------------------------------
+!===============================================================================
+
 subroutine in_LxB_LyB_LzB
   integer n
 #ifdef MPIBARRIER
@@ -967,20 +968,22 @@ subroutine in_LxB_LyF_LzB
    if (freenode)  call LxB_LyF_LzB_VHOC
 #endif
 end subroutine in_LxB_LyF_LzB
-!-------------------------------------------------------------------------------
+
+!===============================================================================
 subroutine LxF_LyF_LzF(I1,I2,J1,J2,K1,K2)
-integer,intent(in) :: I1,I2,J1,J2,K1,K2
-integer :: i,j,k
-real(SP) :: DxTxx,DxTxy,DxTxz,DxVx,DxVy,DxVz
-real(SP) :: DyTyy,DyTxy,DyTyz,DyVx,DyVy,DyVz
-real(SP) :: DzTzz,DzTxz,DzTyz,DzVx,DzVy,DzVz
-real(SP) :: rrho
-real(SP) :: tc11,tc12,tc13,tc22,tc23,tc33,tc44,tc55,tc66
+!===============================================================================
+    integer,intent(in) :: I1,I2,J1,J2,K1,K2
+    integer :: i,j,k
+    real(SP) :: DxTxx,DxTxy,DxTxz,DxVx,DxVy,DxVz
+    real(SP) :: DyTyy,DyTxy,DyTyz,DyVx,DyVy,DyVz
+    real(SP) :: DzTzz,DzTxz,DzTyz,DzVx,DzVy,DzVz
+    real(SP) :: rrho
+    real(SP) :: tc11,tc12,tc13,tc22,tc23,tc33,tc44,tc55,tc66
 #ifdef AnisGene
-real(SP) :: tc14,tc15,tc16,tc24,tc25,tc26,tc34,tc35,tc36
-real(SP) :: tc45,tc46,tc56
+    real(SP) :: tc14,tc15,tc16,tc24,tc25,tc26,tc34,tc35,tc36
+    real(SP) :: tc45,tc46,tc56
 #endif
-real(SP) :: E11,E22,E33,E12,E13,E23
+    real(SP) :: E11,E22,E33,E12,E13,E23
 ! curvilinear
 !$OMP PARALLEL DO DEFAULT(shared)  &
 !$OMP PRIVATE(i,j,k, &
@@ -989,234 +992,237 @@ real(SP) :: E11,E22,E33,E12,E13,E23
 !$OMP   DzTzz,DzTxz,DzTyz,DzVx,DzVy,DzVz, &
 !$OMP   lam,miu,lam2mu,rrho, &
 !$OMP   E11,E22,E33,E12,E13,E23 )
-do k=K1,K2
-do j=J1,J2
-do i=I1,I2
-   DxTxx = (              &
-     m3d_FDxF1(Txx,i,j,k) &
-     m3d_FDxF2(Txx,i,j,k) &
-     )*xi_x(i)
-   DxTxy = (              &
-     m3d_FDxF1(Txy,i,j,k) &
-     m3d_FDxF2(Txy,i,j,k) &
-     )*xi_x(i)
-   DxTxz = (              &
-     m3d_FDxF1(Txz,i,j,k) &
-     m3d_FDxF2(Txz,i,j,k) &
-     )*xi_x(i)
-   DxVx =  (              &
-     m3d_FDxF1(Vx,i,j,k)  &
-     m3d_FDxF2(Vx,i,j,k)  &
-     )*xi_x(i)
-   DxVy = (               &
-     m3d_FDxF1(Vy,i,j,k)  &
-     m3d_FDxF2(Vy,i,j,k)  &
-     )*xi_x(i)
-   DxVz = (               &
-     m3d_FDxF1(Vz,i,j,k)  &
-     m3d_FDxF2(Vz,i,j,k)  &
-     )*xi_x(i)
-
-   DyTyy = (              &
-     m3d_FDyF1(Tyy,i,j,k) &
-     m3d_FDyF2(Tyy,i,j,k) &
-     )*eta_y(j)
-   DyTxy = (              &
-     m3d_FDyF1(Txy,i,j,k) &
-     m3d_FDyF2(Txy,i,j,k) &
-     )*eta_y(j)
-   DyTyz = (              &
-     m3d_FDyF1(Tyz,i,j,k) &
-     m3d_FDyF2(Tyz,i,j,k) &
-     )*eta_y(j)
-   DyVx = (               &
-     m3d_FDyF1(Vx,i,j,k)  &
-     m3d_FDyF2(Vx,i,j,k)  &
-     )*eta_y(j)
-   DyVy = (               &
-     m3d_FDyF1(Vy,i,j,k)  &
-     m3d_FDyF2(Vy,i,j,k)  &
-     )*eta_y(j)
-   DyVz = (               &
-     m3d_FDyF1(Vz,i,j,k)  &
-     m3d_FDyF2(Vz,i,j,k)  &
-     )*eta_y(j)
-
-   DzTzz = (              &
-     m3d_FDzF1(Tzz,i,j,k) &
-     m3d_FDzF2(Tzz,i,j,k) &
-     )*zeta_z(k)
-   DzTxz = (              &
-     m3d_FDzF1(Txz,i,j,k) &
-     m3d_FDzF2(Txz,i,j,k) &
-     )*zeta_z(k)
-   DzTyz = (              &
-     m3d_FDzF1(Tyz,i,j,k) &
-     m3d_FDzF2(Tyz,i,j,k) &
-     )*zeta_z(k)
+    do k=K1,K2
+    do j=J1,J2
+    do i=I1,I2
+       DxTxx = (              &
+         m3d_FDxF1(Txx,i,j,k) &
+         m3d_FDxF2(Txx,i,j,k) &
+         )*xi_x(i)
+       DxTxy = (              &
+         m3d_FDxF1(Txy,i,j,k) &
+         m3d_FDxF2(Txy,i,j,k) &
+         )*xi_x(i)
+       DxTxz = (              &
+         m3d_FDxF1(Txz,i,j,k) &
+         m3d_FDxF2(Txz,i,j,k) &
+         )*xi_x(i)
+       DxVx =  (              &
+         m3d_FDxF1(Vx,i,j,k)  &
+         m3d_FDxF2(Vx,i,j,k)  &
+         )*xi_x(i)
+       DxVy = (               &
+         m3d_FDxF1(Vy,i,j,k)  &
+         m3d_FDxF2(Vy,i,j,k)  &
+         )*xi_x(i)
+       DxVz = (               &
+         m3d_FDxF1(Vz,i,j,k)  &
+         m3d_FDxF2(Vz,i,j,k)  &
+         )*xi_x(i)
+    
+       DyTyy = (              &
+         m3d_FDyF1(Tyy,i,j,k) &
+         m3d_FDyF2(Tyy,i,j,k) &
+         )*eta_y(j)
+       DyTxy = (              &
+         m3d_FDyF1(Txy,i,j,k) &
+         m3d_FDyF2(Txy,i,j,k) &
+         )*eta_y(j)
+       DyTyz = (              &
+         m3d_FDyF1(Tyz,i,j,k) &
+         m3d_FDyF2(Tyz,i,j,k) &
+         )*eta_y(j)
+       DyVx = (               &
+         m3d_FDyF1(Vx,i,j,k)  &
+         m3d_FDyF2(Vx,i,j,k)  &
+         )*eta_y(j)
+       DyVy = (               &
+         m3d_FDyF1(Vy,i,j,k)  &
+         m3d_FDyF2(Vy,i,j,k)  &
+         )*eta_y(j)
+       DyVz = (               &
+         m3d_FDyF1(Vz,i,j,k)  &
+         m3d_FDyF2(Vz,i,j,k)  &
+         )*eta_y(j)
+    
+       DzTzz = (              &
+         m3d_FDzF1(Tzz,i,j,k) &
+         m3d_FDzF2(Tzz,i,j,k) &
+         )*zeta_z(k)
+       DzTxz = (              &
+         m3d_FDzF1(Txz,i,j,k) &
+         m3d_FDzF2(Txz,i,j,k) &
+         )*zeta_z(k)
+       DzTyz = (              &
+         m3d_FDzF1(Tyz,i,j,k) &
+         m3d_FDzF2(Tyz,i,j,k) &
+         )*zeta_z(k)
 #ifdef CondFreeVLOW
-   if (freenode .and. k==nk2-1) then
-   DzVx = (               &
-     m22_FDzF1(Vx,i,j,k)  &
-     m22_FDzF2(Vx,i,j,k)  &
-     )*zeta_z(k)
-   DzVy = (               &
-     m22_FDzF1(Vy,i,j,k)  &
-     m22_FDzF2(Vy,i,j,k)  &
-     )*zeta_z(k)
-   DzVz = (               &
-     m22_FDzF1(Vz,i,j,k)  &
-     m22_FDzF2(Vz,i,j,k)  &
-     )*zeta_z(k)
-   elseif (freenode .and. k==nk2-2) then
-   DzVx = (               &
-     m24_FDzF1(Vx,i,j,k)  &
-     m24_FDzF2(Vx,i,j,k)  &
-     )*zeta_z(k)
-   DzVy = (               &
-     m24_FDzF1(Vy,i,j,k)  &
-     m24_FDzF2(Vy,i,j,k)  &
-     )*zeta_z(k)
-   DzVz = (               &
-     m24_FDzF1(Vz,i,j,k)  &
-     m24_FDzF2(Vz,i,j,k)  &
-     )*zeta_z(k)
-   else
+       if (freenode .and. k==nk2-1) then
+       DzVx = (               &
+         m22_FDzF1(Vx,i,j,k)  &
+         m22_FDzF2(Vx,i,j,k)  &
+         )*zeta_z(k)
+       DzVy = (               &
+         m22_FDzF1(Vy,i,j,k)  &
+         m22_FDzF2(Vy,i,j,k)  &
+         )*zeta_z(k)
+       DzVz = (               &
+         m22_FDzF1(Vz,i,j,k)  &
+         m22_FDzF2(Vz,i,j,k)  &
+         )*zeta_z(k)
+       elseif (freenode .and. k==nk2-2) then
+       DzVx = (               &
+         m24_FDzF1(Vx,i,j,k)  &
+         m24_FDzF2(Vx,i,j,k)  &
+         )*zeta_z(k)
+       DzVy = (               &
+         m24_FDzF1(Vy,i,j,k)  &
+         m24_FDzF2(Vy,i,j,k)  &
+         )*zeta_z(k)
+       DzVz = (               &
+         m24_FDzF1(Vz,i,j,k)  &
+         m24_FDzF2(Vz,i,j,k)  &
+         )*zeta_z(k)
+       else
 #endif
-   DzVx = (               &
-     m3d_FDzF1(Vx,i,j,k)  &
-     m3d_FDzF2(Vx,i,j,k)  &
-     )*zeta_z(k)
-   DzVy = (               &
-     m3d_FDzF1(Vy,i,j,k)  &
-     m3d_FDzF2(Vy,i,j,k)  &
-     )*zeta_z(k)
-   DzVz = (               &
-     m3d_FDzF1(Vz,i,j,k)  &
-     m3d_FDzF2(Vz,i,j,k)  &
-     )*zeta_z(k)
+       DzVx = (               &
+         m3d_FDzF1(Vx,i,j,k)  &
+         m3d_FDzF2(Vx,i,j,k)  &
+         )*zeta_z(k)
+       DzVy = (               &
+         m3d_FDzF1(Vy,i,j,k)  &
+         m3d_FDzF2(Vy,i,j,k)  &
+         )*zeta_z(k)
+       DzVz = (               &
+         m3d_FDzF1(Vz,i,j,k)  &
+         m3d_FDzF2(Vz,i,j,k)  &
+         )*zeta_z(k)
 #ifdef CondFreeVLOW
-   end if
+       end if
 #endif
-
+    
 #ifdef WATER
-   if (C66(i,j,k)<=SEIS_ZERO) then
-      DxTxy=0.0
-      DxTxz=0.0
-      DyTxy=0.0
-      DyTyz=0.0
-      DzTxz=0.0
-      DzTyz=0.0
-   end if
+       if (C66(i,j,k)<=SEIS_ZERO) then
+          DxTxy=0.0
+          DxTxz=0.0
+          DyTxy=0.0
+          DyTyz=0.0
+          DzTxz=0.0
+          DzTyz=0.0
+       end if
 #endif
-
-   rrho=1.0/rho(i,j,k)
-
-   hVx(i,j,k)= rrho*( DxTxx/z(k)+DyTxy/z(k)/xsin(i)+DzTxz                    &
-        +(3.0_SP*Txz(i,j,k)+Txx(i,j,k)*xcot(i)-Tyy(i,j,k)*xcot(i))/z(k) )
-   hVy(i,j,k)= rrho*( DxTxy/z(k)+DyTyy/z(k)/xsin(i)+DzTyz                    &
-        +(2.0_SP*Txy(i,j,k)*xcot(i)+3.0_SP*Tyz(i,j,k))/z(k) )
-   hVz(i,j,k)= rrho*( DxTxz/z(k)+DyTyz/z(k)/xsin(i)+DzTzz                    &
-        +(2.0_SP*Tzz(i,j,k)-Txx(i,j,k)-Tyy(i,j,k)+Txz(i,j,k)*xcot(i))/z(k) )
-
+    
+       rrho=1.0/rho(i,j,k)
+    
+       hVx(i,j,k)= rrho*( DxTxx/z(k)+DyTxy/z(k)/xsin(i)+DzTxz                    &
+            +(3.0_SP*Txz(i,j,k)+Txx(i,j,k)*xcot(i)-Tyy(i,j,k)*xcot(i))/z(k) )
+       hVy(i,j,k)= rrho*( DxTxy/z(k)+DyTyy/z(k)/xsin(i)+DzTyz                    &
+            +(2.0_SP*Txy(i,j,k)*xcot(i)+3.0_SP*Tyz(i,j,k))/z(k) )
+       hVz(i,j,k)= rrho*( DxTxz/z(k)+DyTyz/z(k)/xsin(i)+DzTzz                    &
+            +(2.0_SP*Tzz(i,j,k)-Txx(i,j,k)-Tyy(i,j,k)+Txz(i,j,k)*xcot(i))/z(k) )
+    
 #if defined AnisGene
-   tc11=C11(i,j,k)
-   tc12=C12(i,j,k)
-   tc13=C13(i,j,k)
-   tc14=C14(i,j,k)
-   tc15=C15(i,j,k)
-   tc16=C16(i,j,k)
-   tc22=C22(i,j,k)
-   tc23=C23(i,j,k)
-   tc24=C24(i,j,k)
-   tc25=C25(i,j,k)
-   tc26=C26(i,j,k)
-   tc33=C33(i,j,k)
-   tc34=C34(i,j,k)
-   tc35=C35(i,j,k)
-   tc36=C36(i,j,k)
-   tc44=C44(i,j,k)
-   tc45=C45(i,j,k)
-   tc46=C46(i,j,k)
-   tc55=C55(i,j,k)
-   tc56=C56(i,j,k)
-   tc66=C66(i,j,k)
+       tc11=C11(i,j,k)
+       tc12=C12(i,j,k)
+       tc13=C13(i,j,k)
+       tc14=C14(i,j,k)
+       tc15=C15(i,j,k)
+       tc16=C16(i,j,k)
+       tc22=C22(i,j,k)
+       tc23=C23(i,j,k)
+       tc24=C24(i,j,k)
+       tc25=C25(i,j,k)
+       tc26=C26(i,j,k)
+       tc33=C33(i,j,k)
+       tc34=C34(i,j,k)
+       tc35=C35(i,j,k)
+       tc36=C36(i,j,k)
+       tc44=C44(i,j,k)
+       tc45=C45(i,j,k)
+       tc46=C46(i,j,k)
+       tc55=C55(i,j,k)
+       tc56=C56(i,j,k)
+       tc66=C66(i,j,k)
 #elif defined AnisVTI
-   tc11=C11(i,j,k)
-   tc13=C13(i,j,k)
-   tc33=C33(i,j,k)
-   tc44=C44(i,j,k)
-   tc66=C66(i,j,k)
-
-   tc12=tc11-2.0_SP*tc66
-   tc22=tc11
-   tc23=tc13
-   tc55=tc44
+       tc11=C11(i,j,k)
+       tc13=C13(i,j,k)
+       tc33=C33(i,j,k)
+       tc44=C44(i,j,k)
+       tc66=C66(i,j,k)
+    
+       tc12=tc11-2.0_SP*tc66
+       tc22=tc11
+       tc23=tc13
+       tc55=tc44
 #else
-   tc13=C13(i,j,k)
-   tc66=C66(i,j,k)
-
-   tc11=tc13+2.0_SP*tc66
-   tc12=tc13
-   tc22=tc11
-   tc23=tc13
-   tc33=tc11
-   tc44=tc66
-   tc55=tc66
+       tc13=C13(i,j,k)
+       tc66=C66(i,j,k)
+    
+       tc11=tc13+2.0_SP*tc66
+       tc12=tc13
+       tc22=tc11
+       tc23=tc13
+       tc33=tc11
+       tc44=tc66
+       tc55=tc66
 #endif
-
-   E11=(DxVx+Vz(i,j,k))/z(k)
-   E22=(Vx(i,j,k)*xcot(i)+DyVy/xsin(i)+Vz(i,j,k))/z(k)
-   E12=(DxVy+DyVx/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)
-
-   E33=DzVz
-   E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))
-   E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))
-
+    
+       E11=(DxVx+Vz(i,j,k))/z(k)
+       E22=(Vx(i,j,k)*xcot(i)+DyVy/xsin(i)+Vz(i,j,k))/z(k)
+       E12=(DxVy+DyVx/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)
+    
+       E33=DzVz
+       E13=(DxVz/z(k)+DzVx-Vx(i,j,k)/z(k))
+       E23=(DyVz/z(k)/xsin(i)+DzVy-Vy(i,j,k)/z(k))
+    
 #if ! ( defined CondFreeCharac || defined CondFreeVHOC )
-   if (freenode .and. k==nk2) then
+       if (freenode .and. k==nk2) then
 #ifdef AnisGene
-      E33= matEh2Ev(1,1,i,j)*E11+matEh2Ev(1,2,i,j)*E22+matEh2Ev(1,3,i,j)*E12 &
-          +matF2Ev(1,1,i,j)*VzSrc(i,j), &
-          +matF2Ev(1,2,i,j)*VySrc(i,j), &
-          +matF2Ev(1,3,i,j)*VxSrc(i,j)
-      E23= matEh2Ev(2,1,i,j)*E11+matEh2Ev(2,2,i,j)*E22+matEh2Ev(2,3,i,j)*E12 &
-          +matF2Ev(2,1,i,j)*VzSrc(i,j), &
-          +matF2Ev(2,2,i,j)*VySrc(i,j), &
-          +matF2Ev(2,3,i,j)*VxSrc(i,j)
-      E13= matEh2Ev(3,1,i,j)*E11+matEh2Ev(3,2,i,j)*E22+matEh2Ev(3,3,i,j)*E12 &
-          +matF2Ev(3,1,i,j)*VzSrc(i,j), &
-          +matF2Ev(3,2,i,j)*VySrc(i,j), &
-          +matF2Ev(3,3,i,j)*VxSrc(i,j)
+          E33= matEh2Ev(1,1,i,j)*E11+matEh2Ev(1,2,i,j)*E22+matEh2Ev(1,3,i,j)*E12 &
+              +matF2Ev(1,1,i,j)*VzSrc(i,j), &
+              +matF2Ev(1,2,i,j)*VySrc(i,j), &
+              +matF2Ev(1,3,i,j)*VxSrc(i,j)
+          E23= matEh2Ev(2,1,i,j)*E11+matEh2Ev(2,2,i,j)*E22+matEh2Ev(2,3,i,j)*E12 &
+              +matF2Ev(2,1,i,j)*VzSrc(i,j), &
+              +matF2Ev(2,2,i,j)*VySrc(i,j), &
+              +matF2Ev(2,3,i,j)*VxSrc(i,j)
+          E13= matEh2Ev(3,1,i,j)*E11+matEh2Ev(3,2,i,j)*E22+matEh2Ev(3,3,i,j)*E12 &
+              +matF2Ev(3,1,i,j)*VzSrc(i,j), &
+              +matF2Ev(3,2,i,j)*VySrc(i,j), &
+              +matF2Ev(3,3,i,j)*VxSrc(i,j)
 #else
-      E33=(-tc13*E11-tc23*E22+VzSrc(i,j))/tc33
-      E23=VySrc(i,j)/tc44
-      E13=VxSrc(i,j)/tc55
+          E33=(-tc13*E11-tc23*E22+VzSrc(i,j))/tc33
+          E23=VySrc(i,j)/tc44
+          E13=VxSrc(i,j)/tc55
 #endif
-   end if
+       end if
 #endif
-
+    
 #ifdef AnisGene
-   hTxx(i,j,k)=tc11*E11+tc12*E22+tc13*E33+tc14*E23+tc15*E13+tc16*E12
-   hTyy(i,j,k)=tc12*E11+tc22*E22+tc23*E33+tc24*E23+tc25*E13+tc26*E12
-   hTzz(i,j,k)=tc13*E11+tc23*E22+tc33*E33+tc34*E23+tc35*E13+tc36*E12
-   hTyz(i,j,k)=tc14*E11+tc24*E22+tc34*E33+tc44*E23+tc45*E13+tc46*E12
-   hTxz(i,j,k)=tc15*E11+tc25*E22+tc35*E33+tc45*E23+tc55*E13+tc56*E12
-   hTxy(i,j,k)=tc16*E11+tc26*E22+tc36*E33+tc46*E23+tc56*E13+tc66*E12
+       hTxx(i,j,k)=tc11*E11+tc12*E22+tc13*E33+tc14*E23+tc15*E13+tc16*E12
+       hTyy(i,j,k)=tc12*E11+tc22*E22+tc23*E33+tc24*E23+tc25*E13+tc26*E12
+       hTzz(i,j,k)=tc13*E11+tc23*E22+tc33*E33+tc34*E23+tc35*E13+tc36*E12
+       hTyz(i,j,k)=tc14*E11+tc24*E22+tc34*E33+tc44*E23+tc45*E13+tc46*E12
+       hTxz(i,j,k)=tc15*E11+tc25*E22+tc35*E33+tc45*E23+tc55*E13+tc56*E12
+       hTxy(i,j,k)=tc16*E11+tc26*E22+tc36*E33+tc46*E23+tc56*E13+tc66*E12
 #else
-   hTxx(i,j,k)=tc11*E11+tc12*E22+tc13*E33
-   hTyy(i,j,k)=tc12*E11+tc22*E22+tc23*E33
-   hTzz(i,j,k)=tc13*E11+tc23*E22+tc33*E33
-   hTyz(i,j,k)=tc44*E23
-   hTxz(i,j,k)=         tc55*E13
-   hTxy(i,j,k)=                  tc66*E12
+       hTxx(i,j,k)=tc11*E11+tc12*E22+tc13*E33
+       hTyy(i,j,k)=tc12*E11+tc22*E22+tc23*E33
+       hTzz(i,j,k)=tc13*E11+tc23*E22+tc33*E33
+       hTyz(i,j,k)=tc44*E23
+       hTxz(i,j,k)=         tc55*E13
+       hTxy(i,j,k)=                  tc66*E12
 #endif
-
-end do
-end do
-end do
+    
+    end do
+    end do
+    end do
 !$OMP END PARALLEL DO
+!===============================================================================
 end subroutine LxF_LyF_LzF
+!===============================================================================
+
 !-------------------------------------------------------------------------------
 subroutine LxB_LyB_LzB(I1,I2,J1,J2,K1,K2)
 integer,intent(in) :: I1,I2,J1,J2,K1,K2
@@ -2967,249 +2973,254 @@ end do
 end do
 !$OMP END PARALLEL DO
 end subroutine LxB_LyF_LzB
-!-------------------------------------------------------------------------------
 
-#ifdef CondFreeVHOC
-!-------------------------------------------------------------------------------
+
+!===============================================================================
 !--  use Compact MacCormack scheme to calculate velocities fd with
 !--  respect to eta and assemble the right hand side to update stresses
-!-------------------------------------------------------------------------------
+!===============================================================================
+
+#ifdef CondFreeVHOC
+!===============================================================================
 subroutine LxF_LyF_LzF_VHOC
-integer :: i,j,k,n
-real(SP) :: tc11,tc12,tc13,tc22,tc23,tc33,tc44,tc55,tc66
+!===============================================================================
+    integer :: i,j,k,n
+    real(SP) :: tc11,tc12,tc13,tc22,tc23,tc33,tc44,tc55,tc66
 #ifdef AnisGene
-real(SP) :: tc14,tc15,tc16,tc24,tc25,tc26,tc34,tc35,tc36
-real(SP) :: tc45,tc46,tc56
+    real(SP) :: tc14,tc15,tc16,tc24,tc25,tc26,tc34,tc35,tc36
+    real(SP) :: tc45,tc46,tc56
 #endif
-real(SP) :: rhs_Dz,lhs_Dz
-real(SP),dimension(1:LenFD+1) :: DxVx,DxVy,DxVz, &
-                             DyVx,DyVy,DyVz, &
-                             DzVx,DzVy,DzVz
-real(SP) :: E11,E22,E33,E12,E13,E23
-
-if (.not. freenode) return
-
-!-- velocity fd --
-loop_eta: do j=nj1,nj2
-loop_xi:  do i=ni1,ni2
-   !-- k=nz --
-   n=LenFD+1; k=nk2
-
+    real(SP) :: rhs_Dz,lhs_Dz
+    real(SP),dimension(1:LenFD+1) :: DxVx,DxVy,DxVz, &
+                                 DyVx,DyVy,DyVz, &
+                                 DzVx,DzVy,DzVz
+    real(SP) :: E11,E22,E33,E12,E13,E23
+    
+    if (.not. freenode) return
+    
+    !-- velocity fd --
+    loop_eta: do j=nj1,nj2
+    loop_xi:  do i=ni1,ni2
+       !-- k=nz --
+       n=LenFD+1; k=nk2
+    
 #if ! defined AnisGene
 #if defined AnisVTI
-   tc13=C13(i,j,k)
-   tc33=C33(i,j,k)
-   tc44=C44(i,j,k)
-
-   tc23=tc13
-   tc55=tc44
+       tc13=C13(i,j,k)
+       tc33=C33(i,j,k)
+       tc44=C44(i,j,k)
+    
+       tc23=tc13
+       tc55=tc44
 #else
-   tc13=C13(i,j,k)
-   tc66=C66(i,j,k)
-
-   tc11=tc13+2.0_SP*tc66
-   tc23=tc13
-   tc33=tc11
-   tc44=tc66
-   tc55=tc66
+       tc13=C13(i,j,k)
+       tc66=C66(i,j,k)
+    
+       tc11=tc13+2.0_SP*tc66
+       tc23=tc13
+       tc33=tc11
+       tc44=tc66
+       tc55=tc66
 #endif
 #endif
-
-   DxVx(n) =  (          &
-     m3d_FDxF1(Vx,i,j,k) &
-     m3d_FDxF2(Vx,i,j,k) &
-     )*xi_x(i)
-   DxVy(n) = (           &
-     m3d_FDxF1(Vy,i,j,k) &
-     m3d_FDxF2(Vy,i,j,k) &
-     )*xi_x(i)
-   DxVz(n) = (           &
-     m3d_FDxF1(Vz,i,j,k) &
-     m3d_FDxF2(Vz,i,j,k) &
-     )*xi_x(i)
-
-   DyVx(n) =  (          &
-     m3d_FDyF1(Vx,i,j,k) &
-     m3d_FDyF2(Vx,i,j,k) &
-     )*eta_y(j)
-   DyVy(n) = (           &
-     m3d_FDyF1(Vy,i,j,k) &
-     m3d_FDyF2(Vy,i,j,k) &
-     )*eta_y(j)
-   DyVz(n) = (           &
-     m3d_FDyF1(Vz,i,j,k) &
-     m3d_FDyF2(Vz,i,j,k) &
-     )*eta_y(j)
-
-   E11=(DxVx(n)+Vz(i,j,k))/z(k)
-   E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
-
+    
+       DxVx(n) =  (          &
+         m3d_FDxF1(Vx,i,j,k) &
+         m3d_FDxF2(Vx,i,j,k) &
+         )*xi_x(i)
+       DxVy(n) = (           &
+         m3d_FDxF1(Vy,i,j,k) &
+         m3d_FDxF2(Vy,i,j,k) &
+         )*xi_x(i)
+       DxVz(n) = (           &
+         m3d_FDxF1(Vz,i,j,k) &
+         m3d_FDxF2(Vz,i,j,k) &
+         )*xi_x(i)
+    
+       DyVx(n) =  (          &
+         m3d_FDyF1(Vx,i,j,k) &
+         m3d_FDyF2(Vx,i,j,k) &
+         )*eta_y(j)
+       DyVy(n) = (           &
+         m3d_FDyF1(Vy,i,j,k) &
+         m3d_FDyF2(Vy,i,j,k) &
+         )*eta_y(j)
+       DyVz(n) = (           &
+         m3d_FDyF1(Vz,i,j,k) &
+         m3d_FDyF2(Vz,i,j,k) &
+         )*eta_y(j)
+    
+       E11=(DxVx(n)+Vz(i,j,k))/z(k)
+       E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
+    
 #ifdef AnisGene
-   E12=(DxVy(n)+DyVx(n)/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)
-   E33= matEh2Ev(1,1,i,j)*E11+matEh2Ev(1,2,i,j)*E22+matEh2Ev(1,3,i,j)*E12 &
-          +matF2Ev(1,1,i,j)*VzSrc(i,j), &
-          +matF2Ev(1,2,i,j)*VySrc(i,j), &
-          +matF2Ev(1,3,i,j)*VxSrc(i,j)
-   E23= matEh2Ev(2,1,i,j)*E11+matEh2Ev(2,2,i,j)*E22+matEh2Ev(2,3,i,j)*E12 &
-          +matF2Ev(2,1,i,j)*VzSrc(i,j), &
-          +matF2Ev(2,2,i,j)*VySrc(i,j), &
-          +matF2Ev(2,3,i,j)*VxSrc(i,j)
-   E13= matEh2Ev(3,1,i,j)*E11+matEh2Ev(3,2,i,j)*E22+matEh2Ev(3,3,i,j)*E12 &
-          +matF2Ev(3,1,i,j)*VzSrc(i,j), &
-          +matF2Ev(3,2,i,j)*VySrc(i,j), &
-          +matF2Ev(3,3,i,j)*VxSrc(i,j)
+       E12=(DxVy(n)+DyVx(n)/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)
+       E33= matEh2Ev(1,1,i,j)*E11+matEh2Ev(1,2,i,j)*E22+matEh2Ev(1,3,i,j)*E12 &
+              +matF2Ev(1,1,i,j)*VzSrc(i,j), &
+              +matF2Ev(1,2,i,j)*VySrc(i,j), &
+              +matF2Ev(1,3,i,j)*VxSrc(i,j)
+       E23= matEh2Ev(2,1,i,j)*E11+matEh2Ev(2,2,i,j)*E22+matEh2Ev(2,3,i,j)*E12 &
+              +matF2Ev(2,1,i,j)*VzSrc(i,j), &
+              +matF2Ev(2,2,i,j)*VySrc(i,j), &
+              +matF2Ev(2,3,i,j)*VxSrc(i,j)
+       E13= matEh2Ev(3,1,i,j)*E11+matEh2Ev(3,2,i,j)*E22+matEh2Ev(3,3,i,j)*E12 &
+              +matF2Ev(3,1,i,j)*VzSrc(i,j), &
+              +matF2Ev(3,2,i,j)*VySrc(i,j), &
+              +matF2Ev(3,3,i,j)*VxSrc(i,j)
 #else
-   E33=(-tc13*E11-tc23*E22+VzSrc(i,j))/tc33
-   E23=VySrc(i,j)/tc44
-   E13=VxSrc(i,j)/tc55
+       E33=(-tc13*E11-tc23*E22+VzSrc(i,j))/tc33
+       E23=VySrc(i,j)/tc44
+       E13=VxSrc(i,j)/tc55
 #endif
-
-   DzVz(n) = E33/zeta_z(k)
-   DzVy(n) = (E23-DyVz(n)/z(k)/xsin(i)+Vy(i,j,k)/z(k))/zeta_z(k)
-   DzVx(n) = (E13-DxVz(n)/z(k)+Vx(i,j,k)/z(k))/zeta_z(k)
-
-   !-- j=ny-LenFD+1:ny-1 --
-do n=LenFD,2,-1
-   k=nk2-LenFD +n-1
-
-   DxVx(n) =  (          &
-     m3d_FDxF1(Vx,i,j,k) &
-     m3d_FDxF2(Vx,i,j,k) &
-     )*xi_x(i)
-   DxVy(n) = (           &
-     m3d_FDxF1(Vy,i,j,k) &
-     m3d_FDxF2(Vy,i,j,k) &
-     )*xi_x(i)
-   DxVz(n) = (           &
-     m3d_FDxF1(Vz,i,j,k) &
-     m3d_FDxF2(Vz,i,j,k) &
-     )*xi_x(i)
-
-   DyVx(n) =  (          &
-     m3d_FDyF1(Vx,i,j,k) &
-     m3d_FDyF2(Vx,i,j,k) &
-     )*eta_y(j)
-   DyVy(n) = (           &
-     m3d_FDyF1(Vy,i,j,k) &
-     m3d_FDyF2(Vy,i,j,k) &
-     )*eta_y(j)
-   DyVz(n) = (           &
-     m3d_FDyF1(Vz,i,j,k) &
-     m3d_FDyF2(Vz,i,j,k) &
-     )*eta_y(j)
-
-   rhs_Dz= (                  &
-     m3d_HOCzF1_RHS(Vx,i,j,k) &
-     m3d_HOCzF2_RHS(Vx,i,j,k) &
-     )
-   lhs_Dz= (                  &
-     vec_HOC_F_LHS(DzVx,n)    &
-     )
-   DzVx(n)=rhs_Dz - lhs_Dz
-
-   rhs_Dz= (                  &
-     m3d_HOCzF1_RHS(Vy,i,j,k) &
-     m3d_HOCzF2_RHS(Vy,i,j,k) &
-     )
-   lhs_Dz= (                  &
-     vec_HOC_F_LHS(DzVy,n)    &
-     )
-   DzVy(n)=rhs_Dz - lhs_Dz
-
-   rhs_Dz= (                  &
-     m3d_HOCzF1_RHS(Vz,i,j,k) &
-     m3d_HOCzF2_RHS(Vz,i,j,k) &
-     )
-   lhs_Dz= (                  &
-     vec_HOC_F_LHS(DzVz,n)    &
-     )
-   DzVz(n)=rhs_Dz - lhs_Dz
-
-end do
-do n=2,LenFD+1
-   k=nk2-LenFD +n-1
-   DzVx(n)=DzVx(n)*zeta_z(k)
-   DzVy(n)=DzVy(n)*zeta_z(k)
-   DzVz(n)=DzVz(n)*zeta_z(k)
-
+    
+       DzVz(n) = E33/zeta_z(k)
+       DzVy(n) = (E23-DyVz(n)/z(k)/xsin(i)+Vy(i,j,k)/z(k))/zeta_z(k)
+       DzVx(n) = (E13-DxVz(n)/z(k)+Vx(i,j,k)/z(k))/zeta_z(k)
+    
+       !-- j=ny-LenFD+1:ny-1 --
+    do n=LenFD,2,-1
+       k=nk2-LenFD +n-1
+    
+       DxVx(n) =  (          &
+         m3d_FDxF1(Vx,i,j,k) &
+         m3d_FDxF2(Vx,i,j,k) &
+         )*xi_x(i)
+       DxVy(n) = (           &
+         m3d_FDxF1(Vy,i,j,k) &
+         m3d_FDxF2(Vy,i,j,k) &
+         )*xi_x(i)
+       DxVz(n) = (           &
+         m3d_FDxF1(Vz,i,j,k) &
+         m3d_FDxF2(Vz,i,j,k) &
+         )*xi_x(i)
+    
+       DyVx(n) =  (          &
+         m3d_FDyF1(Vx,i,j,k) &
+         m3d_FDyF2(Vx,i,j,k) &
+         )*eta_y(j)
+       DyVy(n) = (           &
+         m3d_FDyF1(Vy,i,j,k) &
+         m3d_FDyF2(Vy,i,j,k) &
+         )*eta_y(j)
+       DyVz(n) = (           &
+         m3d_FDyF1(Vz,i,j,k) &
+         m3d_FDyF2(Vz,i,j,k) &
+         )*eta_y(j)
+    
+       rhs_Dz= (                  &
+         m3d_HOCzF1_RHS(Vx,i,j,k) &
+         m3d_HOCzF2_RHS(Vx,i,j,k) &
+         )
+       lhs_Dz= (                  &
+         vec_HOC_F_LHS(DzVx,n)    &
+         )
+       DzVx(n)=rhs_Dz - lhs_Dz
+    
+       rhs_Dz= (                  &
+         m3d_HOCzF1_RHS(Vy,i,j,k) &
+         m3d_HOCzF2_RHS(Vy,i,j,k) &
+         )
+       lhs_Dz= (                  &
+         vec_HOC_F_LHS(DzVy,n)    &
+         )
+       DzVy(n)=rhs_Dz - lhs_Dz
+    
+       rhs_Dz= (                  &
+         m3d_HOCzF1_RHS(Vz,i,j,k) &
+         m3d_HOCzF2_RHS(Vz,i,j,k) &
+         )
+       lhs_Dz= (                  &
+         vec_HOC_F_LHS(DzVz,n)    &
+         )
+       DzVz(n)=rhs_Dz - lhs_Dz
+    
+    end do
+    do n=2,LenFD+1
+       k=nk2-LenFD +n-1
+       DzVx(n)=DzVx(n)*zeta_z(k)
+       DzVy(n)=DzVy(n)*zeta_z(k)
+       DzVz(n)=DzVz(n)*zeta_z(k)
+    
 #if defined AnisGene
-   tc11=C11(i,j,k)
-   tc12=C12(i,j,k)
-   tc13=C13(i,j,k)
-   tc14=C14(i,j,k)
-   tc15=C15(i,j,k)
-   tc16=C16(i,j,k)
-   tc22=C22(i,j,k)
-   tc23=C23(i,j,k)
-   tc24=C24(i,j,k)
-   tc25=C25(i,j,k)
-   tc26=C26(i,j,k)
-   tc33=C33(i,j,k)
-   tc34=C34(i,j,k)
-   tc35=C35(i,j,k)
-   tc36=C36(i,j,k)
-   tc44=C44(i,j,k)
-   tc45=C45(i,j,k)
-   tc46=C46(i,j,k)
-   tc55=C55(i,j,k)
-   tc56=C56(i,j,k)
-   tc66=C66(i,j,k)
+       tc11=C11(i,j,k)
+       tc12=C12(i,j,k)
+       tc13=C13(i,j,k)
+       tc14=C14(i,j,k)
+       tc15=C15(i,j,k)
+       tc16=C16(i,j,k)
+       tc22=C22(i,j,k)
+       tc23=C23(i,j,k)
+       tc24=C24(i,j,k)
+       tc25=C25(i,j,k)
+       tc26=C26(i,j,k)
+       tc33=C33(i,j,k)
+       tc34=C34(i,j,k)
+       tc35=C35(i,j,k)
+       tc36=C36(i,j,k)
+       tc44=C44(i,j,k)
+       tc45=C45(i,j,k)
+       tc46=C46(i,j,k)
+       tc55=C55(i,j,k)
+       tc56=C56(i,j,k)
+       tc66=C66(i,j,k)
 #elif defined AnisVTI
-   tc11=C11(i,j,k)
-   tc13=C13(i,j,k)
-   tc33=C33(i,j,k)
-   tc44=C44(i,j,k)
-   tc66=C66(i,j,k)
-
-   tc12=tc11-2.0_SP*tc66
-   tc22=tc11
-   tc23=tc13
-   tc55=tc44
+       tc11=C11(i,j,k)
+       tc13=C13(i,j,k)
+       tc33=C33(i,j,k)
+       tc44=C44(i,j,k)
+       tc66=C66(i,j,k)
+    
+       tc12=tc11-2.0_SP*tc66
+       tc22=tc11
+       tc23=tc13
+       tc55=tc44
 #else
-   tc13=C13(i,j,k)
-   tc66=C66(i,j,k)
-
-   tc11=tc13+2.0_SP*tc66
-   tc12=tc13
-   tc22=tc11
-   tc23=tc13
-   tc33=tc11
-   tc44=tc66
-   tc55=tc66
+       tc13=C13(i,j,k)
+       tc66=C66(i,j,k)
+    
+       tc11=tc13+2.0_SP*tc66
+       tc12=tc13
+       tc22=tc11
+       tc23=tc13
+       tc33=tc11
+       tc44=tc66
+       tc55=tc66
 #endif
-
-   E11=(DxVx(n)+Vz(i,j,k))/z(k)
-   E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
-   E33=DzVz(n)
-   E12=(DxVy(n)+DyVx(n)/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)
-   E13=(DxVz(n)/z(k)+DzVx(n)-Vx(i,j,k)/z(k))
-   E23=(DyVz(n)/z(k)/xsin(i)+DzVy(n)-Vy(i,j,k)/z(k))
-
+    
+       E11=(DxVx(n)+Vz(i,j,k))/z(k)
+       E22=(Vx(i,j,k)*xcot(i)+DyVy(n)/xsin(i)+Vz(i,j,k))/z(k)
+       E33=DzVz(n)
+       E12=(DxVy(n)+DyVx(n)/xsin(i)-Vy(i,j,k)*xcot(i))/z(k)
+       E13=(DxVz(n)/z(k)+DzVx(n)-Vx(i,j,k)/z(k))
+       E23=(DyVz(n)/z(k)/xsin(i)+DzVy(n)-Vy(i,j,k)/z(k))
+    
 #ifdef AnisGene
-   hTxx(i,j,k)=tc11*E11+tc12*E22+tc13*E33+tc14*E23+tc15*E13+tc16*E12
-   hTyy(i,j,k)=tc12*E11+tc22*E22+tc23*E33+tc24*E23+tc25*E13+tc26*E12
-   hTzz(i,j,k)=tc13*E11+tc23*E22+tc33*E33+tc34*E23+tc35*E13+tc36*E12
-   hTyz(i,j,k)=tc14*E11+tc24*E22+tc34*E33+tc44*E23+tc45*E13+tc46*E12
-   hTxz(i,j,k)=tc15*E11+tc25*E22+tc35*E33+tc45*E23+tc55*E13+tc56*E12
-   hTxy(i,j,k)=tc16*E11+tc26*E22+tc36*E33+tc46*E23+tc56*E13+tc66*E12
+       hTxx(i,j,k)=tc11*E11+tc12*E22+tc13*E33+tc14*E23+tc15*E13+tc16*E12
+       hTyy(i,j,k)=tc12*E11+tc22*E22+tc23*E33+tc24*E23+tc25*E13+tc26*E12
+       hTzz(i,j,k)=tc13*E11+tc23*E22+tc33*E33+tc34*E23+tc35*E13+tc36*E12
+       hTyz(i,j,k)=tc14*E11+tc24*E22+tc34*E33+tc44*E23+tc45*E13+tc46*E12
+       hTxz(i,j,k)=tc15*E11+tc25*E22+tc35*E33+tc45*E23+tc55*E13+tc56*E12
+       hTxy(i,j,k)=tc16*E11+tc26*E22+tc36*E33+tc46*E23+tc56*E13+tc66*E12
 #else
-   hTxx(i,j,k)=tc11*E11+tc12*E22+tc13*E33
-   hTyy(i,j,k)=tc12*E11+tc22*E22+tc23*E33
-   hTzz(i,j,k)=tc13*E11+tc23*E22+tc33*E33
-   hTyz(i,j,k)=tc44*E23
-   hTxz(i,j,k)=         tc55*E13
-   hTxy(i,j,k)=                  tc66*E12
+       hTxx(i,j,k)=tc11*E11+tc12*E22+tc13*E33
+       hTyy(i,j,k)=tc12*E11+tc22*E22+tc23*E33
+       hTzz(i,j,k)=tc13*E11+tc23*E22+tc33*E33
+       hTyz(i,j,k)=tc44*E23
+       hTxz(i,j,k)=         tc55*E13
+       hTxy(i,j,k)=                  tc66*E12
 #endif
-   if (k==nk2) then
-      hTxz(i,j,k)=VxSrc(i,j)
-      hTyz(i,j,k)=VySrc(i,j)
-      hTzz(i,j,k)=VzSrc(i,j)
-   end if
-end do
-end do loop_xi
-end do loop_eta
+       if (k==nk2) then
+          hTxz(i,j,k)=VxSrc(i,j)
+          hTyz(i,j,k)=VySrc(i,j)
+          hTzz(i,j,k)=VzSrc(i,j)
+       end if
+    end do
+    end do loop_xi
+    end do loop_eta
+!===============================================================================
 end subroutine LxF_LyF_LzF_VHOC
-!-------------------------------------------------------------------------------
+!===============================================================================
+
 subroutine LxB_LyB_LzB_VHOC
 integer :: i,j,k,n
 real(SP) :: tc11,tc12,tc13,tc22,tc23,tc33,tc44,tc55,tc66
@@ -4922,139 +4933,142 @@ end subroutine LxB_LyF_LzB_VHOC
 !-------------------------------------------------------------------------------
 #endif
 
-!-------------------------------------------------------------------------------
+!===============================================================================
 subroutine free_charac  !-- characteristic variable free surface boundary
-!-------------------------------------------------------------------------------
-integer i,j,k
-real(SP) v1,v2,v3,t11,t22,t33,t12,t13,t23
-real(SP) lam,miu,lam2mu,rrho,f1,f2,fct
-real(SP) :: Tx,Ty,Tz
-
-if (.not. freenode) return
-
-   k=nk2
-do j=nj1,nj2
-do i=ni1,ni2
-
-   lam=C13(i,j,k);miu=C66(i,j,k);lam2mu=lam+2.0*miu;
-   rrho=rho(i,j,k)
-   f1=sqrt(rrho*lam2mu); f2=sqrt(rrho*miu); fct=lam/lam2mu
-   v1 = Vx (i,j,k)
-   v2 = Vy (i,j,k)
-   v3 = Vz (i,j,k)
-   t11= Txx(i,j,k)
-   t22= Tyy(i,j,k)
-   t33= Tzz(i,j,k)
-   t12= Txy(i,j,k)
-   t13= Txz(i,j,k)
-   t23= Tyz(i,j,k)
-
-   Tx=-TxSrc(i,j); Ty=-TySrc(i,j); Tz= TzSrc(i,j)
-   Vx (i,j,k)=v1-(t13+Tx)/f2
-   Vy (i,j,k)=v2-(t23+Ty)/f2
-   Vz (i,j,k)=v3-(t33-Tz)/f1
-   Txx(i,j,k)=t11-fct*(t33-Tz)
-   Tyy(i,j,k)=t22-fct*(t33-Tz)
-   Tzz(i,j,k)=Tz
-   Txz(i,j,k)=Tx
-   Tyz(i,j,k)=Ty
-end do
-end do
-!-------------------------------------------------------------------------------
+!===============================================================================
+    integer i,j,k
+    real(SP) v1,v2,v3,t11,t22,t33,t12,t13,t23
+    real(SP) lam,miu,lam2mu,rrho,f1,f2,fct
+    real(SP) :: Tx,Ty,Tz
+    
+    if (.not. freenode) return
+    
+       k=nk2
+    do j=nj1,nj2
+    do i=ni1,ni2
+    
+       lam=C13(i,j,k);miu=C66(i,j,k);lam2mu=lam+2.0*miu;
+       rrho=rho(i,j,k)
+       f1=sqrt(rrho*lam2mu); f2=sqrt(rrho*miu); fct=lam/lam2mu
+       v1 = Vx (i,j,k)
+       v2 = Vy (i,j,k)
+       v3 = Vz (i,j,k)
+       t11= Txx(i,j,k)
+       t22= Tyy(i,j,k)
+       t33= Tzz(i,j,k)
+       t12= Txy(i,j,k)
+       t13= Txz(i,j,k)
+       t23= Tyz(i,j,k)
+    
+       Tx=-TxSrc(i,j); Ty=-TySrc(i,j); Tz= TzSrc(i,j)
+       Vx (i,j,k)=v1-(t13+Tx)/f2
+       Vy (i,j,k)=v2-(t23+Ty)/f2
+       Vz (i,j,k)=v3-(t33-Tz)/f1
+       Txx(i,j,k)=t11-fct*(t33-Tz)
+       Tyy(i,j,k)=t22-fct*(t33-Tz)
+       Tzz(i,j,k)=Tz
+       Txz(i,j,k)=Tx
+       Tyz(i,j,k)=Ty
+    end do
+    end do
+!===============================================================================
 end subroutine free_charac
-!-------------------------------------------------------------------------------
+!===============================================================================
 
-!-------------------------------------------------------------------------------
+!===============================================================================
 subroutine free_extrap  !--- extrapolate wavefield on grids above surface
-!-------------------------------------------------------------------------------
-integer i,j,k
-
-if (freenode) then
-do k=nk2+1,nz2
-do j=nj1,nj2
-do i=ni1,ni2
-   Vx (i,j,k)=4.0*Vx (i,j,k-1)-6.0*Vx (i,j,k-2)+4.0*Vx (i,j,k-3)-Vx (i,j,k-4)
-   Vy (i,j,k)=4.0*Vy (i,j,k-1)-6.0*Vy (i,j,k-2)+4.0*Vy (i,j,k-3)-Vy (i,j,k-4)
-   Vz (i,j,k)=4.0*Vz (i,j,k-1)-6.0*Vz (i,j,k-2)+4.0*Vz (i,j,k-3)-Vz (i,j,k-4)
-   Txx(i,j,k)=4.0*Txx(i,j,k-1)-6.0*Txx(i,j,k-2)+4.0*Txx(i,j,k-3)-Txx(i,j,k-4)
-   Tzz(i,j,k)=4.0*Tzz(i,j,k-1)-6.0*Tzz(i,j,k-2)+4.0*Tzz(i,j,k-3)-Tzz(i,j,k-4)
-   Tyy(i,j,k)=4.0*Tyy(i,j,k-1)-6.0*Tyy(i,j,k-2)+4.0*Tyy(i,j,k-3)-Tyy(i,j,k-4)
-   Txy(i,j,k)=4.0*Txy(i,j,k-1)-6.0*Txy(i,j,k-2)+4.0*Txy(i,j,k-3)-Txy(i,j,k-4)
-   Txz(i,j,k)=4.0*Txz(i,j,k-1)-6.0*Txz(i,j,k-2)+4.0*Txz(i,j,k-3)-Txz(i,j,k-4)
-   Tyz(i,j,k)=4.0*Tyz(i,j,k-1)-6.0*Tyz(i,j,k-2)+4.0*Tyz(i,j,k-3)-Tyz(i,j,k-4)
-end do
-end do
-end do
-end if
-!-------------------------------------------------------------------------------
+!===============================================================================
+    integer i,j,k
+    
+    if (freenode) then
+    do k=nk2+1,nz2
+    do j=nj1,nj2
+    do i=ni1,ni2
+       Vx (i,j,k)=4.0*Vx (i,j,k-1)-6.0*Vx (i,j,k-2)+4.0*Vx (i,j,k-3)-Vx (i,j,k-4)
+       Vy (i,j,k)=4.0*Vy (i,j,k-1)-6.0*Vy (i,j,k-2)+4.0*Vy (i,j,k-3)-Vy (i,j,k-4)
+       Vz (i,j,k)=4.0*Vz (i,j,k-1)-6.0*Vz (i,j,k-2)+4.0*Vz (i,j,k-3)-Vz (i,j,k-4)
+       Txx(i,j,k)=4.0*Txx(i,j,k-1)-6.0*Txx(i,j,k-2)+4.0*Txx(i,j,k-3)-Txx(i,j,k-4)
+       Tzz(i,j,k)=4.0*Tzz(i,j,k-1)-6.0*Tzz(i,j,k-2)+4.0*Tzz(i,j,k-3)-Tzz(i,j,k-4)
+       Tyy(i,j,k)=4.0*Tyy(i,j,k-1)-6.0*Tyy(i,j,k-2)+4.0*Tyy(i,j,k-3)-Tyy(i,j,k-4)
+       Txy(i,j,k)=4.0*Txy(i,j,k-1)-6.0*Txy(i,j,k-2)+4.0*Txy(i,j,k-3)-Txy(i,j,k-4)
+       Txz(i,j,k)=4.0*Txz(i,j,k-1)-6.0*Txz(i,j,k-2)+4.0*Txz(i,j,k-3)-Txz(i,j,k-4)
+       Tyz(i,j,k)=4.0*Tyz(i,j,k-1)-6.0*Tyz(i,j,k-2)+4.0*Tyz(i,j,k-3)-Tyz(i,j,k-4)
+    end do
+    end do
+    end do
+    end if
+!===============================================================================
 end subroutine free_extrap
-!-------------------------------------------------------------------------------
+!===============================================================================
 
-!-------------------------------------------------------------------------------
+!===============================================================================
 subroutine free_vext  !--- only extrapolate velocity above surface
-!-------------------------------------------------------------------------------
-integer i,j,k
-
-if (freenode) then
-do k=nk2+1,nz2
-do j=nj1,nj2
-do i=ni1,ni2
-   Vx (i,j,k)=4.0*Vx (i,j,k-1)-6.0*Vx (i,j,k-2)+4.0*Vx (i,j,k-3)-Vx (i,j,k-4)
-   Vy (i,j,k)=4.0*Vy (i,j,k-1)-6.0*Vy (i,j,k-2)+4.0*Vy (i,j,k-3)-Vy (i,j,k-4)
-   Vz (i,j,k)=4.0*Vz (i,j,k-1)-6.0*Vz (i,j,k-2)+4.0*Vz (i,j,k-3)-Vz (i,j,k-4)
-end do
-end do
-end do
-end if
-!-------------------------------------------------------------------------------
+!===============================================================================
+    integer i,j,k
+    
+    if (freenode) then
+    do k=nk2+1,nz2
+    do j=nj1,nj2
+    do i=ni1,ni2
+       Vx (i,j,k)=4.0*Vx (i,j,k-1)-6.0*Vx (i,j,k-2)+4.0*Vx (i,j,k-3)-Vx (i,j,k-4)
+       Vy (i,j,k)=4.0*Vy (i,j,k-1)-6.0*Vy (i,j,k-2)+4.0*Vy (i,j,k-3)-Vy (i,j,k-4)
+       Vz (i,j,k)=4.0*Vz (i,j,k-1)-6.0*Vz (i,j,k-2)+4.0*Vz (i,j,k-3)-Vz (i,j,k-4)
+    end do
+    end do
+    end do
+    end if
+!===============================================================================
 end subroutine free_vext
-!-------------------------------------------------------------------------------
+!===============================================================================
 
-!-------------------------------------------------------------------------------
+!===============================================================================
 subroutine free_timg  !--- stress imaging of stress
-!-------------------------------------------------------------------------------
-integer i,j,k
-
-if (freenode) then
-do k=1,SEIS_GEO
-do j=nj1,nj2
-do i=ni1,ni2
-   Tzz(i,j,nk2+k)=2.0_SP*TzSrc(i,j)-Tzz(i,j,nk2-k)
-   Txz(i,j,nk2+k)=2.0_SP*TxSrc(i,j)-Txz(i,j,nk2-k)
-   Tyz(i,j,nk2+k)=2.0_SP*TySrc(i,j)-Tyz(i,j,nk2-k)
-end do
-end do
-end do
-
-do j=nj1,nj2
-do i=ni1,ni2
-   Tzz(i,j,nk2)=TzSrc(i,j)
-   Txz(i,j,nk2)=TxSrc(i,j)
-   Tyz(i,j,nk2)=TySrc(i,j)
-end do
-end do
-end if
-!-------------------------------------------------------------------------------
+!===============================================================================
+    integer i,j,k
+    
+    if (freenode) then
+    do k=1,SEIS_GEO
+    do j=nj1,nj2
+    do i=ni1,ni2
+       Tzz(i,j,nk2+k)=2.0_SP*TzSrc(i,j)-Tzz(i,j,nk2-k)
+       Txz(i,j,nk2+k)=2.0_SP*TxSrc(i,j)-Txz(i,j,nk2-k)
+       Tyz(i,j,nk2+k)=2.0_SP*TySrc(i,j)-Tyz(i,j,nk2-k)
+    end do
+    end do
+    end do
+    
+    do j=nj1,nj2
+    do i=ni1,ni2
+       Tzz(i,j,nk2)=TzSrc(i,j)
+       Txz(i,j,nk2)=TxSrc(i,j)
+       Tyz(i,j,nk2)=TySrc(i,j)
+    end do
+    end do
+    end if
+!===============================================================================
 end subroutine free_timg
-!-------------------------------------------------------------------------------
+!===============================================================================
 
-!-------------------------------------------------------------------------------
+!===============================================================================
 subroutine macdrp_mesg_init  !--- initial the continuous communication
-!-------------------------------------------------------------------------------
-  call mesg_init_LxF
-  call mesg_init_LxB
-  call mesg_init_LyF
-  call mesg_init_LyB
-  call mesg_init_LzF
-  call mesg_init_LzB
-!-------------------------------------------------------------------------------
+!===============================================================================
+    call mesg_init_LxF
+    call mesg_init_LxB
+    call mesg_init_LyF
+    call mesg_init_LyB
+    call mesg_init_LzF
+    call mesg_init_LzB
+!===============================================================================
 end subroutine macdrp_mesg_init
-!-------------------------------------------------------------------------------
+!===============================================================================
 
-!-------------------------------------------------------------------------------
+!===============================================================================
 !--- message for each direction and forward or backward operator
-!-------------------------------------------------------------------------------
+!===============================================================================
+
+!===============================================================================
 subroutine mesg_init_LxF
+!===============================================================================
 integer s1,s2,s3,s4,s5,s6,s7,s8,s9
 integer r1,r2,r3,r4,r5,r6,r7,r8,r9
 #ifdef MPIBuffered
@@ -5112,9 +5126,13 @@ call MPI_RECV_INIT(Vz (ni1-LenFDS,ny1,nz1),1,DTypeXS,neigid(1,1),1219,SWMPI_COMM
 !reqXF(19:36)=(/ s1,r1,s2,r2,s3,r3,s4,r4,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
 reqXF(13:24)=(/ s1,r1,s4,r4,s5,r5,s7,r7,s8,r8,s9,r9 /)
 #endif
+!===============================================================================
 end subroutine mesg_init_LxF
-!-------------------------------------------------------------------------------
+!===============================================================================
+
+!===============================================================================
 subroutine mesg_init_LxB
+!===============================================================================
 integer s1,s2,s3,s4,s5,s6,s7,s8,s9
 integer r1,r2,r3,r4,r5,r6,r7,r8,r9
 #ifdef MPIBuffered
@@ -5172,9 +5190,13 @@ call MPI_RECV_INIT(Vz (ni1-LenFDL,ny1,nz1),1,DTypeXL,neigid(1,1),1239,SWMPI_COMM
 !reqXB(19:36)=(/ s1,r1,s2,r2,s3,r3,s4,r4,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
 reqXB(13:24)=(/ s1,r1,s4,r4,s5,r5,s7,r7,s8,r8,s9,r9 /)
 #endif
+!===============================================================================
 end subroutine mesg_init_LxB
-!-------------------------------------------------------------------------------
+!===============================================================================
+
+!===============================================================================
 subroutine mesg_init_LyF
+!===============================================================================
 integer s1,s2,s3,s4,s5,s6,s7,s8,s9
 integer r1,r2,r3,r4,r5,r6,r7,r8,r9
 #ifdef MPIBuffered
@@ -5233,9 +5255,13 @@ call MPI_RECV_INIT(Vz (nx1,nj1-LenFDS,nz1),1,DTypeYS,neigid(2,1),2219,SWMPI_COMM
 !reqYF(19:36)=(/ s1,r1,s2,r2,s3,r3,s4,r4,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
 reqYF(13:24)=(/ s2,r2,s4,r4,s6,r6,s7,r7,s8,r8,s9,r9 /)
 #endif
+!===============================================================================
 end subroutine mesg_init_LyF
-!-------------------------------------------------------------------------------
+!===============================================================================
+
+!===============================================================================
 subroutine mesg_init_LyB
+!===============================================================================
 integer s1,s2,s3,s4,s5,s6,s7,s8,s9
 integer r1,r2,r3,r4,r5,r6,r7,r8,r9
 #ifdef MPIBuffered
@@ -5293,9 +5319,13 @@ call MPI_RECV_INIT(Vz (nx1,nj1-LenFDL,nz1),1,DTypeYL,neigid(2,1),2239,SWMPI_COMM
 !reqYB(19:36)=(/ s1,r1,s2,r2,s3,r3,s4,r4,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
 reqYB(13:24)=(/ s2,r2,s4,r4,s6,r6,s7,r7,s8,r8,s9,r9 /)
 #endif
+!===============================================================================
 end subroutine mesg_init_LyB
-!-------------------------------------------------------------------------------
+!===============================================================================
+
+!===============================================================================
 subroutine mesg_init_LzF
+!===============================================================================
 integer s1,s2,s3,s4,s5,s6,s7,s8,s9
 integer r1,r2,r3,r4,r5,r6,r7,r8,r9
 #ifdef MPIBuffered
@@ -5353,9 +5383,13 @@ call MPI_RECV_INIT(Vz (nx1,ny1,nk1-LenFDS),1,DTypeZS,neigid(3,1),3219,SWMPI_COMM
 !reqZF(19:36)=(/ s1,r1,s2,r2,s3,r3,s4,r4,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
 reqZF(13:24)=(/ s3,r3,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
 #endif
+!===============================================================================
 end subroutine mesg_init_LzF
-!-------------------------------------------------------------------------------
+!===============================================================================
+
+!===============================================================================
 subroutine mesg_init_LzB
+!===============================================================================
 integer s1,s2,s3,s4,s5,s6,s7,s8,s9
 integer r1,r2,r3,r4,r5,r6,r7,r8,r9
 #ifdef MPIBuffered
@@ -5413,8 +5447,9 @@ call MPI_RECV_INIT(Vz (nx1,ny1,nk1-LenFDL),1,DTypeZL,neigid(3,1),3239,SWMPI_COMM
 !reqZB(19:36)=(/ s1,r1,s2,r2,s3,r3,s4,r4,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
 reqZB(13:24)=(/ s3,r3,s5,r5,s6,r6,s7,r7,s8,r8,s9,r9 /)
 #endif
+!===============================================================================
 end subroutine mesg_init_LzB
-!-------------------------------------------------------------------------------
+!===============================================================================
 
 #ifdef MPIBuffered
 !-------------------------------------------------------------------------------
