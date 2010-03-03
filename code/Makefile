@@ -66,6 +66,7 @@ OBJDIR := ./OBJ
 BINDIR := ./bin
 SRCDIR := ./src
 FPPDIR := ./srcF
+M4DIR  := ./srcM4
 
 SRC_MOD = mod_constants.f90 mod_math.f90 mod_string.f90 mod_nfseis.f90 \
 		  mod_para.f90 mod_mpi.f90  \
@@ -110,9 +111,13 @@ EXE_EXPTSEISMO := tool_expt_seismo
 OBJ_EXPTSEISMO :=  $(foreach file,$(SRC_EXPTSEISMO),$(OBJDIR)/$(file:.f90=.o))
 
 vpath %.F90 $(FPPDIR)
+vpath %.m4  $(M4DIR)
 
-FPP := /usr/bin/cpp
+FPP      := /usr/bin/cpp
 FPPFLAGS := -P -traditional $(foreach dir,$(FPPDIR),-I$(dir)) $(DFLAGS) 
+
+M4       := /usr/bin/m4
+M4FLAGS  := $(foreach dir,$(M4DIR),-I$(dir))
 
 #######################################################################
 #                     compiler and option                             #
@@ -172,13 +177,16 @@ distclean: cleanexe cleanobj cleanf90
 #######################################################################
 
 .SUFFIXES:
-.SUFFIXES: .F90 .f90 .o
+.SUFFIXES: .m4 .F90 .f90 .o
 
 seis3d_media_mpi.f90: seis3d_media.F90
 	$(FPP) $(FPPINCS) $(FPPFLAGS) -DMediaMPI $< > $(SRCDIR)/$(@F)
 
 seis3d_wave.f90: seis3d_wave_8op_p3.F90
 	$(FPP) $(FPPINCS) $(FPPFLAGS) $< > $(SRCDIR)/$(@F)
+
+%.F90 : %.m4
+	$(M4) $(M4FLAGS) $< > $(FPPDIR)/$(@F)
 
 %.f90 : %.F90
 	$(FPP) $(FPPFLAGS) $< > $(SRCDIR)/$(@F)
