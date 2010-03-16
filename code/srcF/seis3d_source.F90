@@ -221,16 +221,12 @@ program seis3d_source
        nfrc=0
        do n=1,num_force
           gi=force_indx(1,n);gj=force_indx(2,n);gk=force_indx(3,n)
-          if (      gi>=ngx1 .and. gi<=ngx2                          &
-              .and. gj>=ngy1 .and. gj<=ngy2                          &
-              .and. gk>=ngz1 .and. gk<=ngz2 ) nfrc=nfrc+1
+          if ( is_in_this_thread(gi,gj,gk) ) nfrc=nfrc+1
        end do
        nmom=0
        do n=1,num_moment
           gi=moment_indx(1,n);gj=moment_indx(2,n);gk=moment_indx(3,n)
-          if (      gi>=ngx1 .and. gi<=ngx2                          &
-              .and. gj>=ngy1 .and. gj<=ngy2                          &
-              .and. gk>=ngz1 .and. gk<=ngz2 ) nmom=nmom+1
+          if ( is_in_this_thread(gi,gj,gk) ) nmom=nmom+1
        end do
     
        filenm=src_fnm_get(n_i,n_j,n_k)
@@ -253,9 +249,7 @@ program seis3d_source
           m=0
           do n=1,num_force
              gi=force_indx(1,n);gj=force_indx(2,n);gk=force_indx(3,n)
-             if (      gi>=ngx1 .and. gi<=ngx2                          &
-                 .and. gj>=ngy1 .and. gj<=ngy2                          &
-                 .and. gk>=ngz1 .and. gk<=ngz2 ) then
+             if ( is_in_this_thread(gi,gj,gk) ) then
                 m=m+1
                 call nfseis_put(ncid,fxid,ForceX(:,n),(/1,m/),(/ntwin_force,1/),(/1,1/))
                 call nfseis_put(ncid,fyid,ForceY(:,n),(/1,m/),(/ntwin_force,1/),(/1,1/))
@@ -290,9 +284,7 @@ program seis3d_source
           m=0
           do n=1,num_moment
              gi=moment_indx(1,n);gj=moment_indx(2,n);gk=moment_indx(3,n)
-             if (      gi>=ngx1 .and. gi<=ngx2                          &
-                 .and. gj>=ngy1 .and. gj<=ngy2                          &
-                 .and. gk>=ngz1 .and. gk<=ngz2 ) then
+             if ( is_in_this_thread(gi,gj,gk) ) then
                 m=m+1
                 call nfseis_put(ncid,mxxid,MomTxx(:,n),(/1,m/),(/ntwin_moment,1/),(/1,1/))
                 call nfseis_put(ncid,myyid,MomTyy(:,n),(/1,m/),(/ntwin_moment,1/),(/1,1/))
@@ -439,6 +431,24 @@ subroutine read_src_para(fnm_conf)
 !-------------------------------------------------------------------------------
 end subroutine read_src_para
 !-------------------------------------------------------------------------------
+
+!-------------------------------------------------------------------------------
+function is_in_this_thread(gi,gj,gk) result(flag_in)
+!-------------------------------------------------------------------------------
+    integer :: gi,gj,gk
+    logical :: flag_in
+
+    if (      gi>=ngi1-NSRCEXT .and. gi<=ngi2+NSRCEXT                          &
+        .and. gj>=ngj1-NSRCEXT .and. gj<=ngj2+NSRCEXT                          &
+        .and. gk>=ngk1-NSRCEXT .and. gk<=ngk2+NSRCEXT ) then
+        flag_in=.true.
+    else
+        flag_in=.false.
+    end if
+!-------------------------------------------------------------------------------
+end function is_in_this_thread
+!-------------------------------------------------------------------------------
+
 
 !-------------------------------------------------------------------------------
 subroutine angle2moment(strike,dip,rake,Mxx,Myy,Mzz,Mxy,Mxz,Myz)
