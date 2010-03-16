@@ -31,7 +31,7 @@ module abs_mod
 !-------------------------------------------------------------------------------
 #include "mod_macdrp.h"
 !#define AbsVzero
-!#define DEBUG
+#define DEBUG
 !#define CorrAbs
 
 !-------------------------------------------------------------------------------
@@ -231,7 +231,7 @@ subroutine abs_init(fnm_conf)
           cycle
        end if
        call string_conf(fid,1,'abs_P_velocity',(n-1)*2+m+1,Vp(n,m))
-       call string_conf(fid,1,'CFS_S_volocity',(n-1)*2+m+1,Vs(n,m))
+       call string_conf(fid,1,'CFS_S_velocity',(n-1)*2+m+1,Vs(n,m))
        call string_conf(fid,1,'CFS_center_frequency',(n-1)*2+m+1,fc(n,m))
        !call string_conf(fid,1,'CFS_bmax',(n-1)*2+m+1,bmax(n,m))
        !call string_conf(fid,1,'CFS_amax',(n-1)*2+m+1,amax(n,m))
@@ -269,6 +269,7 @@ subroutine abs_init(fnm_conf)
        L0=z(nk2)*(x0-x(ni1))       !-- total length
        dh=L0/abs_number(1,1)       !-- average spacing
        bmax(1,1)=cal_pml_bmax(Vs(1,1),fc(1,1),dh)
+       amax(1,1)=cal_pml_amax(        fc(1,1)   )
        if (bmax(1,1)<1.0) then
           print *, "Warning: CFS_bmax less than 1, reset it to 1"
           print *, "thisid,n,m=",thisid,1,1
@@ -289,6 +290,7 @@ subroutine abs_init(fnm_conf)
        L0=z(nk2)*(x(ni2)-x0)
        dh=L0/abs_number(1,2)
        bmax(1,2)=cal_pml_bmax(Vs(1,2),fc(1,2),dh)
+       amax(1,2)=cal_pml_amax(        fc(1,2)   )
        if (bmax(1,2)<1.0) then
           print *, "Warning: CFS_bmax less than 1, reset it to 1"
           print *, "thisid,n,m=",thisid,1,2
@@ -311,6 +313,7 @@ subroutine abs_init(fnm_conf)
        L0=z(nk2)*(y0-y(nj1))
        dh=L0/abs_number(2,1)       !-- average spacing
        bmax(2,1)=cal_pml_bmax(Vs(2,1),fc(2,1),dh)
+       amax(2,1)=cal_pml_amax(        fc(2,1)   )
        if (bmax(2,1)<1.0) then
           print *, "Warning: CFS_bmax less than 1, reset it to 1"
           print *, "thisid,n,m=",thisid,2,1
@@ -331,6 +334,7 @@ subroutine abs_init(fnm_conf)
        L0=z(nk2)*(y(nj2)-y0)
        dh=L0/abs_number(2,2)
        bmax(2,2)=cal_pml_bmax(Vs(2,2),fc(2,2),dh)
+       amax(2,2)=cal_pml_amax(        fc(2,2)   )
        if (bmax(2,2)<1.0) then
           print *, "Warning: CFS_bmax less than 1, reset it to 1"
           print *, "thisid,n,m=",thisid,2,2
@@ -353,6 +357,7 @@ subroutine abs_init(fnm_conf)
        L0=z0-z(nk1)
        dh=L0/abs_number(3,1)       !-- average spacing
        bmax(3,1)=cal_pml_bmax(Vs(3,1),fc(3,1),dh)
+       amax(3,1)=cal_pml_amax(        fc(3,1)   )
        if (bmax(3,1)<1.0) then
           print *, "Warning: CFS_bmax less than 1, reset it to 1"
           print *, "thisid,n,m=",thisid,3,1
@@ -374,6 +379,7 @@ subroutine abs_init(fnm_conf)
        L0=z(nk2)-z0
        dh=L0/abs_number(3,2)
        bmax(3,2)=cal_pml_bmax(Vs(3,2),fc(3,2),dh)
+       amax(3,2)=cal_pml_amax(        fc(3,2)   )
        if (bmax(3,2)<1.0) then
           print *, "Warning: CFS_bmax less than 1, reset it to 1"
           print *, "thisid,n,m=",thisid,3,2
