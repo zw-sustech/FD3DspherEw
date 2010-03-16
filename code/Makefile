@@ -36,21 +36,25 @@ USEPML := ON
 #WITHQS := ON
 #DataTypeDouble := ON
 
-#AnisVTI := ON
+AnisVTI := ON
 #AnisGene := ON
 
-#SrcSmooth :=ON
-SrcSurface := ON
+#SrcSurface := ON
+
+#SrcNearestPoint := ON
+SrcImpulseFilter := ON
+#SrcGaussianSmooth := ON
 
 #CondFreeCharac := ON
 CondFreeTIMG := ON
-CondFreeVHOC := ON
-#CondFreeVLOW := ON
+#CondFreeVHOC := ON
+CondFreeVLOW := ON
 #CondFreeVEXT := ON
 
 DFLAG_LIST := DEBUG STATIC GETARG VERBOSE CheckOverFlow \
 			  MPITOPO1D USEOMP MPIBARRIER MPIBuffered DataTypeDouble \
-              USEPML WITHQS SrcSmooth SrcSurface \
+              USEPML WITHQS \
+              SrcSurface SrcNearestPoint SrcImpulseFilter SrcGaussianSmooth \
               AnisVTI AnisGene \
 			  CondFreeCharac CondFreeTIMG \
               CondFreeVHOC CondFreeVEXT CondFreeVLOW
@@ -67,11 +71,13 @@ BINDIR := ./bin
 SRCDIR := ./src
 FPPDIR := ./srcF
 M4DIR  := ./srcM4
+NRDIR  := ./srcNR
 
-SRC_MOD = mod_constants.f90 mod_math.f90 mod_string.f90 mod_nfseis.f90 \
+SRC_MOD := mod_constants.f90 mod_math.f90 mod_string.f90 mod_nfseis.f90 \
 		  mod_para.f90 mod_mpi.f90  \
 		  mod_grid.f90 mod_io.f90 mod_media.f90 mod_macdrp.f90 mod_src.f90 \
 		  mod_custom.f90
+SRC_MOD := $(if $(SrcImpulseFilter),nrtype.f90 nrutil.f90 bessi0.f90,) $(SRC_MOD)
 OBJ_MOD := $(foreach file,$(SRC_MOD),$(OBJDIR)/$(file:.f90=.o))
 
 SRC_GRID    := seis3d_grid.f90
@@ -169,8 +175,15 @@ cleanobj:
 	$(RM) -f $(OBJDIR)/*
 cleanf90:
 	$(RM) -f $(SRCDIR)/*
-cleanall: cleanexe cleanobj cleanf90
-distclean: cleanexe cleanobj cleanf90
+cleanF90:
+	rm -f $(foreach file,$(notdir $(wildcard $(M4DIR)/*.m4)),$(FPPDIR)/$(file:.m4=.F90))
+cleanskel:
+	$(RM) -rf $(skeldirs)
+	$(RM) -f *.log
+#	echo $(foreach file,$(M4DIR)/*,$(FPPDIR)/$(file:.m4=.F90))
+#	#$(RM) -f $(foreach file,$(M4DIR)/*,$(FPPDIR)/$(file:.m4=.F90))
+cleanall: cleanexe cleanobj cleanf90 cleanF90
+distclean: cleanexe cleanobj cleanf90 cleanskel
 
 #######################################################################
 #                        subffixes rules                              #
@@ -182,17 +195,30 @@ distclean: cleanexe cleanobj cleanf90
 seis3d_media_mpi.f90: seis3d_media.F90
 	$(FPP) $(FPPINCS) $(FPPFLAGS) -DMediaMPI $< > $(SRCDIR)/$(@F)
 
-seis3d_wave.f90: seis3d_wave_8op_p3.F90
-	$(FPP) $(FPPINCS) $(FPPFLAGS) $< > $(SRCDIR)/$(@F)
+#seis3d_wave.f90: seis3d_wave_8op_p3.F90
+#	$(FPP) $(FPPINCS) $(FPPFLAGS) $< > $(SRCDIR)/$(@F)
 
-%.F90 : %.m4
-	$(M4) $(M4FLAGS) $< > $(FPPDIR)/$(@F)
+nrtype.f90: $(NRDIR)/nrtype.f90
+	cp -f $< $(SRCDIR)/$(@F)
+nrutil.f90: $(NRDIR)/nrutil.f90
+	cp -f $< $(SRCDIR)/$(@F)
+bessi0.f90: $(NRDIR)/bessi0.f90
+	cp -f $< $(SRCDIR)/$(@F)
+
+%.f90 : %.m4
+	$(M4) $(M4FLAGS) $< > $(FPPDIR)/$(@F:.f90=.F90)
+	$(FPP) $(FPPFLAGS) $(FPPDIR)/$(@F:.f90=.F90) > $(SRCDIR)/$(@F)
 
 %.f90 : %.F90
 	$(FPP) $(FPPFLAGS) $< > $(SRCDIR)/$(@F)
 
 $(OBJDIR)/%.o : %.f90
 	$(FC) $(FFLAGS) $(SRCDIR)/$(<F) -o $@
+
+#$(OBJDIR)/%.o : %.f90
+#	$(FC) $(FFLAGS) $< -o $@
+	#$(FC) $(FFLAGS) $(NRDIR)/$(<F) -o $@
+
 
 #######################################################################
 #                          include rules                              #
