@@ -23,6 +23,10 @@ module src_mod
 ! Include file:
 !-------------------------------------------------------------------------------
 #include "mod_macdrp.h"
+!#define SrcNearestPoint
+!#define SrcImpulseFilter
+!#define SrcGaussianSmooth
+!#define SrcPolyFit
 
 !-------------------------------------------------------------------------------
 ! Dependent modules:
@@ -36,10 +40,20 @@ module src_mod
     use media_mod
     use nfseis_mod
 
+    implicit none
+
+#ifdef SrcImpulseFilter
+    interface
+        function bessi0_s(x) result(y)
+            real :: x
+            real :: y
+        end function bessi0_s
+    end interface
+#endif
+
 !-------------------------------------------------------------------------------
 ! Public interface and variables:
 !-------------------------------------------------------------------------------
-    implicit none
     private
     
     public ::           &
@@ -71,6 +85,17 @@ module src_mod
          SIG_STF_STEP     =240,  &
          SIG_STF_DELTA    =250
     
+!-- nodes to extend the source spatial extent
+#if defined SrcNearestPoint
+    integer,parameter,public :: NSRCEXT=1 !- single point
+#elif defined SrcImpulseFilter
+    integer,parameter,public :: NSRCEXT=4 !- for Kaiser and sinc function
+    !real,parameter    :: KAISERB=4.14
+    real,parameter    :: KAISERB=6.31
+#elif defined SrcGaussianSmooth
+    integer,parameter,public :: NSRCEXT=LenFD !- for Gaussian distribution
+#endif
+
     integer,public :: num_force,num_moment,ntwin_force,ntwin_moment
     integer,allocatable,public :: force_indx(:,:),moment_indx(:,:)
     real(SP),allocatable,public ::                        &
@@ -186,7 +211,8 @@ function src_fnm_get(n_i,n_j,n_k) result(filenm)
 !-------------------------------------------------------------------------------
     integer,intent(in) :: n_i,n_j,n_k
     character (len=SEIS_STRLEN) :: filenm
-    filenm=trim(pnm_src)//'/'//'source'//'_'//set_mpi_subfix(n_i,n_j,n_k)//'.nc'
+    filenm=trim(pnm_src)//'/'//'source'  &
+           //'_'//trim(set_mpi_subfix(n_i,n_j,n_k))//'.nc'
 !-------------------------------------------------------------------------------
 end function src_fnm_get
 !-------------------------------------------------------------------------------
@@ -256,91 +282,63 @@ end subroutine src_import
 !===============================================================================
 
 !===============================================================================
-subroutine src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,tinc,stept)
+#ifdef SrcNearestPoint
 !===============================================================================
+!-------------------------------------------------------------------------------
+subroutine src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,tinc,stept)
+!-------------------------------------------------------------------------------
     real(SP),dimension(:,:,:),intent(inout) :: Txx,Tyy,Tzz,Txy,Txz,Tyz
     integer,intent(in) :: ntime
     real(SP),intent(in) :: tinc,stept
     
     integer :: i,j,k,n,m,si,sj,sk
     real(SP) :: t,rate,Mxx,Mxy,Mxz,Myy,Myz,Mzz,d,V
-#ifdef SrcSmooth
-    integer :: Li,Lj,Lk
-    real(SP),dimension(-LenFD:LenFD,-LenFD:LenFD,-LenFD:LenFD) :: normd
-    real(SP) :: x0,y0,z0
-#endif
     
+!-- exist if no moment source
     if ( num_moment<=0 ) return
-    
+
+!-- current time
     t=(ntime+tinc)*stept
     
+!-- loop each moment source
     do n=1,num_moment
-       si=moment_indx(1,n); sj=moment_indx(2,n); sk=moment_indx(3,n)
-#ifdef SrcSmooth
-       x0=moment_shift(1,n); y0=moment_shift(2,n); z0=moment_shift(3,n)
-       call cal_norm_delt(normd, x0,y0,z0,                            &
-            real(LenFD/2.0,SP), real(LenFD/2.0,SP), real(LenFD/2.0,SP) )
-       if (freenode .and. sk+LenFD>nk2)  then
-          normd=normd/sum(normd(:,:,-LenFD:nk2-sk))
-       end if
-#endif
-    
+
+        si=moment_indx(1,n); sj=moment_indx(2,n); sk=moment_indx(3,n)
+
     do m=1,ntwin_moment
-       rate=src_svf(t-moment_t0(n),momstf_time(m),momstf_freq(m),momstf_id,ntime)
-#ifdef VERBOSE
-       if (n==1) then
-          write(fid_out,'(i5,2es12.5)') ntime, t, rate
-       end if
-#endif
-       Mxx=MomTxx(m,n); Myy=MomTyy(m,n); Mzz=MomTzz(m,n)
-       Mxy=MomTxy(m,n); Mxz=MomTxz(m,n); Myz=MomTyz(m,n)
-#ifdef SrcSmooth
-    do Lk=-LenFD,LenFD
-    do Lj=-LenFD,LenFD
-    do Li=-LenFD,LenFD
-       i=Li+si; j=Lj+sj; k=Lk+sk; d=normd(Li,Lj,Lk)
-#else
-       i=si; j=sj; k=sk; d=1.0_SP
-#endif
-       if (      i<=ni2 .and. i>=ni1  &
-           .and. j<=nj2 .and. j>=nj1  &
-           .and. k<=nk2 .and. k>=nk1 ) then
-           !V=stepx*stepy*stepz*z(k)**2*xsin(i)
-           V=(x(i+1)-x(i-1))*(y(j+1)-y(j-1))*(z(k+1)-z(k-1))/8.0*z(k)**2*xsin(i)
-           V=d*rate/V
-           Txx(i,j,k)=Txx(i,j,k)-Mxx*V
-           Tyy(i,j,k)=Tyy(i,j,k)-Myy*V
-           Tzz(i,j,k)=Tzz(i,j,k)-Mzz*V
-           Txy(i,j,k)=Txy(i,j,k)-Mxy*V
-           Txz(i,j,k)=Txz(i,j,k)-Mxz*V
-           Tyz(i,j,k)=Tyz(i,j,k)-Myz*V
-       end if
-#ifdef SrcSmooth
-    end do
-    end do
-    end do  ! loop_of Li,Lj,Lk
-#endif
-    
+        rate=src_svf(t-moment_t0(n),momstf_time(m),momstf_freq(m),momstf_id,ntime)
+        Mxx=MomTxx(m,n); Myy=MomTyy(m,n); Mzz=MomTzz(m,n)
+        Mxy=MomTxy(m,n); Mxz=MomTxz(m,n); Myz=MomTyz(m,n)
+        i=si; j=sj; k=sk; d=1.0_SP
+        if (      i<=ni2 .and. i>=ni1  &
+            .and. j<=nj2 .and. j>=nj1  &
+            .and. k<=nk2 .and. k>=nk1 ) then
+            !V=stepx*stepy*stepz*z(k)**2*xsin(i)
+        !-- volume
+            V=(x(i+1)-x(i-1))*(y(j+1)-y(j-1))*(z(k+1)-z(k-1))/8.0*z(k)**2*xsin(i)
+            V=d*rate/V
+            Txx(i,j,k)=Txx(i,j,k)-Mxx*V
+            Tyy(i,j,k)=Tyy(i,j,k)-Myy*V
+            Tzz(i,j,k)=Tzz(i,j,k)-Mzz*V
+            Txy(i,j,k)=Txy(i,j,k)-Mxy*V
+            Txz(i,j,k)=Txz(i,j,k)-Mxz*V
+            Tyz(i,j,k)=Tyz(i,j,k)-Myz*V
+        end if
     end do ! ntwin
     end do ! loop_of_npt
-!===============================================================================
+!-------------------------------------------------------------------------------
 end subroutine src_stress
-!===============================================================================
+!-------------------------------------------------------------------------------
 
-!===============================================================================
+!-------------------------------------------------------------------------------
 subroutine src_force(Vx,Vy,Vz,ntime,tinc,stept)
-!===============================================================================
+!-------------------------------------------------------------------------------
     real(SP),dimension(:,:,:),intent(inout) :: Vx,Vy,Vz
     integer,intent(in) :: ntime
     real(SP),intent(in) :: tinc,stept
     
     integer :: i,j,k,n,m,si,sj,sk
     real(SP) :: t,disp,d,fx0,fy0,fz0,fx,fy,fz,V
-#ifdef SrcSmooth
-    integer :: Li,Lj,Lk
-    real(SP),dimension(-LenFD:LenFD,-LenFD:LenFD,-LenFD:LenFD) :: normd
-    real(SP) :: x0,y0,z0
-#endif
     
     if ( num_force<=0 ) return
     
@@ -348,31 +346,11 @@ subroutine src_force(Vx,Vy,Vz,ntime,tinc,stept)
     
     do n=1,num_force
        si=force_indx(1,n); sj=force_indx(2,n); sk=force_indx(3,n)
-#ifdef SrcSmooth
-       x0=force_shift(1,n); y0=force_shift(2,n); z0=force_shift(3,n)
-       call cal_norm_delt(normd, x0,y0,z0,                            &
-            real(LenFD/2.0,SP), real(LenFD/2.0,SP), real(LenFD/2.0,SP) )
-       if (freenode .and. sk+LenFD>nk2)  then
-          normd=normd/sum(normd(:,:,-LenFD:nk2-sk))
-       end if
-#endif
     
     do m=1,ntwin_force
        disp=src_stf(t-force_t0(n),frcstf_time(m),frcstf_freq(m),frcstf_id,ntime)
-#ifdef VERBOSE
-    if (n==1) then
-       write(fid_out,'(i5,2es12.5)') ntime, t, disp
-    end if
-#endif
        fx0=ForceX(m,n)*disp; fy0=ForceY(m,n)*disp; fz0=ForceZ(m,n)*disp
-#ifdef SrcSmooth
-    do Lk=-LenFD,LenFD
-    do Lj=-LenFD,LenFD
-    do Li=-LenFD,LenFD
-       i=Li+si; j=Lj+sj; k=Lk+sk; d=normd(Li,Lj,Lk)
-#else
        i=si; j=sj; k=sk; d=1.0_SP
-#endif
        if (      i<=ni2 .and. i>=ni1  &
            .and. j<=nj2 .and. j>=nj1  &
            .and. k<=nk2 .and. k>=nk1 ) then
@@ -390,18 +368,590 @@ subroutine src_force(Vx,Vy,Vz,ntime,tinc,stept)
            Vy(i,j,k)=Vy(i,j,k)+fy
            Vz(i,j,k)=Vz(i,j,k)+fz
        end if !i[jk]
-#ifdef SrcSmooth
-    end do !Li
-    end do !Lj
-    end do !Lk
-#endif
     
     end do ! ntwin
     end do ! loop_of_npt
     !call src_charac(t,ntime)
-!===============================================================================
+!-------------------------------------------------------------------------------
 end subroutine src_force
+!-------------------------------------------------------------------------------
+
+!-------------------------------------------------------------------------------
+subroutine src_surface(ntime,tinc,stept)
+!-------------------------------------------------------------------------------
+    use macdrp_mod, only : &
+        TxSrc,TySrc,TzSrc
+    use macdrp_mod, only : &
+        VxSrc,VySrc,VzSrc
+    integer,intent(in) :: ntime
+    real(SP),intent(in) :: tinc,stept
+    
+    integer :: n,m,i,j,k
+    real(SP) :: t,disp,rate,S,fx0,fy0,fz0
+    
+    if (.not. freenode) return
+    
+    if ( num_force<=0 ) return
+    
+    t=(ntime+tinc)*stept
+
+!-- reset var to zero to allow force overlap
+    VxSrc=0.0
+    VySrc=0.0
+    VzSrc=0.0
+    TxSrc=0.0
+    TySrc=0.0
+    TzSrc=0.0
+    
+!-- loop each force
+    do n=1,num_force
+
+       i=force_indx(1,n); j=force_indx(2,n); k=force_indx(3,n)
+
+    do m=1,ntwin_force
+
+       disp=src_stf(t-force_t0(n),frcstf_time(m),frcstf_freq(m),frcstf_id,ntime)
+       rate=src_svf(t-force_t0(n),frcstf_time(m),frcstf_freq(m),frcstf_id,ntime)
+       fx0=ForceX(m,n); fy0=ForceY(m,n); fz0=ForceZ(m,n)
+
+       if (      i<=ni2 .and. i>=ni1  &
+           .and. j<=nj2 .and. j>=nj1  &
+           .and. k==nk2  ) then
+    
+            S=(x(i+1)-x(i-1))*(y(j+1)-y(j-1))/4.0*z(k)**2*xsin(i)
+    
+            TxSrc(i,j)=TxSrc(i,j)+fx0/S*disp
+            TySrc(i,j)=TySrc(i,j)+fy0/S*disp
+            TzSrc(i,j)=TzSrc(i,j)+fz0/S*disp
+            VxSrc(i,j)=VxSrc(i,j)+fx0/S*rate
+            VySrc(i,j)=VySrc(i,j)+fy0/S*rate
+            VzSrc(i,j)=VzSrc(i,j)+fz0/S*rate
+
+        end if
+    end do
+    end do
+!-------------------------------------------------------------------------------
+end subroutine src_surface
+!-------------------------------------------------------------------------------
+
 !===============================================================================
+#endif
+!===============================================================================
+
+!===============================================================================
+#ifdef SrcGaussianSmooth
+!===============================================================================
+!-------------------------------------------------------------------------------
+subroutine src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,tinc,stept)
+!-------------------------------------------------------------------------------
+    real(SP),dimension(:,:,:),intent(inout) :: Txx,Tyy,Tzz,Txy,Txz,Tyz
+    integer,intent(in) :: ntime
+    real(SP),intent(in) :: tinc,stept
+    
+    integer :: i,j,k,n,m,si,sj,sk
+    real(SP) :: t,rate,Mxx,Mxy,Mxz,Myy,Myz,Mzz,d,V
+    integer :: Li,Lj,Lk
+    real(SP),dimension(-NSRCEXT:NSRCEXT,-NSRCEXT:NSRCEXT,-NSRCEXT:NSRCEXT) :: normd
+    real(SP) :: x0,y0,z0
+
+!-- exist if no moment source
+    if ( num_moment<=0 ) return
+
+!-- current time
+    t=(ntime+tinc)*stept
+    
+!-- loop each moment source
+    do n=1,num_moment
+
+        si=moment_indx(1,n); sj=moment_indx(2,n); sk=moment_indx(3,n)
+
+    !-- source position shift
+        x0=moment_shift(1,n); y0=moment_shift(2,n); z0=moment_shift(3,n)
+        call cal_norm_delt(normd, x0,y0,z0,                            &
+             real(NSRCEXT/2.0,SP), real(NSRCEXT/2.0,SP), real(NSRCEXT/2.0,SP) )
+        if (freenode .and. sk+LenFD>nk2)  then
+            normd=normd/sum(normd(:,:,-NSRCEXT:nk2-sk))
+        end if
+    
+    !-- loop each time window
+    do m=1,ntwin_moment
+        rate=src_svf(t-moment_t0(n),momstf_time(m),momstf_freq(m),momstf_id,ntime)
+
+        Mxx=MomTxx(m,n); Myy=MomTyy(m,n); Mzz=MomTzz(m,n)
+        Mxy=MomTxy(m,n); Mxz=MomTxz(m,n); Myz=MomTyz(m,n)
+
+    do Lk=-NSRCEXT,NSRCEXT
+    do Lj=-NSRCEXT,NSRCEXT
+    do Li=-NSRCEXT,NSRCEXT
+
+        i=Li+si; j=Lj+sj; k=Lk+sk; d=normd(Li,Lj,Lk)
+
+        if (      i<=ni2 .and. i>=ni1  &
+            .and. j<=nj2 .and. j>=nj1  &
+            .and. k<=nk2 .and. k>=nk1 ) then
+            !V=stepx*stepy*stepz*z(k)**2*xsin(i)
+        !-- volume
+            V=(x(i+1)-x(i-1))*(y(j+1)-y(j-1))*(z(k+1)-z(k-1))/8.0*z(k)**2*xsin(i)
+            V=d*rate/V
+            Txx(i,j,k)=Txx(i,j,k)-Mxx*V
+            Tyy(i,j,k)=Tyy(i,j,k)-Myy*V
+            Tzz(i,j,k)=Tzz(i,j,k)-Mzz*V
+            Txy(i,j,k)=Txy(i,j,k)-Mxy*V
+            Txz(i,j,k)=Txz(i,j,k)-Mxz*V
+            Tyz(i,j,k)=Tyz(i,j,k)-Myz*V
+        end if
+    end do
+    end do
+    end do  ! loop_of Li,Lj,Lk
+    
+    end do ! ntwin
+    end do ! loop_of_npt
+!-------------------------------------------------------------------------------
+end subroutine src_stress
+!-------------------------------------------------------------------------------
+
+!-------------------------------------------------------------------------------
+subroutine src_force(Vx,Vy,Vz,ntime,tinc,stept)
+!-------------------------------------------------------------------------------
+    real(SP),dimension(:,:,:),intent(inout) :: Vx,Vy,Vz
+    integer,intent(in) :: ntime
+    real(SP),intent(in) :: tinc,stept
+    
+    integer :: i,j,k,n,m,si,sj,sk
+    real(SP) :: t,disp,d,fx0,fy0,fz0,fx,fy,fz,V
+    integer :: Li,Lj,Lk
+    real(SP),dimension(-NSRCEXT:NSRCEXT,-NSRCEXT:NSRCEXT,-NSRCEXT:NSRCEXT) :: normd
+    real(SP) :: x0,y0,z0
+    
+    if ( num_force<=0 ) return
+    
+    t=(ntime+tinc)*stept
+    
+    do n=1,num_force
+       si=force_indx(1,n); sj=force_indx(2,n); sk=force_indx(3,n)
+       x0=force_shift(1,n); y0=force_shift(2,n); z0=force_shift(3,n)
+       call cal_norm_delt(normd, x0,y0,z0,                            &
+            real(NSRCEXT/2.0,SP), real(NSRCEXT/2.0,SP), real(NSRCEXT/2.0,SP) )
+       if (freenode .and. sk+LenFD>nk2)  then
+          normd=normd/sum(normd(:,:,-NSRCEXT:nk2-sk))
+       end if
+    
+    do m=1,ntwin_force
+       disp=src_stf(t-force_t0(n),frcstf_time(m),frcstf_freq(m),frcstf_id,ntime)
+       fx0=ForceX(m,n)*disp; fy0=ForceY(m,n)*disp; fz0=ForceZ(m,n)*disp
+    do Lk=-NSRCEXT,NSRCEXT
+    do Lj=-NSRCEXT,NSRCEXT
+    do Li=-NSRCEXT,NSRCEXT
+       i=Li+si; j=Lj+sj; k=Lk+sk; d=normd(Li,Lj,Lk)
+       if (      i<=ni2 .and. i>=ni1  &
+           .and. j<=nj2 .and. j>=nj1  &
+           .and. k<=nk2 .and. k>=nk1 ) then
+           V=(x(i+1)-x(i-1))*(y(j+1)-y(j-1))*(z(k+1)-z(k-1))/8.0*z(k)**2*xsin(i)
+           V=1.0/(V*rho(i,j,k))*d
+           fx=fx0*V; fy=fy0*V; fz=fz0*V
+#ifdef SrcSurface
+           if (freenode .and. k==nk2) cycle
+#else
+           if (freenode .and. k==nk2) then
+              fx=2.0_SP*fx;fy=2.0_SP*fy;fz=2.0_SP*fz
+           end if
+#endif
+           Vx(i,j,k)=Vx(i,j,k)+fx
+           Vy(i,j,k)=Vy(i,j,k)+fy
+           Vz(i,j,k)=Vz(i,j,k)+fz
+       end if !i[jk]
+    end do !Li
+    end do !Lj
+    end do !Lk
+    
+    end do ! ntwin
+    end do ! loop_of_npt
+    !call src_charac(t,ntime)
+!-------------------------------------------------------------------------------
+end subroutine src_force
+!-------------------------------------------------------------------------------
+
+!-------------------------------------------------------------------------------
+subroutine src_surface(ntime,tinc,stept)
+!-------------------------------------------------------------------------------
+    use macdrp_mod, only : &
+        TxSrc,TySrc,TzSrc
+    use macdrp_mod, only : &
+        VxSrc,VySrc,VzSrc
+    integer,intent(in) :: ntime
+    real(SP),intent(in) :: tinc,stept
+    
+    integer :: i,j,k,n,m,si,sj,sk
+    integer :: Li,Lj,Lk
+    real(SP) :: t,disp,rate,S,fx0,fy0,fz0
+    real(SP),dimension(-NSRCEXT:NSRCEXT,-NSRCEXT:NSRCEXT,-NSRCEXT:NSRCEXT) :: normd
+    real(SP) :: x0,y0,z0
+    
+    if (.not. freenode) return
+    
+    if ( num_force<=0 ) return
+    
+    t=(ntime+tinc)*stept
+
+!-- reset var to zero to allow force overlap
+    VxSrc=0.0
+    VySrc=0.0
+    VzSrc=0.0
+    TxSrc=0.0
+    TySrc=0.0
+    TzSrc=0.0
+    
+!-- loop each force
+    do n=1,num_force
+       si=force_indx(1,n); sj=force_indx(2,n); sk=force_indx(3,n)
+       x0=force_shift(1,n); y0=force_shift(2,n); z0=force_shift(3,n)
+       call cal_norm_delt(normd, x0,y0,z0,                            &
+            real(NSRCEXT/2.0,SP), real(NSRCEXT/2.0,SP), real(NSRCEXT/2.0,SP) )
+       if (freenode .and. sk+LenFD>nk2)  then
+          normd=normd/sum(normd(:,:,-NSRCEXT:nk2-sk))
+       end if
+    
+    do m=1,ntwin_force
+
+        disp=src_stf(t-force_t0(n),frcstf_time(m),frcstf_freq(m),frcstf_id,ntime)
+        rate=src_svf(t-force_t0(n),frcstf_time(m),frcstf_freq(m),frcstf_id,ntime)
+        fx0=ForceX(m,n); fy0=ForceY(m,n); fz0=ForceZ(m,n)
+
+    do Lk=-NSRCEXT,NSRCEXT
+    do Lj=-NSRCEXT,NSRCEXT
+    do Li=-NSRCEXT,NSRCEXT
+
+        i=Li+si; j=Lj+sj; k=Lk+sk; d=normd(Li,Lj,Lk)
+
+        if (      i<=ni2 .and. i>=ni1  &
+            .and. j<=nj2 .and. j>=nj1  &
+            .and. k==nk2 ) then        &
+
+            S=(x(i+1)-x(i-1))*(y(j+1)-y(j-1))/4.0*z(k)**2*xsin(i)
+    
+            TxSrc(i,j)=TxSrc(i,j)+fx0/S*disp*d
+            TySrc(i,j)=TySrc(i,j)+fy0/S*disp*d
+            TzSrc(i,j)=TzSrc(i,j)+fz0/S*disp*d
+            VxSrc(i,j)=VxSrc(i,j)+fx0/S*rate*d
+            VySrc(i,j)=VySrc(i,j)+fy0/S*rate*d
+            VzSrc(i,j)=VzSrc(i,j)+fz0/S*rate*d
+
+        end if !i[jk]
+    end do !Li
+    end do !Lj
+    end do !Lk
+    
+    end do ! ntwin
+    end do ! loop_of_npt
+    
+!-------------------------------------------------------------------------------
+end subroutine src_surface
+!-------------------------------------------------------------------------------
+
+!===============================================================================
+#endif
+!===============================================================================
+
+!===============================================================================
+#ifdef SrcImpulseFilter
+!===============================================================================
+
+!-------------------------------------------------------------------------------
+subroutine src_stress(Txx,Tyy,Tzz,Txy,Txz,Tyz,ntime,tinc,stept)
+!-------------------------------------------------------------------------------
+    real(SP),dimension(:,:,:),intent(inout) :: Txx,Tyy,Tzz,Txy,Txz,Tyz
+    integer,intent(in) :: ntime
+    real(SP),intent(in) :: tinc,stept
+    
+    integer :: i,j,k,n,m,si,sj,sk
+    real(SP) :: t,rate,Mxx,Mxy,Mxz,Myy,Myz,Mzz,d,V
+    integer :: Li,Lj,Lk
+    real(SP),dimension(-NSRCEXT:NSRCEXT) :: DNx
+    real(SP),dimension(-NSRCEXT:NSRCEXT) :: DNy
+    real(SP),dimension(-NSRCEXT:NSRCEXT) :: DNz
+    real(SP) :: b0,x0,y0,z0
+
+!-- exist if no moment source
+    if ( num_moment<=0 ) return
+
+!-- current time
+    t=(ntime+tinc)*stept
+
+!-- Bessel with b
+    b0=bessi0_s(KAISERB)
+    
+!-- loop each moment source
+    do n=1,num_moment
+
+        si=moment_indx(1,n); sj=moment_indx(2,n); sk=moment_indx(3,n)
+
+    !-- source position shift
+        x0=moment_shift(1,n); y0=moment_shift(2,n); z0=moment_shift(3,n)
+    !-- discrete delta function value
+        do Li=-NSRCEXT,NSRCEXT
+            DNx(Li)=calculate_windowed_impulse(Li-x0,b0)
+        end do
+        do Lj=-NSRCEXT,NSRCEXT
+            DNy(Lj)=calculate_windowed_impulse(Lj-y0,b0)
+        end do
+        do Lk=-NSRCEXT,NSRCEXT
+            DNz(Lk)=calculate_windowed_impulse(Lk-z0,b0)
+        end do
+
+    !-- loop each time window
+    do m=1,ntwin_moment
+        rate=src_svf(t-moment_t0(n),momstf_time(m),momstf_freq(m),momstf_id,ntime)
+
+        Mxx=MomTxx(m,n); Myy=MomTyy(m,n); Mzz=MomTzz(m,n)
+        Mxy=MomTxy(m,n); Mxz=MomTxz(m,n); Myz=MomTyz(m,n)
+
+    do Lk=-NSRCEXT,NSRCEXT
+    do Lj=-NSRCEXT,NSRCEXT
+    do Li=-NSRCEXT,NSRCEXT
+
+        i=Li+si; j=Lj+sj; k=Lk+sk
+
+        if (      i<=ni2 .and. i>=ni1  &
+            .and. j<=nj2 .and. j>=nj1  &
+            .and. k<=nk2 .and. k>=nk1 ) then
+            !V=stepx*stepy*stepz*z(k)**2*xsin(i)
+
+            d=DNx(Li) * DNy(Lj) * DNz(Lk)
+        !-- volume
+            V=(x(i+1)-x(i-1))*(y(j+1)-y(j-1))*(z(k+1)-z(k-1))/8.0*z(k)**2*xsin(i)
+            V=d*rate/V
+            Txx(i,j,k)=Txx(i,j,k)-Mxx*V
+            Tyy(i,j,k)=Tyy(i,j,k)-Myy*V
+            Tzz(i,j,k)=Tzz(i,j,k)-Mzz*V
+            Txy(i,j,k)=Txy(i,j,k)-Mxy*V
+            Txz(i,j,k)=Txz(i,j,k)-Mxz*V
+            Tyz(i,j,k)=Tyz(i,j,k)-Myz*V
+        end if
+    end do
+    end do
+    end do  ! loop_of Li,Lj,Lk
+    
+    end do ! ntwin
+    end do ! loop_of_npt
+!-------------------------------------------------------------------------------
+end subroutine src_stress
+!-------------------------------------------------------------------------------
+
+!-------------------------------------------------------------------------------
+subroutine src_force(Vx,Vy,Vz,ntime,tinc,stept)
+!-------------------------------------------------------------------------------
+    real(SP),dimension(:,:,:),intent(inout) :: Vx,Vy,Vz
+    integer,intent(in) :: ntime
+    real(SP),intent(in) :: tinc,stept
+    
+    integer :: i,j,k,n,m,si,sj,sk
+    real(SP) :: t,disp,d,fx0,fy0,fz0,fx,fy,fz,V
+    integer :: Li,Lj,Lk
+    real(SP),dimension(-NSRCEXT:NSRCEXT) :: DNx
+    real(SP),dimension(-NSRCEXT:NSRCEXT) :: DNy
+    real(SP),dimension(-NSRCEXT:NSRCEXT) :: DNz
+    real(SP) :: b0,x0,y0,z0
+    
+!-- exist if no force source
+    if ( num_force<=0 ) return
+    
+!-- current time
+    t=(ntime+tinc)*stept
+    
+!-- Bessel with b
+    b0=bessi0_s(KAISERB)
+    
+!-- loop each force source
+    do n=1,num_force
+
+        si=force_indx(1,n); sj=force_indx(2,n); sk=force_indx(3,n)
+
+    !-- source position shift
+        x0=force_shift(1,n); y0=force_shift(2,n); z0=force_shift(3,n)
+    !-- discrete delta function value
+        do Li=-NSRCEXT,NSRCEXT
+            DNx(Li)=calculate_windowed_impulse(Li-x0,b0)
+        end do
+        do Lj=-NSRCEXT,NSRCEXT
+            DNy(Lj)=calculate_windowed_impulse(Lj-y0,b0)
+        end do
+        do Lk=-NSRCEXT,NSRCEXT
+            DNz(Lk)=calculate_windowed_impulse(Lk-z0,b0)
+        end do
+    
+    !-- loop each time window
+        do m=1,ntwin_force
+
+            disp=src_stf(t-force_t0(n),frcstf_time(m),frcstf_freq(m),frcstf_id,ntime)
+            fx0=ForceX(m,n)*disp; fy0=ForceY(m,n)*disp; fz0=ForceZ(m,n)*disp
+
+        do Lk=-NSRCEXT,NSRCEXT
+        do Lj=-NSRCEXT,NSRCEXT
+        do Li=-NSRCEXT,NSRCEXT
+
+            i=Li+si; j=Lj+sj; k=Lk+sk;
+
+        !-- filter coefficent
+            d=DNx(Li) * DNy(Lj) * DNz(Lk)
+        !-- wrap to lower grid if extend above the free surface
+            if (freenode .and. k>nk2) then
+               k=nk2-(k-nk2)
+               d=-d
+            end if
+
+        !-- add force if the extended grid in this thread
+            if (      i<=ni2 .and. i>=ni1  &
+                .and. j<=nj2 .and. j>=nj1  &
+                .and. k<=nk2 .and. k>=nk1 ) then
+
+            !-- volume
+                V=(x(i+1)-x(i-1))*(y(j+1)-y(j-1))*(z(k+1)-z(k-1))/8.0*z(k)**2*xsin(i)
+
+                V=1.0/(V*rho(i,j,k))*d
+                fx=fx0*V; fy=fy0*V; fz=fz0*V
+#ifdef SrcSurface
+                if (freenode .and. k==nk2) cycle
+#else
+                if (freenode .and. k==nk2) then
+                    fx=2.0_SP*fx;fy=2.0_SP*fy;fz=2.0_SP*fz
+                end if
+#endif
+            !-- add force to velocity
+                Vx(i,j,k)=Vx(i,j,k)+fx
+                Vy(i,j,k)=Vy(i,j,k)+fy
+                Vz(i,j,k)=Vz(i,j,k)+fz
+            end if !i[jk]
+        end do !Li
+        end do !Lj
+        end do !Lk
+    
+        end do ! ntwin
+    end do ! loop_of_npt
+    !call src_charac(t,ntime)
+!-------------------------------------------------------------------------------
+end subroutine src_force
+!-------------------------------------------------------------------------------
+
+!-------------------------------------------------------------------------------
+subroutine src_surface(ntime,tinc,stept)
+!-------------------------------------------------------------------------------
+    use macdrp_mod, only : &
+        TxSrc,TySrc,TzSrc
+    use macdrp_mod, only : &
+        VxSrc,VySrc,VzSrc
+    integer,intent(in) :: ntime
+    real(SP),intent(in) :: tinc,stept
+    
+    integer :: i,j,k,n,m,si,sj,sk
+    integer :: Li,Lj,Lk
+    real(SP) :: t,disp,rate,d,S,fx0,fy0,fz0
+    real(SP),dimension(-NSRCEXT:NSRCEXT) :: DNx
+    real(SP),dimension(-NSRCEXT:NSRCEXT) :: DNy
+    real(SP),dimension(-NSRCEXT:NSRCEXT) :: DNz
+    real(SP) :: b0,x0,y0,z0
+    
+    if (.not. freenode) return
+    
+    if ( num_force<=0 ) return
+    
+    t=(ntime+tinc)*stept
+
+!-- reset var to zero to allow force overlap
+    VxSrc=0.0
+    VySrc=0.0
+    VzSrc=0.0
+    TxSrc=0.0
+    TySrc=0.0
+    TzSrc=0.0
+    
+!-- Bessel with b
+    b0=bessi0_s(KAISERB)
+    
+!-- loop each force source
+    do n=1,num_force
+
+       si=force_indx(1,n); sj=force_indx(2,n); sk=force_indx(3,n)
+
+    !-- source position shift
+        x0=force_shift(1,n); y0=force_shift(2,n); z0=force_shift(3,n)
+    !-- discrete delta function value
+        do Li=-NSRCEXT,NSRCEXT
+            DNx(Li)=calculate_windowed_impulse(Li-x0,b0)
+        end do
+        do Lj=-NSRCEXT,NSRCEXT
+            DNy(Lj)=calculate_windowed_impulse(Lj-y0,b0)
+        end do
+        do Lk=-NSRCEXT,NSRCEXT
+            DNz(Lk)=calculate_windowed_impulse(Lk-z0,b0)
+        end do
+
+    !-- loop each time window
+    do m=1,ntwin_force
+
+        disp=src_stf(t-force_t0(n),frcstf_time(m),frcstf_freq(m),frcstf_id,ntime)
+        rate=src_svf(t-force_t0(n),frcstf_time(m),frcstf_freq(m),frcstf_id,ntime)
+        fx0=ForceX(m,n); fy0=ForceY(m,n); fz0=ForceZ(m,n)
+
+    do Lk=-NSRCEXT,NSRCEXT
+    do Lj=-NSRCEXT,NSRCEXT
+    do Li=-NSRCEXT,NSRCEXT
+
+        i=Li+si; j=Lj+sj; k=Lk+sk
+
+    !-- filter coefficent
+        d=DNx(Li) * DNy(Lj) * DNz(Lk)
+
+        if (      i<=ni2 .and. i>=ni1  &
+            .and. j<=nj2 .and. j>=nj1  &
+            .and. k==nk2 ) then
+
+            S=(x(i+1)-x(i-1))*(y(j+1)-y(j-1))/4.0*z(k)**2*xsin(i)
+    
+            TxSrc(i,j)=TxSrc(i,j)+fx0/S*disp*d
+            TySrc(i,j)=TySrc(i,j)+fy0/S*disp*d
+            TzSrc(i,j)=TzSrc(i,j)+fz0/S*disp*d
+            VxSrc(i,j)=VxSrc(i,j)+fx0/S*rate*d
+            VySrc(i,j)=VySrc(i,j)+fy0/S*rate*d
+            VzSrc(i,j)=VzSrc(i,j)+fz0/S*rate*d
+
+        end if !i[jk]
+    end do !Li
+    end do !Lj
+    end do !Lk
+    
+    end do ! ntwin
+    end do ! loop_of_npt
+    
+!-------------------------------------------------------------------------------
+end subroutine src_surface
+!-------------------------------------------------------------------------------
+
+!-------------------------------------------------------------------------------
+function calculate_windowed_impulse(x,b0) result(y)
+!-------------------------------------------------------------------------------
+    real,intent(in) :: x,b0
+    real :: y
+
+    if ( abs(x)<SEIS_ZERO ) then
+        y=1.0_SP
+    else
+        if (1.0-x**2/NSRCEXT**2 > 0.0) then
+        !-- Kaiser window
+            y=bessi0_s( KAISERB * sqrt( 1.0-x**2/NSRCEXT**2) ) / b0
+        !-- sinc
+            y=y*sin(PI*x)/(PI*x)
+        else
+            y=0.0
+        end if
+    end if
+!-------------------------------------------------------------------------------
+end function calculate_windowed_impulse
+!-------------------------------------------------------------------------------
+
+!===============================================================================
+#endif
+!===============================================================================
+
 
 !subroutine src_charac(t,ntime)
 !use macdrp_mod, only : TxSrc,TySrc,TzSrc
@@ -429,51 +979,51 @@ end subroutine src_force
 !end do ! loop_of_npt_fault
 !end subroutine src_charac
 
-!===============================================================================
-subroutine src_surface(ntime,tinc,stept)
-!===============================================================================
-    use macdrp_mod, only : &
-        TxSrc,TySrc,TzSrc
-    use macdrp_mod, only : &
-        VxSrc,VySrc,VzSrc
-    integer,intent(in) :: ntime
-    real(SP),intent(in) :: tinc,stept
-    
-    integer :: n,m,i,j,k
-    real(SP) :: t,disp,rate,S,fx0,fy0,fz0
-    
-    if (.not. freenode) return
-    
-    if ( num_force<=0 ) return
-    
-    t=(ntime+tinc)*stept
-    
-    m=1 ! for ntwin
-    
-    do n=1,num_force
-       i=force_indx(1,n); j=force_indx(2,n); k=force_indx(3,n)
-    do m=1,ntwin_force
-       disp=src_stf(t-force_t0(n),frcstf_time(m),frcstf_freq(m),frcstf_id,ntime)
-       rate=src_svf(t-force_t0(n),frcstf_time(m),frcstf_freq(m),frcstf_id,ntime)
-       fx0=ForceX(m,n); fy0=ForceY(m,n); fz0=ForceZ(m,n)
-       if (      i<=ni2 .and. i>=ni1  &
-           .and. j<=nj2 .and. j>=nj1  &
-           .and. k==nk2  ) then
-    
-           S=(x(i+1)-x(i-1))*(y(j+1)-y(j-1))/4.0*z(k)**2*xsin(i)
-    
-           TxSrc(i,j)=fx0/S*disp
-           TySrc(i,j)=fy0/S*disp
-           TzSrc(i,j)=fz0/S*disp
-           VxSrc(i,j)=fx0/S*rate
-           VySrc(i,j)=fy0/S*rate
-           VzSrc(i,j)=fz0/S*rate
-        end if
-    end do
-    end do
-!===============================================================================
-end subroutine src_surface
-!===============================================================================
+!!===============================================================================
+!subroutine src_surface(ntime,tinc,stept)
+!!===============================================================================
+!    use macdrp_mod, only : &
+!        TxSrc,TySrc,TzSrc
+!    use macdrp_mod, only : &
+!        VxSrc,VySrc,VzSrc
+!    integer,intent(in) :: ntime
+!    real(SP),intent(in) :: tinc,stept
+!    
+!    integer :: n,m,i,j,k
+!    real(SP) :: t,disp,rate,S,fx0,fy0,fz0
+!    
+!    if (.not. freenode) return
+!    
+!    if ( num_force<=0 ) return
+!    
+!    t=(ntime+tinc)*stept
+!    
+!    m=1 ! for ntwin
+!    
+!    do n=1,num_force
+!       i=force_indx(1,n); j=force_indx(2,n); k=force_indx(3,n)
+!    do m=1,ntwin_force
+!       disp=src_stf(t-force_t0(n),frcstf_time(m),frcstf_freq(m),frcstf_id,ntime)
+!       rate=src_svf(t-force_t0(n),frcstf_time(m),frcstf_freq(m),frcstf_id,ntime)
+!       fx0=ForceX(m,n); fy0=ForceY(m,n); fz0=ForceZ(m,n)
+!       if (      i<=ni2 .and. i>=ni1  &
+!           .and. j<=nj2 .and. j>=nj1  &
+!           .and. k==nk2  ) then
+!    
+!           S=(x(i+1)-x(i-1))*(y(j+1)-y(j-1))/4.0*z(k)**2*xsin(i)
+!    
+!           TxSrc(i,j)=fx0/S*disp
+!           TySrc(i,j)=fy0/S*disp
+!           TzSrc(i,j)=fz0/S*disp
+!           VxSrc(i,j)=fx0/S*rate
+!           VySrc(i,j)=fy0/S*rate
+!           VzSrc(i,j)=fz0/S*rate
+!        end if
+!    end do
+!    end do
+!!===============================================================================
+!end subroutine src_surface
+!!===============================================================================
 
 !===============================================================================
 !*                --- source signal generator --                         *
@@ -481,14 +1031,14 @@ end subroutine src_surface
 !-------------------------------------------------------------------------------
 subroutine cal_norm_delt(delt,x0,y0,z0,rx0,ry0,rz0)
 !-------------------------------------------------------------------------------
-    real(SP),dimension(-LenFD:LenFD,-LenFD:LenFD,-LenFD:LenFD),intent(out) :: delt
+    real(SP),dimension(-NSRCEXT:NSRCEXT,-NSRCEXT:NSRCEXT,-NSRCEXT:NSRCEXT),intent(out) :: delt
     real(SP),intent(in) :: x0,y0,z0,rx0,ry0,rz0
     real(SP) :: D1,D2,D3
     integer i,j,k
     delt=0.0_SP
-    do k=-LenFD,LenFD
-    do j=-LenFD,LenFD
-    do i=-LenFD,LenFD
+    do k=-NSRCEXT,NSRCEXT
+    do j=-NSRCEXT,NSRCEXT
+    do i=-NSRCEXT,NSRCEXT
        D1=fun_gauss(i-x0,rx0,0.0_SP)
        D2=fun_gauss(j-y0,ry0,0.0_SP)
        D3=fun_gauss(k-z0,rz0,0.0_SP)
@@ -819,6 +1369,68 @@ function stf_id2name(id) result(stfname)
 !-------------------------------------------------------------------------------
 end function stf_id2name
 !-------------------------------------------------------------------------------
+
+!===============================================================================
+subroutine src_print_info(fid) 
+!===============================================================================
+
+!-------------------------------------------------------------------------------
+!-- Description:
+!-------------------------------------------------------------------------------
+!--   print variables and compiler macro
+
+!-------------------------------------------------------------------------------
+!-- ToDo:
+!-------------------------------------------------------------------------------
+!--   print snap and station info, maybe each info file each thread
+
+!-------------------------------------------------------------------------------
+!-- Input arguments:
+!-------------------------------------------------------------------------------
+!--
+    integer,intent(in) :: fid        !-- id of opened info file
+
+!-------------------------------------------------------------------------------
+!-- Local variables:
+!-------------------------------------------------------------------------------
+
+    character (len=300) :: FFLAG     !-- compiler flag
+
+!-------------------------------------------------------------------------------
+!-- Entry point: 
+!-------------------------------------------------------------------------------
+
+    write(fid,*)
+    write(fid,"(a)") "#========================================================"
+    write(fid,"(a)") "Compiler MACRO used for src_mod:"
+#ifdef SrcNearestPoint
+    FFLAG = trim(FFLAG)//' -DSrcNearestPoint'
+#endif
+#ifdef SrcGaussianSmooth
+    FFLAG = trim(FFLAG)//' -DSrcGaussianSmooth'
+#endif
+#ifdef SrcImpulseFilter
+    FFLAG = trim(FFLAG)//' -DSrcImpulseFilter'
+#endif
+
+    !---- write FFLAG to the output file -----
+    write(fid,"(a)") "FFLAG = "//trim(FFLAG)
+    write(fid,*)
+
+!-------------------------------------------------------------------------------
+    write(fid,"(a)") "Input parameter values in src_mod:"
+!-------------------------------------------------------------------------------
+    write(fid,"(a)")     "SOURCE_ROOT               = "//trim(pnm_src)
+    write(fid,"(a)")     "SOURCE_CONF              = "//trim(fnm_src_conf)
+    write(fid,*)
+
+    !write(fid,"(a,i6)")  'num_force   =',  num_force
+    !write(fid,"(a,i6)")  'num_moment  =',  num_moment
+    write(fid,*)
+
+!===============================================================================
+end subroutine src_print_info
+!===============================================================================
 
 end module src_mod
 
