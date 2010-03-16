@@ -48,6 +48,7 @@ module io_mod
     public :: corr_subse,corr_indx
     public :: read_nc_list
     public :: io_info_file_open, io_info_file_close, io_print_info
+    public :: io_next_file_id
     
     character (len=SEIS_STRLEN),public ::        &
         filename_log,        &  !-- file name to keep runtime time info
@@ -97,6 +98,7 @@ module io_mod
     integer pt_ncid,pt_tid,pt_vid(SEIS_GEO),pt_sid(6)
     integer rest_tinv,run_from_rest
     integer :: nt_dyn_rest, nt_dyn_sync, nt_dyn_new
+    integer :: fid_seed   !- current integer of used fid
 
 !===============================================================================
 ! subroutine and functions in this module
@@ -117,12 +119,12 @@ subroutine io_init(fnm_input)
     
     call string_conf(fid,1,'OUTPUT_ROOT',2,pnm_out)
     call string_conf(fid,1,'STATION_ROOT',2,pnm_station)
-    !-- log file --
+!-- log file --
     call string_conf(fid,1,'fnm_log',2,filename_log)
     !call string_conf(fid,1,'fnm_log',2,filename_log)
     filename_info = "seis3d_wave.info"
     
-    !-- restart --
+!-- restart --
     call string_conf(fid,1,'CHECKPOINT_ROOT',2,pnm_rest)
     call string_conf(fid,1,'checkpoint_tinv',2,rest_tinv)
     call string_conf(fid,1,'run_from_checkpoint',2,run_from_rest)
@@ -130,10 +132,21 @@ subroutine io_init(fnm_input)
     nt_dyn_rest=0; nt_dyn_sync=0;
     
     close(fid)
+!-- initial value of fid spool
+    fid_seed = 3000
 !===============================================================================
 end subroutine io_init
 !===============================================================================
 
+!-------------------------------------------------------------------------------
+function io_next_file_id () result (fid)
+!-------------------------------------------------------------------------------
+    integer :: fid
+    fid_seed = fid_seed+1
+    fid      = fid_seed
+!-------------------------------------------------------------------------------
+end function io_next_file_id
+!-------------------------------------------------------------------------------
 
 !===============================================================================
 subroutine io_info_file_open(myid,fid)
