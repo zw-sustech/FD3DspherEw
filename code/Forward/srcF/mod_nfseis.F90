@@ -302,14 +302,14 @@ subroutine nfseis_grid3d_defvar(ncid,varnm,vid)
     integer :: ierr,Iid,Jid,Kid
 !--
     ierr=nf90_inq_dimid(ncid,'I',Iid)
-         call nfseis_except(ierr,'I dim in grid3d_addvar')
+         call nfseis_except(ierr,'I dim in grid3d_defvar')
     ierr=nf90_inq_dimid(ncid,'J',Jid)
-         call nfseis_except(ierr,'J dim in grid3d_addvar')
+         call nfseis_except(ierr,'J dim in grid3d_defvar')
     ierr=nf90_inq_dimid(ncid,'K',Kid)
-         call nfseis_except(ierr,'K dim in grid3d_addvar')
+         call nfseis_except(ierr,'K dim in grid3d_defvar')
     ierr=nf90_def_var(ncid,varnm,SEISNC_DATATYPE, &
          (/ Iid,Jid,Kid /), vid )
-         call nfseis_except(ierr,'add var in grid3d_addvar')
+         call nfseis_except(ierr,'add var in grid3d_defvar')
 !-------------------------------------------------------------------------------
 end subroutine nfseis_grid3d_defvar
 !-------------------------------------------------------------------------------
