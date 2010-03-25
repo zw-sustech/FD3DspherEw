@@ -114,11 +114,9 @@ subroutine read_grid_coord(fnm_conf)
     character (len=SEIS_STRLEN) :: str
     real(SP),dimension(SEIS_GEO) :: dh,xyz0
     integer :: fid,i,j,k,n,n1,n2,n3
-    real :: d2m
     fid=1001
     open(fid,file=trim(fnm_conf),status="old")
     
-      call string_conf(fid,1,'distance2meter',2,d2m)
       do n=1,SEIS_GEO
          call string_conf(fid,1,'steph',n+1,dh(n))
          call string_conf(fid,1,'theta0_phi0_rmax',n+1,xyz0(n))
@@ -154,7 +152,7 @@ subroutine read_grid_coord(fnm_conf)
          read(fid,*) ( gz(k),k=nk1,n3+nk1-1 )
       end if
     
-      gx=gx/180.0_DP*PI; gy=gy/180.0_DP*PI; gz=gz*d2m
+      gx=gx/180.0_DP*PI; gy=gy/180.0_DP*PI;
     
       n1=swmpi_globi(ni2,dims(1)-1)
       n2=swmpi_globj(nj2,dims(2)-1)
