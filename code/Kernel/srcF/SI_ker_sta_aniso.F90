@@ -1259,15 +1259,15 @@ end do !- npara
             call nfseis_put(ncid(npk,ncmp),kVsh_qid(npk,ncmp),Kconv,bsubs,bsubc,bsubt)
         !-- Vsv
             Kconv= 2.0*C44                  *Buff4D(:,:,:,(4-1)*num_ker1stiff+(nker-1)*2+1) &
-                  +4.0*C11*C44/(C11-2.0*C44)*Buff4D(:,:,:,(5-1)*num_ker1stiff+(nker-1)*2+1)
+                  -4.0*C44*C13/(C11-2.0*C44)*Buff4D(:,:,:,(5-1)*num_ker1stiff+(nker-1)*2+1)
             call nfseis_put(ncid(npk,ncmp),kVsv_pid(npk,ncmp),Kconv,bsubs,bsubc,bsubt)
             Kconv= 2.0*C44                  *Buff4D(:,:,:,(4-1)*num_ker1stiff+(nker-1)*2+2) &
-                  +4.0*C11*C44/(C11-2.0*C44)*Buff4D(:,:,:,(5-1)*num_ker1stiff+(nker-1)*2+2)
+                  -4.0*C44*C13/(C11-2.0*C44)*Buff4D(:,:,:,(5-1)*num_ker1stiff+(nker-1)*2+2)
             call nfseis_put(ncid(npk,ncmp),kVsv_qid(npk,ncmp),Kconv,bsubs,bsubc,bsubt)
         !-- eta
-            Kconv= (C11-2.0*C44)**2/C13     *Buff4D(:,:,:,(5-1)*num_ker1stiff+(nker-1)*2+1)
+            Kconv=                  C13     *Buff4D(:,:,:,(5-1)*num_ker1stiff+(nker-1)*2+1)
             call nfseis_put(ncid(npk,ncmp),keta_pid(npk,ncmp),Kconv,bsubs,bsubc,bsubt)
-            Kconv= (C11-2.0*C44)**2/C13     *Buff4D(:,:,:,(5-1)*num_ker1stiff+(nker-1)*2+2)
+            Kconv=                  C13     *Buff4D(:,:,:,(5-1)*num_ker1stiff+(nker-1)*2+2)
             call nfseis_put(ncid(npk,ncmp),keta_qid(npk,ncmp),Kconv,bsubs,bsubc,bsubt)
         end if
         end if
