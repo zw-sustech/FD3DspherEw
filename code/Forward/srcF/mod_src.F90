@@ -901,11 +901,12 @@ subroutine src_surface(ntime,tinc,stept)
     !-- filter coefficent
         d=DNx(Li) * DNy(Lj) * DNz(Lk)
 
-        if (      i<=ni2 .and. i>=ni1  &
-            .and. j<=nj2 .and. j>=nj1  &
-            .and. k==nk2 ) then
+        if ( i<=ni2 .and. i>=ni1 .and. j<=nj2 .and. j>=nj1 .and. k>=nk2 ) then
 
-            S=(x(i+1)-x(i-1))*(y(j+1)-y(j-1))/4.0*z(k)**2*xsin(i)
+        !-- anti-symmetric imaging
+            if (k>nk2) d=2.0*d
+
+            S=(x(i+1)-x(i-1))*(y(j+1)-y(j-1))/4.0*z(nk2)**2*xsin(i)
     
             TxSrc(i,j)=TxSrc(i,j)+fx0/S*disp*d
             TySrc(i,j)=TySrc(i,j)+fy0/S*disp*d
