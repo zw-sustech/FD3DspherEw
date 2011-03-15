@@ -607,11 +607,30 @@ subroutine layer1d_retrieve(d0,Vp,Vs,Dp,Vph,Vsh,eta)
            h=L1D%d(k2)-L1D%d(k1)
            L1=(d-d0)/h; L2=1.0-L1
            Vp (:)=L1D%Vp (k1)*L1+L1D%Vp (k2)*L2
-           Vs (:)=L1D%Vs (k1)*L1+L1D%Vs (k2)*L2
            Dp (:)=L1D%Dp (k1)*L1+L1D%Dp (k2)*L2
            Vph(:)=L1D%Vph(k1)*L1+L1D%Vph(k2)*L2
-           Vsh(:)=L1D%Vsh(k1)*L1+L1D%Vsh(k2)*L2
-           eta(:)=L1D%eta(k1)*L1+L1D%eta(k2)*L2
+
+           !Vs (:)=L1D%Vs (k1)*L1+L1D%Vs (k2)*L2
+           !Vsh(:)=L1D%Vsh(k1)*L1+L1D%Vsh(k2)*L2
+           !eta(:)=L1D%eta(k1)*L1+L1D%eta(k2)*L2
+
+           if (L1D%Vs(k1) < SEIS_ZERO .or. L1D%Vs(k2) < SEIS_ZERO) then
+            Vs (1)=L1D%Vs (k1); Vs (2)=L1D%Vs (k2); 
+           else
+            Vs (:)=L1D%Vs (k1)*L1+L1D%Vs (k2)*L2
+           end if
+
+           if (L1D%Vsh(k1) < SEIS_ZERO .or. L1D%Vsh(k2) < SEIS_ZERO) then
+            Vsh (1)=L1D%Vsh (k1); Vsh (2)=L1D%Vsh (k2); 
+           else
+            Vsh (:)=L1D%Vsh (k1)*L1+L1D%Vsh (k2)*L2
+           end if
+
+           if (L1D%eta(k1) < SEIS_ZERO .or. L1D%eta(k2) < SEIS_ZERO) then
+            eta (1)=L1D%eta (k1); eta (2)=L1D%eta (k2); 
+           else
+            eta (:)=L1D%eta (k1)*L1+L1D%eta (k2)*L2
+           end if
         end if
     end if
 !-------------------------------------------------------------------------------
@@ -2215,29 +2234,50 @@ do i=ni1,ni2
     !== larger then a criteria value of ncrit ==
     ncrit=nsamp/2
     !ncrit=0
+                           C13(i,j,k)=0.0_SP
     if (nsamped( 3)>ncrit) C13(i,j,k)=nsamped( 3)/vsamped( 3)
+                           C66(i,j,k)=0.0_SP
     if (nsamped(21)>ncrit) C66(i,j,k)=nsamped(21)/vsamped(21)
 #if defined AnisVTI || defined AnisGene
+                           C11(i,j,k)=0.0_SP
     if (nsamped( 1)>ncrit) C11(i,j,k)=nsamped( 1)/vsamped( 1)
+                           C33(i,j,k)=0.0_SP
     if (nsamped(12)>ncrit) C33(i,j,k)=nsamped(12)/vsamped(12)
+                           C44(i,j,k)=0.0_SP
     if (nsamped(16)>ncrit) C44(i,j,k)=nsamped(16)/vsamped(16)
 #endif
 #ifdef AnisGene
+                           C12(i,j,k)=0.0_SP
     if (nsamped( 2)>ncrit) C12(i,j,k)=nsamped( 2)/vsamped( 2)
+                           C14(i,j,k)=0.0_SP
     if (nsamped( 4)>ncrit) C14(i,j,k)=nsamped( 4)/vsamped( 4)
+                           C15(i,j,k)=0.0_SP
     if (nsamped( 5)>ncrit) C15(i,j,k)=nsamped( 5)/vsamped( 5)
+                           C16(i,j,k)=0.0_SP
     if (nsamped( 6)>ncrit) C16(i,j,k)=nsamped( 6)/vsamped( 6)
+                           C22(i,j,k)=0.0_SP
     if (nsamped( 7)>ncrit) C22(i,j,k)=nsamped( 7)/vsamped( 7)
+                           C23(i,j,k)=0.0_SP
     if (nsamped( 8)>ncrit) C23(i,j,k)=nsamped( 8)/vsamped( 8)
+                           C24(i,j,k)=0.0_SP
     if (nsamped( 9)>ncrit) C24(i,j,k)=nsamped( 9)/vsamped( 9)
+                           C25(i,j,k)=0.0_SP
     if (nsamped(10)>ncrit) C25(i,j,k)=nsamped(10)/vsamped(10)
+                           C26(i,j,k)=0.0_SP
     if (nsamped(11)>ncrit) C26(i,j,k)=nsamped(11)/vsamped(11)
+                           C34(i,j,k)=0.0_SP
     if (nsamped(13)>ncrit) C34(i,j,k)=nsamped(13)/vsamped(13)
+                           C35(i,j,k)=0.0_SP
     if (nsamped(14)>ncrit) C35(i,j,k)=nsamped(14)/vsamped(14)
+                           C36(i,j,k)=0.0_SP
     if (nsamped(15)>ncrit) C36(i,j,k)=nsamped(15)/vsamped(15)
+                           C45(i,j,k)=0.0_SP
     if (nsamped(17)>ncrit) C45(i,j,k)=nsamped(17)/vsamped(17)
+                           C46(i,j,k)=0.0_SP
     if (nsamped(18)>ncrit) C46(i,j,k)=nsamped(18)/vsamped(18)
+                           C55(i,j,k)=0.0_SP
     if (nsamped(19)>ncrit) C55(i,j,k)=nsamped(19)/vsamped(19)
+                           C56(i,j,k)=0.0_SP
     if (nsamped(20)>ncrit) C56(i,j,k)=nsamped(20)/vsamped(20)
 #endif
 
@@ -2767,7 +2807,9 @@ subroutine media_stept_check(n_i,n_j,n_k)
     end do
     end do
     end do
-    write(*,"(a,3i5,a,f,a,3i5,a,2f)") "   dtmax in thread", n_i,n_j,n_k, " is", dtmax,  &
+    !write(*,"(a,3i5,a,f,a,3i5,a,2f)") "   dtmax in thread", n_i,n_j,n_k, " is", dtmax,  &
+    !    " located on", dtindx," with Vp and dL", dtmaxVp,dtmaxL
+    write(*,"(a,3i5,a,f,a,3i5,a,2f)") "   dtmax in thread", dtnode, " is", dtmax,  &
         " located on", dtindx," with Vp and dL", dtmaxVp,dtmaxL
 !-------------------------------------------------------------------------------
 end subroutine media_stept_check
