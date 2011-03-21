@@ -1432,18 +1432,18 @@ subroutine composite_read(L)
 !-- density
     allocate(L%Dp(2,imax,jmax,kmax))
     allocate(L%Dp_poly_d(kmax))
-    #ifdef WITHQS
+#ifdef WITHQS
     allocate(L%Qs(2,imax,jmax,kmax))
     allocate(L%Qs_poly_d(kmax))
-    #endif
+#endif
     call nfseis_varget(L%fnm,'rho',L%Dp,(/1,1,1,1/),(/2,imax,jmax,kmax/),(/1,1,1,1/) )
     call nfseis_varget(L%fnm,'rho_poly_d',L%Dp_poly_d,(/1/),(/kmax/),(/1/) )
-    #ifdef WITHQS
+#ifdef WITHQS
     call nfseis_varget(L%fnm,'Qs',L%Qs,(/1,1,1,1/),(/2,imax,jmax,kmax/),(/1,1,1,1/) )
     call nfseis_attget(L%fnm,'QsF0',L%QsF0)
     call nfseis_attget(L%fnm,'QsINF',L%QsINF)
     QsF0=L%QsF0; QsINF=L%QsINF
-    #endif
+#endif
     
 !-- stiffness from velocity parameters
     if (flag_stif_type==SIG_STIF_VEL) then
