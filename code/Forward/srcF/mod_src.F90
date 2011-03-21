@@ -584,7 +584,7 @@ subroutine src_surface(ntime,tinc,stept)
     
     integer :: i,j,k,n,m,si,sj,sk
     integer :: Li,Lj,Lk
-    real(SP) :: t,disp,rate,S,fx0,fy0,fz0
+    real(SP) :: t,disp,rate,d,S,fx0,fy0,fz0
     real(SP),dimension(-NSRCEXT:NSRCEXT,-NSRCEXT:NSRCEXT,-NSRCEXT:NSRCEXT) :: normd
     real(SP) :: x0,y0,z0
     
@@ -626,7 +626,7 @@ subroutine src_surface(ntime,tinc,stept)
 
         if (      i<=ni2 .and. i>=ni1  &
             .and. j<=nj2 .and. j>=nj1  &
-            .and. k==nk2 ) then        &
+            .and. k==nk2 ) then
 
             S=(x(i+1)-x(i-1))*(y(j+1)-y(j-1))/4.0*z(k)**2*xsin(i)
     
