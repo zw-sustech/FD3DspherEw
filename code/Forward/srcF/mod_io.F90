@@ -1093,7 +1093,7 @@ function io_out_pattern(num,width) result(ioname)
     integer,optional,intent(in) :: width
     character (len=SEIS_STRLEN) :: ioname,str,fmt_str
     if (present(width)) then
-       write(str,"(i)") width
+       write(str,"(i0)") width
        fmt_str="(i"//trim(str)//"."//trim(str)//")"
     else
        fmt_str="(i4.4)"
