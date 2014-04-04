@@ -9,14 +9,23 @@ pnm_nc='../input/';
 varnm='rho';
 
 %-- flags --
+nargs=nargin-1;
+
 n=1;
-while n<=nargin-1
+while n<=nargs
 
 if numel(varargin{n})==1 | ~isnumeric(varargin{n})
    switch varargin{n}
    case {'rho','lambda','mu','Qs', ...
          'Px','Py','Pz', ...
          'Uxy','Uxz','Uyz' }
+       varnm=varargin{n};
+   case {'C11','C12','C13','C14','C15','C16', ...
+               'C22','C23','C24','C25','C26', ...
+                     'C33','C34','C35','C36', ...
+                           'C44','C45','C46', ...
+                                 'C55','C56', ...
+                                       'C66'}
        varnm=varargin{n};
    case 'mediadir'
        pnm_nc=varargin{n+1}; n=n+1;
@@ -49,4 +58,6 @@ for n=1:nthd
 end
 
 V=permute(V,[3,2,1]);
-varargout(1)={varnm};
+
+% pack varargout
+if nargout>=2, varargout(1)={varnm}; end

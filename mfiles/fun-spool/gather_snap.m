@@ -11,8 +11,10 @@ fnm_prefix='snap_';
 pnm_out='../output/';
 
 %-- flags --
+nargs=nargin-3
 n=1;
-while n<=nargin-3
+
+while n<=nargs
 
 if numel(varargin{n})==1 | ~isnumeric(varargin{n})
    switch varargin{n}
@@ -71,5 +73,6 @@ for n=1:nthd
 end
 
 V=permute(V,[3,2,1]);
+
 if nargout>0, varargout(1)={t}; end
 if nargout>1,varargout(2)={varnm}; end

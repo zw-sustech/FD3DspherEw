@@ -8,8 +8,9 @@ function [x,y,z]=gather_coord(snapinfo,varargin)
 pnm_nc='../input/';
 
 %-- flags --
+nargs=nargin-1;
 n=1;
-while n<=nargin-1
+while n<=nargs
 
 if numel(varargin{n})==1 | ~isnumeric(varargin{n})
    switch varargin{n}
