@@ -19,6 +19,10 @@ program SI_ker_sta_aniso
 !   $Date$
 !   $Revision$
 !   $LastChangedBy$
+!
+!   03/29/10    wzhang      Fix error of 4*K_F in K_Vph
+!
+
 
 !-------------------------------------------------------------------------------
 ! Attention:
@@ -1242,10 +1246,10 @@ end do !- npara
         if (flag_VpVs) then
         !-- Vph
             Kconv= 2.0*C11                  *Buff4D(:,:,:,(1-1)*num_ker1stiff+(nker-1)*2+1) &
-                  +4.0*C11*C13/(C11-2.0*C44)*Buff4D(:,:,:,(5-1)*num_ker1stiff+(nker-1)*2+1)
+                  +2.0*C11*C13/(C11-2.0*C44)*Buff4D(:,:,:,(5-1)*num_ker1stiff+(nker-1)*2+1)
             call nfseis_put(ncid(npk,ncmp),kVph_pid(npk,ncmp),Kconv,bsubs,bsubc,bsubt)
             Kconv= 2.0*C11                  *Buff4D(:,:,:,(1-1)*num_ker1stiff+(nker-1)*2+2) &
-                  +4.0*C11*C13/(C11-2.0*C44)*Buff4D(:,:,:,(5-1)*num_ker1stiff+(nker-1)*2+2)
+                  +2.0*C11*C13/(C11-2.0*C44)*Buff4D(:,:,:,(5-1)*num_ker1stiff+(nker-1)*2+2)
             call nfseis_put(ncid(npk,ncmp),kVph_qid(npk,ncmp),Kconv,bsubs,bsubc,bsubt)
         !-- Vpv
             Kconv= 2.0*C33                  *Buff4D(:,:,:,(2-1)*num_ker1stiff+(nker-1)*2+1)
