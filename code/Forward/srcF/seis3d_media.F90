@@ -2809,7 +2809,7 @@ subroutine media_stept_check(n_i,n_j,n_k)
     end do
     !write(*,"(a,3i5,a,f,a,3i5,a,2f)") "   dtmax in thread", n_i,n_j,n_k, " is", dtmax,  &
     !    " located on", dtindx," with Vp and dL", dtmaxVp,dtmaxL
-    write(*,"(a,3i5,a,f,a,3i5,a,2f)") "   dtmax in thread", dtnode, " is", dtmax,  &
+    write(*,"(a,3i5,a,g0,a,3i5,a,2g0)") "   dtmax in thread", dtnode, " is", dtmax,  &
         " located on", dtindx," with Vp and dL", dtmaxVp,dtmaxL
 !-------------------------------------------------------------------------------
 end subroutine media_stept_check
