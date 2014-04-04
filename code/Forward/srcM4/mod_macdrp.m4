@@ -1,5 +1,5 @@
 divert(-1)dnl
-dnl macro to generate mod_abs_npml.F90
+dnl macro to generate mod_macdrp.F90
 changequote([,])dnl
 divert(0)dnl
 
