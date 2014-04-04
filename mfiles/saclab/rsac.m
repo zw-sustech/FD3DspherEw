@@ -84,7 +84,7 @@ end
 
 YARRAY     = fread(fid,'single');
 
-if h(106) ~= 1 % modified by zw: ==1 to ~=1
+if h(106) == 1 
   XARRAY = (linspace(h(6),h(7),h(80)))'; 
 else
   error('LEVEN must = 1; SAC file not evenly spaced')
