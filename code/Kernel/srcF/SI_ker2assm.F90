@@ -651,7 +651,7 @@ subroutine export_inv_info
     filenm=trim(pnm_spool)//'/'//'inv_G_band.conf'
     open(fid,file=trim(filenm),status='unknown')
     do n=1,num_var
-        write(fid,"(a,i)") trim(var_list(n))//" max_band = ",max_bdap(n)
+        write(fid,"(a,i0)") trim(var_list(n))//" max_band = ",max_bdap(n)
     end do
     close(fid)
 !-------------------------------------------------------------------------------
