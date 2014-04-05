@@ -45,7 +45,7 @@ module src_mod
 #ifdef SrcImpulseFilter
     interface
         function bessi0_s(x) result(y)
-            real :: x
+            real,intent(in) :: x
             real :: y
         end function bessi0_s
     end interface

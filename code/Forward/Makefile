@@ -14,8 +14,8 @@
 #######################################################################
 
 #WHEREAMI := nw8440
-WHEREAMI := uri
-#WHEREAMI := pku
+#WHEREAMI := uri
+WHEREAMI := w520
 #WHEREAMI := ustc
 #WHEREAMI := generic
 

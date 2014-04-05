@@ -92,15 +92,24 @@ vpath %.F90 $(FPPDIR)
 #===============================================================================
 #                 Compiler and macro flags setting
 #===============================================================================
-FC     :=  /opt/mpich/p4-intel/bin/mpif90
-NETCDF :=  /opt/netcdf/intel-10.1
+#FC     :=  /opt/mpich/p4-intel/bin/mpif90
+#NETCDF :=  /opt/netcdf/intel-10.1
+#LDFLAGS := -L$(NETCDF)/lib -lnetcdf \
+#           -Bstatic -static
+#FFLAGS := -c -O3 -w95 -warn all -zero \
+#          -module $(OBJDIR) -module $(Forward_OBJDIR) \
+#          -I$(FPPDIR) \
+#          -I$(NETCDF)/include 
 
-LDFLAGS := -L$(NETCDF)/lib -lnetcdf \
+FC     := /home/opt/mpich/3.1-intel/bin/mpif90
+NETCDFF := /home/opt/netcdf4/4.2.2-ifort
+NETCDFC := /home/opt/netcdf4/4.3.1-icc
+LDFLAGS := -L$(NETCDFF)/lib -lnetcdff  -L$(NETCDFC)/lib -lnetcdf \
            -Bstatic -static
-FFLAGS := -c -O3 -w95 -warn all -zero \
+FFLAGS := -c -O3 -warn all -zero \
           -module $(OBJDIR) -module $(Forward_OBJDIR) \
           -I$(FPPDIR) \
-          -I$(NETCDF)/include 
+          -I$(NETCDFF)/include 
 
 FPP      := /usr/bin/cpp
 FPPFLAGS := -P -traditional $(foreach dir,$(FPPDIR),-I$(dir)) $(DFLAGS) 

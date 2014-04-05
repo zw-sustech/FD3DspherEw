@@ -1,0 +1,75 @@
+#******************************************************************************#
+#*     Compiler setting for my laptop w520                                    *#
+#*                                                                            *#
+#*            Author: Wei ZHANG     Email: zhangwei.zw@gmail.com              *#
+#*                       Copyright (C) 2006 Wei ZHANG                         *#
+#******************************************************************************#
+
+# $Date: 2010-03-28 02:14:06 -0400 (Sun, 28 Mar 2010) $
+# $Revision: 536 $
+# $LastChangedBy: zhangw $
+
+#COMPILER := GNU
+COMPILER := Intel
+#COMPILER := PGI
+
+#######################################################################
+#                        Intel compiler                               #
+#######################################################################
+ifeq "$(COMPILER)" "Intel"
+
+FC     := /home/opt/mpich/3.1-intel/bin/mpif90
+NETCDFF := /home/opt/netcdf4/4.2.2-ifort
+NETCDFC := /home/opt/netcdf4/4.3.1-icc
+#LDFLAGS := -L$(NETCDFF)/lib -lnetcdff -L$(NETCDFC)/lib -lnetcdf $(if $(STATIC),-Bstatic -static,)
+LDFLAGS :=  $(NETCDFF)/lib/libnetcdff.a \
+	        $(NETCDFC)/lib/libnetcdf.a \
+            -static-intel \
+            $(if $(STATIC),-Bstatic -static,)
+FFLAGS := -c -warn all -zero -module $(OBJDIR) -I$(NETCDFF)/include \
+          $(if $(WithOMP),-openmp -openmp_report2,)
+#FFLAGS := -fpp $(FFLAGS) #-- enable preprocessing, important!
+FFLAGSMP := -mp1 -unroll0 -ip-no-inlining $(FFLAGS)
+
+ifeq "$(DEBUG)" "ON"
+  FFLAGS   := $(if $(WithOMP),-O0,-g -debug extended -traceback -fp) $(FFLAGS)
+  FFLAGSMP := $(if $(WithOMP),-O0,-g -debug extended -traceback -fp) $(FFLAGSMP)
+  #FFLAGS   := -check bounds -check uninit -ftrapuv -fpe0 $(FFLAGS)
+else
+
+FFLAGS   := -O3 -ftz -align records -no-prec-div -unroll1 $(FFLAGS)
+FFLAGSMP := -O3 $(FFLAGSMP)
+endif #DEBUG
+
+endif #Intel
+#######################################################################
+#                          PGI compiler                               #
+#######################################################################
+ifeq "$(COMPILER)" "PGI"
+$(error "Please set FC and NETCDF for $(COMPILER) in Makefile.$(WHEREAMI)")
+endif
+
+#######################################################################
+#                        GNU compiler                               #
+#######################################################################
+ifeq "$(COMPILER)" "GNU"
+
+FC     := /usr/bin/mpif90
+NETCDF := /usr
+LDFLAGS := -L$(NETCDF)/lib -lnetcdff -lnetcdf $(if $(STATIC),-static-libgfortran,)
+
+FFLAGS := -c -J$(OBJDIR) -I$(OBJDIR) -I$(NETCDF)/include
+#FFLAGS := -cpp $(FFLAGS) #-- enable preprocessing, important!
+FFLAGSMP := $(FFLAGS)
+
+ifeq "$(DEBUG)" "ON"
+  FFLAGS   := $(if $(WithOMP),-O0,-g -fcheck all -finit-integer=0 -finit-real=zero) $(FFLAGS)
+  FFLAGSMP := $(if $(WithOMP),-O0,-g -fcheck all -finit-integer=0 -finit-real=zero) $(FFLAGSMP)
+else
+  FFLAGS   := -O3 $(FFLAGS)
+  FFLAGSMP := -O3 $(FFLAGSMP)
+endif #DEBUG
+
+endif #GNU
+
+# vim:ft=make:ts=4:sw=4:nu:et:ai:
