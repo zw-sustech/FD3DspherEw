@@ -27,6 +27,7 @@ LDFLAGS :=  $(NETCDFF)/lib/libnetcdff.a \
             -static-intel \
             $(if $(STATIC),-Bstatic -static,)
 FFLAGS := -c -warn all -zero -module $(OBJDIR) -I$(NETCDFF)/include \
+          -I$(SRCDIR) \
           $(if $(WithOMP),-openmp -openmp_report2,)
 #FFLAGS := -fpp $(FFLAGS) #-- enable preprocessing, important!
 FFLAGSMP := -mp1 -unroll0 -ip-no-inlining $(FFLAGS)

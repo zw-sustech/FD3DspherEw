@@ -1,0 +1,81 @@
+#******************************************************************************#
+#*          Makefile of FFTomo SI-kernel code for FD3DspherEw package         *#
+#*                                                                            *#
+#*            Author: Wei ZHANG     Email: zhangwei.zw@gmail.com              *#
+#*                       Copyright (C) 2008 Wei ZHANG                         *#
+#******************************************************************************#
+
+# $Date$
+# $Revision$
+# $LastChangedBy$
+
+include Makefile
+
+#===============================================================================
+#            directories, source files and target names
+#===============================================================================
+
+KERDIR := ./kernel
+
+EXE_KER_PAIR := SI_ker_pair
+EXE_KER_PAIR_MPI := SI_ker_pair_mpi
+
+EXE_KER_STA := SI_ker_sta
+EXE_KER_STA_MPI := SI_ker_sta_mpi
+
+EXE_KER2INFO := SI_ker2info
+EXE_KER2INFO_MPI := SI_ker2info_mpi
+
+EXE_KER2ASSM := SI_ker2assm
+EXE_KER2ASSM_MPI := SI_ker2assm_mpi
+
+vpath %.F90 $(KERDIR) $(SRCDIR)
+
+#===============================================================================
+#            target
+#===============================================================================
+
+phony_list := $(phony_list) kernel
+.PHONY: $(phony_list)
+
+kernel: $(BINDIR)/$(EXE_KER_PAIR) $(BINDIR)/$(EXE_KER_PAIR_MPI) \
+         $(BINDIR)/$(EXE_KER_STA)  $(BINDIR)/$(EXE_KER_STA_MPI) \
+        $(BINDIR)/$(EXE_KER2INFO) $(BINDIR)/$(EXE_KER2INFO_MPI) \
+        $(BINDIR)/$(EXE_KER2ASSM) $(BINDIR)/$(EXE_KER2ASSM_MPI) \
+
+$(BINDIR)/$(EXE_PAIR): $(OBJ_MOD) $(OBJDIR)/SI_ker_pair.o
+	$(FC) -o $@ $^ $(LDFLAGS)
+$(BINDIR)/$(EXE_PAIR_MPI): $(OBJ_MOD) $(OBJDIR)/SI_ker_pair_mpi.o
+	$(FC) -o $@ $^ $(LDFLAGS)
+
+$(BINDIR)/$(EXE_STA): $(OBJ_MOD) $(OBJDIR)/SI_ker_sta.o
+	$(FC) -o $@ $^ $(LDFLAGS)
+$(BINDIR)/$(EXE_STA_MPI): $(OBJ_MOD) $(OBJDIR)/SI_ker_sta_mpi.o
+
+$(BINDIR)/$(EXE_KER2INFO): $(OBJ_MOD) $(OBJDIR)/SI_ker2info.o
+	$(FC) -o $@ $^ $(LDFLAGS)
+$(BINDIR)/$(EXE_KER2INFO_MPI): $(OBJ_MOD) $(OBJDIR)/SI_ker2info_mpi.o
+	$(FC) -o $@ $^ $(LDFLAGS)
+
+$(BINDIR)/$(EXE_KER2ASSM): $(OBJ_MOD) $(OBJDIR)/SI_ker2assm.o
+	$(FC) -o $@ $^ $(LDFLAGS)
+$(BINDIR)/$(EXE_KER2ASSM_MPI): $(OBJ_MOD) $(OBJDIR)/SI_ker2assm.o
+	$(FC) -o $@ $^ $(LDFLAGS)
+
+#######################################################################
+#                        subffixes rules                              #
+#######################################################################
+
+$(OBJDIR)/SI_ker_pair_mpi.o: SI_ker_pair.F90
+	$(FC) $(FFLAGSMP) $(DFLAGS) -DKernelMPI $< -o $@
+$(OBJDIR)/SI_ker_sta_mpi.o: SI_ker_sta.F90
+	$(FC) $(FFLAGSMP) $(DFLAGS) -DKernelMPI $< -o $@
+$(OBJDIR)/SI_ker2info_mpi.o: SI_ker2info.F90
+	$(FC) $(FFLAGSMP) $(DFLAGS) -DKernelInfoMPI $< -o $@
+$(OBJDIR)/SI_ker2assm_mpi.o: SI_ker2assm.F90
+	$(FC) $(FFLAGSMP) $(DFLAGS) -DKernelAssmMPI $< -o $@
+
+$(OBJDIR)/%.o : %.F90
+	$(FC) $(FFLAGS) $(DFLAGS) $(KERDIR)/$(<F) -o $@
+
+# vim:ft=make:ts=4:sw=4:nu:et:ai:
