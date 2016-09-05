@@ -29,7 +29,7 @@ LDFLAGS :=  $(NETCDFF)/lib/libnetcdff.a \
 FFLAGS := -c -warn all -zero -module $(OBJDIR) -I$(NETCDFF)/include \
           -I$(SRCDIR) \
           $(if $(WithOMP),-openmp -openmp_report2,)
-#FFLAGS := -fpp $(FFLAGS) #-- enable preprocessing, important!
+FFLAGS := -fpp $(FFLAGS) #-- enable preprocessing, important!
 FFLAGSMP := -mp1 -unroll0 -ip-no-inlining $(FFLAGS)
 
 ifeq "$(DEBUG)" "ON"
@@ -60,7 +60,7 @@ NETCDF := /usr
 LDFLAGS := -L$(NETCDF)/lib -lnetcdff -lnetcdf $(if $(STATIC),-static-libgfortran,)
 
 FFLAGS := -c -J$(OBJDIR) -I$(OBJDIR) -I$(NETCDF)/include
-#FFLAGS := -cpp $(FFLAGS) #-- enable preprocessing, important!
+FFLAGS := -cpp $(FFLAGS) #-- enable preprocessing, important!
 FFLAGSMP := $(FFLAGS)
 
 ifeq "$(DEBUG)" "ON"
