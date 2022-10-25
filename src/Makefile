@@ -15,14 +15,15 @@
 
 #WHEREAMI := nw8440
 #WHEREAMI := uri
-WHEREAMI := w520
+#WHEREAMI := w520
 #WHEREAMI := ustc
 #WHEREAMI := generic
+WHEREAMI := mars
 
 # Please choose COMPILER in the included Makefile.opt.$(WHEREAMI)
 
 #DEBUG := ON
-STATIC := ON
+#STATIC := ON
 #GETARG := ON
 #VERBOSE :=ON
 CheckOverFlow := ON

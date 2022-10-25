@@ -1,0 +1,35 @@
+#******************************************************************************#
+#*     Compiler setting for mars                                              *#
+#*                                                                            *#
+#*            Author: Wei ZHANG     Email: zhangwei.zw@gmail.com              *#
+#*                       Copyright (C) 2022 Wei ZHANG                         *#
+#******************************************************************************#
+
+#== use module to load intel compiler etc, providing following env
+# NETCDFROOT
+# NETCDFFROOT
+
+FC     := mpif90
+NETCDFF := ${NETCDFFROOT}
+NETCDFC := ${NETCDFROOT}
+#LDFLAGS := -L$(NETCDFF)/lib -lnetcdff -L$(NETCDFC)/lib -lnetcdf $(if $(STATIC),-Bstatic -static,)
+LDFLAGS :=  $(NETCDFF)/lib/libnetcdff.a \
+	        $(NETCDFC)/lib/libnetcdf.a \
+            -static-intel \
+            $(if $(STATIC),-Bstatic -static,)
+FFLAGS := -c -warn all -zero -module $(OBJDIR) -I$(NETCDFF)/include \
+          -I$(SRCDIR) \
+          $(if $(WithOMP),-openmp -openmp_report2,)
+FFLAGS := -fpp $(FFLAGS) #-- enable preprocessing, important!
+FFLAGSMP := -mp1 -unroll0 -ip-no-inlining $(FFLAGS)
+
+ifeq "$(DEBUG)" "ON"
+  FFLAGS   := $(if $(WithOMP),-O0,-g -debug extended -traceback -fp) $(FFLAGS)
+  FFLAGSMP := $(if $(WithOMP),-O0,-g -debug extended -traceback -fp) $(FFLAGSMP)
+  #FFLAGS   := -check bounds -check uninit -ftrapuv -fpe0 $(FFLAGS)
+else
+
+FFLAGS   := -O3 -ftz -align records -no-prec-div -unroll1 $(FFLAGS)
+FFLAGSMP := -O3 $(FFLAGSMP)
+endif #DEBUG
+
