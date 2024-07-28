@@ -14,9 +14,9 @@
 #*                                                                            *#
 #*                                                                            *#
 #* Written by:                                                                *#
-#*   Wei ZHANG      (wzhang07@ustc.edu.cn)                                    *#
+#*   Wei ZHANG      (zhangwei@sustech.edu.cn)                                 *#
 #*   Yang Shen      (yshen@gso.uri.edu)                                       *#
-#*   Xiaofei CHEN   (xfchen1@ustc.edu.cn)                                     *#
+#*   Xiaofei CHEN   (chenxf@sustech.edu.cn)                                   *#
 #*                                                                            *#
 #* Revision History:                                                          *#
 #*   2008           original version                                          *#
@@ -82,5 +82,26 @@
          # control systme used. Or use mpirun directly
          # nohup mpirun -np NNN -nolocal -machinefile hostlist bin/seis3d_wave_mpi &
       Refer to README file under that directory.
+
+4 If you use this code in your work, please cite (in BibTex format):
+
+  @article{Zhang2006a,
+  author={W. Zhang and X.f. Chen},
+  year=2006,
+  title={Traction image method for irregular free surface boundaries in finite
+         difference seismic wave simulation},
+  journal={Geophysical Journal International},
+  volume=167,
+  pages={337-353}}
+
+  @article{Zhang_Shen_Zhao_2012,
+  author={W. Zhang and Y. Shen and L. Zhao},
+  year={2012},
+  title={Three-dimensional anisotropic seismic wave modelling in spherical coordinates
+         by a collocated-grid finite-difference method},
+  journal={Geophysical Journal International},
+  volume={188}, 
+  pages={1359–1381}}
+
 
 # vim:ft=conf:ts=4:sw=4:nu:et:ai:
